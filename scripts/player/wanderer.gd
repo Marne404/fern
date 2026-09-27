@@ -62,6 +62,14 @@ var _was_on_floor := true
 var _last_state := Body.State.FIT
 var _zoom := false
 
+## The visible hiker. First person: only its shadow; third person (V): fully visible behind the camera arm.
+var scout: Scout
+var third_person := false
+var _arm: SpringArm3D
+var _cam_dist := 3.4
+var _facing := 0.0
+var _sprinting := false
+
 
 func _ready() -> void:
 	# steeper than 40° is no longer ground: you slide off (rock steps, gorge walls)
@@ -85,6 +93,19 @@ func _ready() -> void:
 	camera.far = 4000.0
 	camera.fov = Settings.values["fov"]
 	head.add_child(camera)
+	_arm = SpringArm3D.new()
+	_arm.position = Vector3(0, 0.12, 0)
+	_arm.spring_length = _cam_dist
+	_arm.collision_mask = 1
+	_arm.margin = 0.15
+	var probe := SphereShape3D.new()
+	probe.radius = 0.2
+	_arm.shape = probe
+	_arm.add_excluded_object(get_rid())
+	head.add_child(_arm)
+	scout = Scout.new(Settings.values.get("scout", {}))
+	add_child(scout)
+	set_third_person(Settings.values.get("third_person", false))
 	# starting gear
 	inventory.add(ItemDefs.make("wasserflasche"))
 	inventory.add(ItemDefs.make("apfel"))
@@ -94,7 +115,62 @@ func _ready() -> void:
 func look_along(dir: Vector3) -> void:
 	_yaw = atan2(-dir.x, -dir.z)
 	_pitch = 0.0
+	_facing = _yaw
 	_apply_look()
+
+
+func set_third_person(on: bool) -> void:
+	third_person = on
+	camera.reparent(_arm if on else head, false)
+	camera.position = Vector3.ZERO
+	camera.rotation = Vector3.ZERO
+	scout.set_shadow_only(not on)
+
+
+## Start of the view ray for interaction: in third person the point on the view ray level with the head
+func view_origin() -> Vector3:
+	if not third_person:
+		return camera.global_position
+	var dir := -camera.global_basis.z
+	return camera.global_position + dir * dir.dot(head.global_position - camera.global_position)
+
+
+func _process(delta: float) -> void:
+	if scout == null:
+		return
+	var hv := Vector2(velocity.x, velocity.z)
+	var spd := hv.length() if fly_mode == 0 else 0.0
+	var prev := _facing
+	if not third_person or not rope.is_empty() or climbing:
+		_facing = _yaw
+	elif spd > 0.4 and not resting:
+		_facing = lerp_angle(_facing, atan2(-hv.x, -hv.y), 1.0 - exp(-9.0 * delta))
+	scout.turn_rate = lerpf(scout.turn_rate, clampf(angle_difference(prev, _facing) / maxf(delta, 0.001), -4.0, 4.0), 1.0 - exp(-6.0 * delta))
+	scout.rotation.y = angle_difference(_yaw, _facing)
+	scout.speed = spd
+	scout.sprint = _sprinting
+	scout.on_floor = is_on_floor() or swimming or climbing or fly_mode != 0 or not rope.is_empty()
+	var collapsed_now := body.state == Body.State.COLLAPSED
+	if collapsed_now or sleeping:
+		scout.pose = Scout.Pose.LIE
+	elif resting:
+		scout.pose = Scout.Pose.SIT
+	elif swimming:
+		scout.pose = Scout.Pose.SWIM
+	elif climbing or not rope.is_empty():
+		scout.pose = Scout.Pose.CLIMB
+	elif crouching:
+		scout.pose = Scout.Pose.CROUCH
+	else:
+		scout.pose = Scout.Pose.STAND
+	if collapsed_now:
+		scout.mood = Scout.Mood.KNOCKED_OUT
+	elif sleeping:
+		scout.mood = Scout.Mood.ASLEEP
+	elif body.state >= Body.State.TIRED:
+		scout.mood = Scout.Mood.TIRED
+	else:
+		scout.mood = Scout.Mood.NORMAL
 
 
 func set_look(yaw: float, pitch: float) -> void:
@@ -134,12 +210,18 @@ func _unhandled_input(event: InputEvent) -> void:
 				interact()
 			KEY_R:
 				_toggle_rest()
+			KEY_V:
+				set_third_person(not third_person)
+				Settings.set_value("third_person", third_person, false)
 			KEY_Q:
 				if _look_target and _look_target.has_meta("anchor") and obstacles:
 					var an: Array = _look_target.get_meta("anchor")
 					obstacles.untie_key(an[0], self, _look_target.get_parent())
 	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
 		_zoom = event.pressed and _has_item("fernglas")
+	elif event is InputEventMouseButton and event.pressed and third_person and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		_cam_dist = clampf(_cam_dist * (0.9 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.1), 1.6, 7.0)
+		_arm.spring_length = _cam_dist
 
 
 # ================================================================ Movement
@@ -207,6 +289,7 @@ func _physics_process(delta: float) -> void:
 
 	if crouching:
 		sprint = false
+	_sprinting = sprint
 	var speed := SWIM_SPEED if swimming else (SPRINT_SPEED if sprint else WALK_SPEED)
 	if crouching:
 		speed = 1.6
@@ -692,7 +775,7 @@ func _update_look_target() -> void:
 	prompt = ""
 	if not can_act() or world == null:
 		return
-	var from := camera.global_position
+	var from := view_origin()
 	var to := from - camera.global_basis.z * REACH
 	var q := PhysicsRayQueryParameters3D.create(from, to, (1 << (WorldItem.LAYER - 1)) | (1 << 2))
 	q.collide_with_areas = true
@@ -836,7 +919,7 @@ func drop_item(item: Dictionary, throw := false) -> void:
 	inventory.remove(item)
 	item["equipped"] = false
 	var fwd := -camera.global_basis.z
-	var pos := camera.global_position + fwd * 0.6 - Vector3(0, 0.25, 0)
+	var pos := view_origin() + fwd * 0.6 - Vector3(0, 0.25, 0)
 	var vel := fwd * (9.0 if throw else 1.0) + Vector3(0, 2.5 if throw else 0.0, 0) + velocity
 	if spawn_item.is_valid():
 		spawn_item.call(item, pos, vel)

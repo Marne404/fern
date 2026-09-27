@@ -63,6 +63,8 @@ var values := {
 	"opt_music_thread": true,   # load music in the background
 	"music": true,
 	"music_volume": 0.7,
+	"scout": {},                # look of your scout (see Scout.DEFAULT_LOOK)
+	"third_person": false,
 }
 
 ## On scene reload: generate this world and start hiking right away

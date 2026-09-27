@@ -118,6 +118,23 @@ reasonably flat ground, grove structure with clearings, landmarks (rock arches, 
 - Renamed to **Fern**, everything translated to English (UI, items, messages, code comments, docs).
 - Luckiest Guy as the display font, a game icon, Windows and Linux builds, this repository and website.
 
+## Round 9 – Your scout and a new website
+
+- **The scout:** a playable hiker inspired by the scouts of PEAK – bean-shaped body, dot eyes, noodle arms, short
+  legs, uniform with neckerchief and merit-badge sash, a big backpack with bedroll, bottle, mug and rope. Modeled
+  entirely in code (`scout.gd`, `mesh3.gd`) with its own cel shader.
+- **Procedural animation:** walking, running, crouching, sitting, lying, swimming, climbing, PEAK-style flailing in the
+  air and waving; springs on arms, backpack and hat; blinking, glancing, faces for exhaustion, sleep and collapse.
+- **Third person** with **V** (spring-arm camera, mouse wheel zoom); in first person you see your scout's shadow.
+- **Main menu:** your scout hikes ahead of the camera; *Your scout* opens an editor (colors, uniform, hat, face) –
+  the camera flies around to the front and the scout waves.
+- Static parts are merged into one mesh per animated node (~20 instead of ~90 draw calls).
+- **Website:** a live three.js diorama of the trail built from the game's models – switch biomes (leaves, petals,
+  sand and tumbleweeds, snow, fireflies), follow your scout, click it to make it hop – plus the scout editor in 3D,
+  new third-person screenshots of the obstacles and biomes.
+
+![Your scouts](scouts.png)
+
 ---
 
 ## Ideas for later

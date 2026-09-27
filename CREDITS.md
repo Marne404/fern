@@ -17,3 +17,6 @@ The music is only included in the released game builds, not in this repository.
 
 ## Engine
 **Godot Engine** – MIT License.
+
+## Scout design
+The scout is inspired by the hikers of PEAK (Aggro Crab & Landfall). The model, shader and animation are made from scratch for Fern.

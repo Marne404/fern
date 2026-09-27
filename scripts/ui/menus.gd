@@ -5,11 +5,17 @@ extends CanvasLayer
 signal start_pressed
 signal resume_pressed
 signal main_menu_pressed
+## Scout editor opened/closed; the look changed; dragged to turn the scout
+signal scout_editor(open: bool)
+signal scout_changed
+signal scout_dragged(dx: float)
 
 var _theme: Theme
 var _main: Control
 var _pause: Control
 var _settings: Control
+var _scout: Control
+var _scout_controls := {}       # look key -> [kind, Control]
 var _settings_back: Control      # where "Back" leads
 var _record_label: Label
 var _seed_edit: LineEdit
@@ -30,7 +36,8 @@ func _ready() -> void:
 	_main = _build_main()
 	_pause = _build_pause()
 	_settings = _build_settings()
-	for c in [_main, _pause, _settings]:
+	_scout = _build_scout()
+	for c in [_main, _pause, _settings, _scout]:
 		c.theme = _theme
 		c.visible = false
 		add_child(c)
@@ -70,11 +77,11 @@ func hide_all() -> void:
 
 
 func is_open() -> bool:
-	return _main.visible or _pause.visible or _settings.visible
+	return _main.visible or _pause.visible or _settings.visible or _scout.visible
 
 
 func is_main_open() -> bool:
-	return _main.visible or (_settings.visible and _settings_back == _main)
+	return _main.visible or _scout.visible or (_settings.visible and _settings_back == _main)
 
 
 func _show(c: Control) -> void:
@@ -82,8 +89,11 @@ func _show(c: Control) -> void:
 	var owner := get_viewport().gui_get_focus_owner()
 	if owner:
 		owner.release_focus()
-	for x in [_main, _pause, _settings]:
+	var was_scout := _scout.visible
+	for x in [_main, _pause, _settings, _scout]:
 		x.visible = x == c
+	if was_scout != _scout.visible:
+		scout_editor.emit(_scout.visible)
 	if c:
 		var first := c.find_child("FirstButton", true, false) as Control
 		if first:
@@ -91,7 +101,9 @@ func _show(c: Control) -> void:
 
 
 func back() -> void:
-	if _settings.visible:
+	if _scout.visible:
+		_show(_main)
+	elif _settings.visible:
 		_show(_settings_back)
 	elif _pause.visible:
 		resume_pressed.emit()
@@ -186,9 +198,141 @@ func _build_main() -> Control:
 	_seed_info = _big_label("", 16, Color(0.8, 0.88, 0.75))
 	box.add_child(_seed_info)
 	box.add_child(_button("Start hiking", func(): if _main.visible: start_pressed.emit(), true))
+	box.add_child(_button("Your scout", func(): _open_scout()))
 	box.add_child(_button("Settings", func(): _open_settings(_main)))
 	box.add_child(_button("Quit", func(): get_tree().quit()))
 	return root
+
+
+# ================================================================ Scout editor
+
+func _open_scout() -> void:
+	_refresh_scout()
+	_show(_scout)
+
+
+func _look() -> Dictionary:
+	var l: Dictionary = Scout.DEFAULT_LOOK.duplicate()
+	var saved: Dictionary = Settings.values.get("scout", {})
+	for k in saved:
+		if l.has(k):
+			l[k] = int(saved[k])
+	return l
+
+
+func _set_look(key: String, v: int) -> void:
+	var l := _look()
+	l[key] = v
+	Settings.set_value("scout", l, false)
+	_refresh_scout()
+	scout_changed.emit()
+
+
+func _build_scout() -> Control:
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	# dragging anywhere outside the panel turns the scout
+	root.gui_input.connect(func(e):
+		if e is InputEventMouseMotion and e.button_mask & MOUSE_BUTTON_MASK_LEFT:
+			scout_dragged.emit(e.relative.x))
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	panel.offset_right = -70
+	panel.custom_minimum_size = Vector2(520, 0)
+	root.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	panel.add_child(box)
+	box.add_child(_big_label("Your scout", 52))
+	var hint := _big_label("Drag to turn them around", 16, Color(0.85, 0.9, 0.8, 0.8))
+	box.add_child(hint)
+	_swatch_row(box, "skin", "Color", Scout.SKIN_COLORS)
+	_swatch_row(box, "outfit", "Uniform", Scout.OUTFIT_COLORS)
+	_swatch_row(box, "scarf", "Neckerchief & sash", Scout.ACCENT_COLORS)
+	_cycle_row(box, "hat", "Hat", Scout.HAT_NAMES)
+	_swatch_row(box, "hat_color", "Hat color", Scout.ACCENT_COLORS)
+	_swatch_row(box, "pack", "Backpack", Scout.ACCENT_COLORS)
+	_cycle_row(box, "face", "Face", Scout.FACE_NAMES)
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, 6)
+	box.add_child(spacer)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var rnd := _button("Surprise me", func():
+		Settings.set_value("scout", Scout.random_look(), false)
+		_refresh_scout()
+		scout_changed.emit())
+	rnd.custom_minimum_size = Vector2(0, 0)
+	rnd.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(rnd)
+	var done := _button("Done", func(): _show(_main), true)
+	done.custom_minimum_size = Vector2(0, 0)
+	done.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(done)
+	box.add_child(row)
+	return root
+
+
+func _swatch_row(box: VBoxContainer, key: String, text: String, colors: Array) -> void:
+	box.add_child(_big_label(text, 18, Color(0.75, 0.9, 0.6)))
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 5)
+	flow.add_theme_constant_override("v_separation", 6)
+	var buttons := []
+	for i in colors.size():
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(32, 32)
+		b.focus_mode = Control.FOCUS_NONE
+		b.tooltip_text = text
+		for st in ["normal", "hover", "pressed", "focus"]:
+			var sb := StyleBoxFlat.new()
+			sb.bg_color = colors[i] if st != "hover" else (colors[i] as Color).lightened(0.15)
+			sb.set_corner_radius_all(16)
+			b.add_theme_stylebox_override(st, sb)
+		b.pressed.connect(_set_look.bind(key, i))
+		flow.add_child(b)
+		buttons.append(b)
+	box.add_child(flow)
+	_scout_controls[key] = ["swatch", buttons]
+
+
+func _cycle_row(box: VBoxContainer, key: String, text: String, names: Array) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	var l := _big_label(text, 18, Color(0.75, 0.9, 0.6))
+	l.custom_minimum_size = Vector2(120, 0)
+	row.add_child(l)
+	var prev := Button.new()
+	prev.text = "<"
+	prev.pressed.connect(func(): _set_look(key, posmod(_look()[key] - 1, names.size())))
+	row.add_child(prev)
+	var val := Label.new()
+	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	val.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(val)
+	var next := Button.new()
+	next.text = ">"
+	next.pressed.connect(func(): _set_look(key, posmod(_look()[key] + 1, names.size())))
+	row.add_child(next)
+	box.add_child(row)
+	_scout_controls[key] = ["cycle", val, names]
+
+
+func _refresh_scout() -> void:
+	var l := _look()
+	for key in _scout_controls:
+		var c: Array = _scout_controls[key]
+		if c[0] == "swatch":
+			for i in c[1].size():
+				var b: Button = c[1][i]
+				for st in ["normal", "hover", "pressed", "focus"]:
+					var sb := b.get_theme_stylebox(st) as StyleBoxFlat
+					sb.set_border_width_all(3 if i == l[key] else 0)
+					sb.border_color = Color(1, 1, 1, 0.95)
+		else:
+			(c[1] as Label).text = c[2][l[key]]
 
 
 # ================================================================ Pause

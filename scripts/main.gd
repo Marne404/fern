@@ -15,6 +15,7 @@ var lib := AssetLibrary.new()
 var world: ChunkManager
 var atmosphere: Atmosphere
 var menu_cam: MenuCamera
+var menu_scout: Scout
 var player: Wanderer
 var hud: Hud
 var backpack: Backpack
@@ -94,6 +95,13 @@ func _ready() -> void:
 			var pd := gen.pond(k)
 			if pd.z > 0.0:
 				print("Pond z=%.0f x=%.0f r=%.0f path_x=%.0f biome=%s" % [pd.y, pd.x, pd.z, gen.path_x(pd.y), gen.biomes[gen.dominant_biome(pd.y)]["name"]])
+	if _args.has("obstacles"):
+		for k in 30:
+			var ob := gen.obstacle(k)
+			if not ob.is_empty():
+				print("Obstacle %d: %s at z=%.0f (%s)" % [k, ob["type"], ob["z"], gen.biomes[gen.dominant_biome(ob["z"])]["name"]])
+		get_tree().quit()
+		return
 	if _args.has("biomes"):
 		for k in 12:
 			print("Segment %d: %s from %.0f m" % [k, gen.biomes[gen._segment_biome[k]]["name"], gen._segment_start[k]])
@@ -147,6 +155,10 @@ func _ready() -> void:
 	menu_cam.far = 4000.0
 	add_child(menu_cam)
 	menu_cam.start_z = start_z + 30.0
+	menu_scout = Scout.new(Settings.values.get("scout", {}))
+	menu_scout.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(menu_scout)
+	menu_cam.scout = menu_scout
 	menu_cam.start()
 	menu_cam.make_current()
 
@@ -199,6 +211,16 @@ func _ready() -> void:
 	menus.start_pressed.connect(_on_start_pressed)
 	menus.resume_pressed.connect(resume)
 	menus.main_menu_pressed.connect(end_journey)
+	menus.scout_editor.connect(func(open: bool):
+		menu_cam.portrait = open
+		menu_cam.drag_yaw = 0.0
+		if open:
+			menu_scout.wave(2.4))
+	menus.scout_changed.connect(func():
+		menu_scout.set_look_data(Settings.values["scout"])
+		menu_scout.apply_look()
+		menu_scout.wave(1.4))
+	menus.scout_dragged.connect(func(dx: float): menu_cam.drag_yaw += dx * 0.01)
 
 	if _args.has("shot") and not _args.has("ui") or _args.has("size"):
 		_setup_offscreen()
@@ -213,6 +235,8 @@ func _ready() -> void:
 		music.set_menu()
 		if _args.has("settings"):
 			menus._open_settings(menus._main)
+		if _args.has("scout"):
+			menus._open_scout()
 	if _args.has("obtest"):
 		var ot: Node = preload("res://scripts/tests/obstacle_test.gd").new()
 		ot.main = self
@@ -244,6 +268,10 @@ func start_journey() -> void:
 	var ahead := world.world_to_local(gen.path_point(start_z - 6.0))
 	player.look_along((ahead - pos) * Vector3(1, 0, 1))
 	player.camera.make_current()
+	if _args.has("obtest") or _args.has("selftest"):
+		player.set_third_person(false)
+	elif _args.has("third"):
+		player.set_third_person(true)
 	player.world = world
 	player.obstacles = obstacles
 	player.spawn_item = _spawn_dropped
@@ -370,6 +398,8 @@ func _process_inner(delta: float) -> void:
 		p.y = world.ground_y(p.x, p.z) + 0.2
 		player.global_position = p
 		player.set_physics_process(true)
+		if _args.has("pitch"):
+			player.set_look(player.rotation.y + deg_to_rad(float(_args.get("yaw", "0"))), deg_to_rad(float(_args["pitch"])))
 		if _args.has("backpack"):
 			backpack.open.call_deferred(player)
 		if _args.has("knotui"):

@@ -18,6 +18,12 @@
 ---
 
 <p align="center">
+  <img src="docs/scouts.png" alt="Five scouts in different colors and hats" width="70%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/menu.jpg" width="49%">
+  <img src="docs/screenshots/tp_blossom.jpg" width="49%">
   <img src="docs/screenshots/autumn.jpg" width="49%">
   <img src="docs/screenshots/coast.jpg" width="49%">
   <img src="docs/screenshots/spring.jpg" width="49%">
@@ -39,10 +45,16 @@ real, physical problem in your way, and there is no scripted solution:
 - **A giant fallen tree** at the end of a narrowing gorge – crouch underneath (not with a heavy backpack!) or climb over.
 - **A cliff with a waterfall** after a long climb – jump into the pool, rappel down on a rope, or take the long way round.
 
+You hike as a **scout**: a round little hiker with noodle arms, a merit-badge sash and a backpack that is always a
+bit too big. Pick colors, a hat and a face in the main menu (*Your scout*). Your scout walks ahead of the camera on the
+title screen, and **V** switches between first and third person on the trail.
+
 Fern is a single-player prototype of a planned co-op game (see the [game design](docs/GAME_DESIGN.md)).
 
 ## Features
 
+- **Your scout** – customizable hiker (10 colors, 8 uniforms, 5 hats, 4 faces) with procedural animation: walking,
+  running, crouching, sitting, swimming, climbing, flailing through the air, waving; faces react to exhaustion and sleep.
 - **Endless, seed-based world** – type any word or number as your world seed and share it with friends.
 - **12 biomes** that blend smoothly: Autumn Meadow, Spring Meadow, Forest Trail, Red Maple Wood, Blossom Grove,
   Mountain Pines, Cliff Lands, Sunset Coast, Lake Country, Deadwood Bog, Glowing Forest and Desert Valley.
@@ -69,6 +81,8 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 | **E** | pick up · use · drink · interact |
 | **Tab** | open backpack |
 | **R** | rest (sleep when tired) |
+| **V** | first / third person |
+| **Mouse wheel** | camera distance (third person) |
 | **Right mouse** | binoculars |
 | **Q** | untie rope |
 | **Esc** | pause / menu |
@@ -106,7 +120,7 @@ scripts/world/grass_field.gd      grass blade carpet around the camera (High/Ult
 scripts/world/poi_manager.gd      finds along the trail
 scripts/world/landmark_manager.gd rock arches, ruins, stone circles, lookout rocks
 scripts/obstacles/                rivers, fallen trees, cliffs, ropes, waterfalls
-scripts/player/                   player character and body state
+scripts/player/                   player character, scout model and animation, body state
 scripts/items/                    items, backpack, world items
 scripts/audio/                    music director and track list
 scripts/fx/                       wind gusts, leaf fall, desert effects, birds, butterflies, backdrops
@@ -126,12 +140,19 @@ Command-line options after `--`, e.g. `godot --path . -- --play --z=-15000`:
 `--shot=image.png --wait=300 --size=1920x1080` save a screenshot and quit (`--ui` with interface) ·
 `--fly=5 --look=-15 --lookrel=dx,dz` raised test camera · `--gust=0.8` fixed gust · `--devil` dust devil ahead ·
 `--debugfx` weather state · `--biomes` / `--pois` / `--ponds` / `--landmarks` print lists · `--music` log track changes ·
+`--third` third person · `--scout` open the scout editor · `--pitch=-10 --yaw=15` camera angle at the start ·
+`--obstacles` print obstacle positions ·
 `--obtest` obstacle test (31 checks) · `--selftest` body/backpack test.
+
+Standalone tools: `godot --path . -s res://scripts/tests/scout_studio.gd -- --mode=lineup --out=x.png` renders scouts
+(modes `lineup`, `poses`, `face`, `back`, `walk`, `side`, `group`), `scripts/tests/scout_export.gd` exports the scout
+as `docs/models/scout.glb` for the website.
 
 ## Credits
 
 - **3D models:** [Quaternius](https://quaternius.com/) – Stylized Nature MegaKit (CC0)
 - **Music:** AlkaKrab – Fantasy Ambient, Desert, Fantasy RPG Vol. 2, Fairytale Magical Fantasy (licensed for games)
+- **Scout design:** inspired by the hikers of PEAK (Aggro Crab & Landfall); the model itself is made from scratch
 - **Font:** [Luckiest Guy](https://fonts.google.com/specimen/Luckiest+Guy) by Astigmatic (Apache 2.0)
 - **Engine:** [Godot Engine](https://godotengine.org/) (MIT)
 
