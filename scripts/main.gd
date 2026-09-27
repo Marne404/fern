@@ -44,6 +44,7 @@ var _passed_obstacles := {}
 var knot_game: KnotGame
 var _knot_cb: Callable
 var _shaft_mat: ShaderMaterial
+var _sea_open := 0.0
 
 var start_z := 0.0
 var best_distance := 0.0
@@ -172,8 +173,8 @@ func _ready() -> void:
 	mountains = Mountains.new()
 	add_child(mountains)
 	atmosphere.mountains = mountains
-	_setup_shafts()
 	atmosphere.apply_quality()
+	_setup_shafts()
 	_setup_post()
 	sea = Sea.new()
 	sea.world = world
@@ -470,6 +471,11 @@ func _process_inner(delta: float) -> void:
 	if player and mode != Mode.MENU:
 		obstacles.update_carried(player)
 	sea.follow(cam.global_position, atmosphere.current)
+	var sea_w := world.gen.coast_info(world.local_to_world(cam.global_position).z).y if sea.visible else 0.0
+	_sea_open = lerpf(_sea_open, sea_w, 1.0 - exp(-delta * 1.5))
+	mountains.set_sea(_sea_open)
+	atmosphere.sky_mat.set_shader_parameter("sea_amount", _sea_open)
+	atmosphere.sky_mat.set_shader_parameter("sea_color", ((atmosphere.current.get("horizon_color", Color.WHITE) as Color) * 0.8).lerp(Color(0.1, 0.3, 0.5), 0.25))
 	RenderingServer.global_shader_parameter_set("player_pos", player.global_position if player and mode != Mode.MENU else Vector3(0, -1000, 0))
 	film.visible = Settings.values["film_look"]
 	_update_underwater(cam, delta)
@@ -817,11 +823,6 @@ func _update_shot() -> void:
 		_shot_vp.mesh_lod_threshold = get_viewport().mesh_lod_threshold
 		_shot_vp.msaa_3d = get_viewport().msaa_3d
 		_shot_vp.screen_space_aa = get_viewport().screen_space_aa
-	if _args.has("shot") and _frame == int(_args.get("wait", "300")):
-		var img := (_shot_vp.get_texture() if _shot_vp else get_viewport().get_texture()).get_image()
-		img.save_png(_args["shot"])
-		print("saved: %s  FPS %d  distance %.0f m" % [_args["shot"], Engine.get_frames_per_second(), journey_distance])
-		get_tree().quit()
 	if _args.has("dbgwater") and _frame == int(_args.get("wait", "300")) - 2:
 		for n in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
 			var gi := n as GeometryInstance3D
@@ -829,3 +830,8 @@ func _update_shot() -> void:
 			if gi.is_visible_in_tree() and mat is ShaderMaterial and (mat.shader.resource_path.contains("water") or mat.shader.resource_path.contains("waterfall")):
 				var ab := gi.global_transform * gi.get_aabb()
 				print("[water] %s %s pos=%s aabb=%s cam=%s" % [gi.name, gi.get_parent().name, gi.global_position, ab, _active_camera().global_position])
+	if _args.has("shot") and _frame == int(_args.get("wait", "300")):
+		var img := (_shot_vp.get_texture() if _shot_vp else get_viewport().get_texture()).get_image()
+		img.save_png(_args["shot"])
+		print("saved: %s  FPS %d  distance %.0f m" % [_args["shot"], Engine.get_frames_per_second(), journey_distance])
+		get_tree().quit()

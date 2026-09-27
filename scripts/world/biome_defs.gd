@@ -494,8 +494,11 @@ static func coast() -> Dictionary:
 			{"kind": "tree", "models": PINES, "styles": [pine], "spacing": 22.0, "chance": 0.4, "dist": [9.0, 30.0], "side": 1.0,
 				"scale": [1.2, 1.8], "radius": 3.0, "collide": "trunk", "trunk": 0.35},
 			# sea stacks in the ocean
-			{"kind": "rock", "models": ROCKS, "styles": [stack], "spacing": 55.0, "chance": 0.55, "dist": [70.0, 260.0], "side": 1.0,
-				"scale": [5.0, 11.0], "squash": Vector3(0.9, 2.4, 0.9), "sink": 0.05, "radius": 10.0},
+			# sea stacks in the ocean: in loose groups of very different sizes, a few small ones near the shore
+			{"kind": "rock", "models": ROCKS, "styles": [stack], "spacing": 38.0, "chance": 0.55, "dist": [70.0, 320.0], "side": 1.0,
+				"grove": [0.02, 0.15], "scale": [2.5, 13.0], "squash": Vector3(0.9, 2.4, 0.9), "sink": 0.05, "radius": 8.0},
+			{"kind": "rock", "models": ROCKS, "styles": [stack], "spacing": 26.0, "chance": 0.25, "dist": [40.0, 110.0], "side": 1.0,
+				"scale": [1.2, 3.5], "squash": Vector3(1.1, 1.3, 1.0), "sink": 0.2, "radius": 3.0},
 			{"kind": "rock", "models": ROCKS, "styles": [cliff], "spacing": 30.0, "chance": 0.4, "dist": [8.0, 50.0],
 				"scale": [1.2, 3.0], "sink": 0.2, "radius": 3.0, "collide": "rock"},
 			{"kind": "cluster", "models": ["Flower_3_Single", "Flower_4_Single"], "styles": [{}], "density": 2.0, "dist": [2.5, 40.0],

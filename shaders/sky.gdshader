@@ -16,6 +16,8 @@ uniform float sun_glow = 0.35;
 uniform float horizon_haze = 1.0;
 uniform float rainbow = 0.0;
 uniform float cloud_detail = 0.0;   // Ultra: finer cloud structure
+uniform float sea_amount = 0.0;     // coast: below the horizon the sky continues as sea haze
+uniform vec3 sea_color : source_color = vec3(0.3, 0.45, 0.6);
 
 float cloud_field(vec2 uv) {
 	float n = texture(cloud_noise, uv).r * 0.72;
@@ -104,6 +106,7 @@ void sky() {
 		col = mix(col, cc, c * fade);
 	} else {
 		col = mix(horizon_color, ground_color, smoothstep(0.0, -0.3, h));
+		col = mix(col, mix(horizon_color * 0.94, sea_color, smoothstep(0.0, -0.25, h)), sea_amount);
 	}
 
 	if (rainbow > 0.0 && h > 0.0) {

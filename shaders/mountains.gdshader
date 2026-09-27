@@ -14,6 +14,7 @@ uniform float haze = 0.55;
 uniform float snow = 0.5;
 uniform vec3 sun_dir = vec3(0.4, 0.6, -0.7);   // towards the sun
 uniform vec3 sun_color : source_color = vec3(1.0, 0.95, 0.85);
+uniform float sea_open = 0.0;      // coast: no ranges on the sea side (+X), an open horizon
 
 varying vec3 v_pos;
 varying float v_t;
@@ -34,7 +35,7 @@ void vertex() {
 	float t = VERTEX.y;
 	float r = ridge(a);
 	float jag = (texture(noise_tex, vec2(a * 2.1, t * 0.7 + seed)).r - 0.5);
-	float h = t * height * r;
+	float h = t * height * r * (1.0 - sea_open * smoothstep(-0.2, 0.35, cos(a)));
 	float rad = radius + (t - 0.3) * height * 1.6 * (0.7 + jag * 0.8);
 	VERTEX = vec3(cos(a) * rad, h - 40.0 + jag * t * height * 0.08, sin(a) * rad);
 	v_t = t;
