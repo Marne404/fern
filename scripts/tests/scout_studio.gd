@@ -72,7 +72,8 @@ func _initialize() -> void:
 		"lineup":
 			for i in 5:
 				var lk := Scout.random_look()
-				lk["hat"] = i
+				lk["hat"] = [1, 5, 6, 2, 7][i]
+				lk["face"] = i
 				if i == 0:
 					lk = Scout.DEFAULT_LOOK.duplicate()
 				var sc := Scout.new(lk)

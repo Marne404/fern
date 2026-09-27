@@ -219,7 +219,10 @@ func _ready() -> void:
 	menus.scout_changed.connect(func():
 		menu_scout.set_look_data(Settings.values["scout"])
 		menu_scout.apply_look()
-		menu_scout.wave(1.4))
+		if randf() < 0.5:
+			menu_scout.wave(1.4)
+		else:
+			menu_scout.fidget())
 	menus.scout_dragged.connect(func(dx: float): menu_cam.drag_yaw += dx * 0.01)
 
 	if _args.has("shot") and not _args.has("ui") or _args.has("size"):

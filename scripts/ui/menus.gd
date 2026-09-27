@@ -240,7 +240,7 @@ func _build_scout() -> Control:
 	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	panel.offset_right = -70
-	panel.custom_minimum_size = Vector2(520, 0)
+	panel.custom_minimum_size = Vector2(660, 0)
 	root.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
@@ -248,13 +248,16 @@ func _build_scout() -> Control:
 	box.add_child(_big_label("Your scout", 52))
 	var hint := _big_label("Drag to turn them around", 16, Color(0.85, 0.9, 0.8, 0.8))
 	box.add_child(hint)
+	_cycle_row(box, "face", "Face", Scout.FACE_NAMES)
 	_swatch_row(box, "skin", "Color", Scout.SKIN_COLORS)
-	_swatch_row(box, "outfit", "Uniform", Scout.OUTFIT_COLORS)
-	_swatch_row(box, "scarf", "Neckerchief & sash", Scout.ACCENT_COLORS)
+	_swatch_row(box, "outfit", "Shirt", Scout.OUTFIT_COLORS)
+	_swatch_row(box, "pants", "Shorts", Scout.PANTS_COLORS)
+	_swatch_row(box, "sash", "Sash", Scout.ACCENT_COLORS)
 	_cycle_row(box, "hat", "Hat", Scout.HAT_NAMES)
 	_swatch_row(box, "hat_color", "Hat color", Scout.ACCENT_COLORS)
 	_swatch_row(box, "pack", "Backpack", Scout.ACCENT_COLORS)
-	_cycle_row(box, "face", "Face", Scout.FACE_NAMES)
+	_cycle_row(box, "extra", "Extras", Scout.EXTRA_NAMES)
+	_swatch_row(box, "scarf", "Neckerchief", Scout.ACCENT_COLORS)
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(0, 6)
 	box.add_child(spacer)
@@ -276,25 +279,31 @@ func _build_scout() -> Control:
 
 
 func _swatch_row(box: VBoxContainer, key: String, text: String, colors: Array) -> void:
-	box.add_child(_big_label(text, 18, Color(0.75, 0.9, 0.6)))
+	var line := HBoxContainer.new()
+	line.add_theme_constant_override("separation", 10)
+	var l := _big_label(text, 18, Color(0.75, 0.9, 0.6))
+	l.custom_minimum_size = Vector2(130, 0)
+	line.add_child(l)
+	box.add_child(line)
 	var flow := HFlowContainer.new()
+	flow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	flow.add_theme_constant_override("h_separation", 5)
 	flow.add_theme_constant_override("v_separation", 6)
 	var buttons := []
 	for i in colors.size():
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(32, 32)
+		b.custom_minimum_size = Vector2(30, 30)
 		b.focus_mode = Control.FOCUS_NONE
 		b.tooltip_text = text
 		for st in ["normal", "hover", "pressed", "focus"]:
 			var sb := StyleBoxFlat.new()
 			sb.bg_color = colors[i] if st != "hover" else (colors[i] as Color).lightened(0.15)
-			sb.set_corner_radius_all(16)
+			sb.set_corner_radius_all(15)
 			b.add_theme_stylebox_override(st, sb)
 		b.pressed.connect(_set_look.bind(key, i))
 		flow.add_child(b)
 		buttons.append(b)
-	box.add_child(flow)
+	line.add_child(flow)
 	_scout_controls[key] = ["swatch", buttons]
 
 
@@ -302,7 +311,7 @@ func _cycle_row(box: VBoxContainer, key: String, text: String, names: Array) -> 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	var l := _big_label(text, 18, Color(0.75, 0.9, 0.6))
-	l.custom_minimum_size = Vector2(120, 0)
+	l.custom_minimum_size = Vector2(130, 0)
 	row.add_child(l)
 	var prev := Button.new()
 	prev.text = "<"

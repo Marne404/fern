@@ -1,36 +1,43 @@
 class_name Scout
 extends Node3D
-## The hiker you play: a soft, bean-shaped scout with dot eyes, noodle arms, short legs, a neckerchief,
-## a merit-badge sash and a big backpack (inspired by the scouts of PEAK).
-## Built entirely from procedural meshes and animated procedurally (walk, run, crouch, sit, lie,
-## swim, climb, fall, wave), with springs on arms, backpack and hat so everything flops a little.
+## The hiker you play, modeled after the scouts of PEAK: a big round head sitting right on the collar,
+## a drawn-on face with thick brows, a short-sleeved uniform shirt with pocket and buttons, a merit-badge
+## sash, shorts, ribbed socks, chunky boots and a backpack.
+## Built from procedural meshes; animated procedurally with springs (walk, run, sneak, sit, lie, swim,
+## climb, jump, fall, land, wave, idle fidgets) and a face driven by continuous expression parameters.
 
 const SKIN_COLORS := [
-	Color("f2c230"), Color("f08a3c"), Color("ef6f6c"), Color("f59ac0"), Color("b28ce8"),
-	Color("6fb6ee"), Color("3fbfb0"), Color("8cc657"), Color("9a6a4b"), Color("f3e2c4"),
+	Color("f5c518"), Color("f08a24"), Color("e8553a"), Color("f07ab8"), Color("8f6ad8"),
+	Color("4aa3e8"), Color("3cc7c2"), Color("4cc25a"), Color("a6d63c"), Color("9a6a4b"), Color("f1dcb8"),
 ]
 const OUTFIT_COLORS := [
-	Color("c9a86a"), Color("5b8a4c"), Color("3d5a8c"), Color("b3424a"),
-	Color("d9a735"), Color("9bb48a"), Color("9c86c9"), Color("4a4f55"),
+	Color("d9c08a"), Color("e3b23c"), Color("f2efe6"), Color("8fc6e8"),
+	Color("8f9b4a"), Color("e39a4a"), Color("c8483e"), Color("a891d6"),
+]
+const PANTS_COLORS := [
+	Color("5f7d3a"), Color("3d5a8c"), Color("c2a878"), Color("7a5236"),
+	Color("5b8fd9"), Color("3f7d3a"), Color("6b6f76"), Color("a8423a"),
 ]
 const ACCENT_COLORS := [
 	Color("d1493f"), Color("ec8a34"), Color("f2c53d"), Color("9ccc4a"), Color("4f8f4a"), Color("3aa99c"),
 	Color("58a6e0"), Color("3f5fae"), Color("8a62c4"), Color("ec86b0"), Color("8b5a36"), Color("efe2c2"),
 ]
-const HAT_NAMES := ["No hat", "Ranger hat", "Bucket hat", "Beanie", "Cap"]
-const FACE_NAMES := ["Happy", "Cheery", "Sleepy", "Wide-eyed"]
-const DEFAULT_LOOK := {"skin": 0, "outfit": 0, "scarf": 0, "hat": 1, "hat_color": 10, "pack": 1, "face": 0}
+const HAT_NAMES := ["No hat", "Ranger hat", "Bucket hat", "Beanie", "Cap", "Helmet", "Propeller cap", "Sailor cap"]
+const FACE_NAMES := ["Happy", "Bright-eyed", "Chill", "Cheeky", "Determined"]
+const EXTRA_NAMES := ["Nothing", "Round glasses", "Eye patch", "Neckerchief", "Glasses & neckerchief"]
+const DEFAULT_LOOK := {"skin": 0, "outfit": 0, "pants": 0, "sash": 7, "scarf": 0, "hat": 1, "hat_color": 10, "pack": 1, "face": 0, "extra": 3}
 
 enum Pose { STAND, CROUCH, SIT, LIE, SWIM, CLIMB }
-enum Mood { NORMAL, TIRED, KNOCKED_OUT, ASLEEP, JOY }
+enum Mood { NORMAL, TIRED, KNOCKED_OUT, ASLEEP, JOY, EFFORT, SCARED, COLD }
 
-# Body shape (meters, feet at y = 0, facing -Z)
-const BODY_Y0 := 0.40
-const BODY_H := 1.22
-const BODY_DZ := 0.88
-const HIP_Y := 0.54
-const SHIRT_TOP := 0.53      # fraction of the body height
-const HAT_Y := 1.45
+# Proportions (meters, feet at y = 0, facing -Z)
+const HIP_Y := 0.58
+const CHEST_Y := 0.78
+const NECK_Y := 1.0
+const HEAD_C := Vector3(0, 1.29, 0)
+const HEAD_R := 0.29
+const HEAD_SCALE := Vector3(1.0, 0.95, 0.95)
+const TORSO_DZ := 0.78
 
 ## Animation inputs (set by the owner every frame)
 var speed := 0.0
@@ -39,41 +46,58 @@ var on_floor := true
 var pose := Pose.STAND
 var mood := Mood.NORMAL
 var waving := false
-## Yaw change per second (lean into turns, arms swing out)
+## Yaw change per second (lean into turns)
 var turn_rate := 0.0
+## 0..1 how heavy the backpack is
+var load := 0.0
+## Upward speed (jump / fall)
+var vy := 0.0
+## Optional point (global) the head turns to, e.g. the camera in the scout editor
+var look_target := Vector3.INF
 
 var look := DEFAULT_LOOK.duplicate()
-## true: StandardMaterial3D instead of the toon shader (for glTF export)
+## true: StandardMaterial3D instead of the toon shader and no merging (for glTF export)
 var export_mode := false
 
 var rig: Node3D
 var hips: Node3D
-var _upper: Node3D
+var chest: Node3D
+var neck: Node3D
 var _legs := []      # per side: [hip, knee, foot]
 var _arms := []      # per side: [shoulder, elbow, hand]
 var _pack: Node3D
 var _hat_pivot: Node3D
 var _hats: Array[Node3D] = []
+var _propeller: Node3D
 var _face := {}
+var _extras := {}
 var _mats := {}
 var _meshes: Array[MeshInstance3D] = []
 var _shadow_only := false
-## Merged meshes per animated node: [MeshInstance3D, vertices, normals, indices, roles per vertex]
 var _baked: Array = []
 var _baked_mat: ShaderMaterial
-const NO_BAKE := ["eye", "white", "mouth"]
-const NO_SHADOW := ["eye", "white", "mouth", "cheek"]
+const NO_BAKE := ["eye", "white", "mouth", "sclera", "tongue", "teeth", "brow"]
+const NO_SHADOW := ["eye", "white", "mouth", "cheek", "sclera", "tongue", "teeth", "brow", "glass"]
 
 var _t := 0.0
 var _phase := 0.0
 var _amp := 0.0
+var _springs := {}
 var _blink := 0.0
 var _next_blink := 2.0
-var _springs := {}
-var _look_eyes := Vector2.ZERO
-var _look_timer := 1.0
 var _wave_t := 0.0
+var _air_t := 0.0
+var _fall_v := 0.0
+var _land := 0.0
+var _idle_t := 0.0
+var _fidget := ""
+var _fidget_t := 0.0
+var _next_fidget := 6.0
+var _look := Vector2.ZERO          # head yaw / pitch target from glancing
+var _look_timer := 1.5
+var _pupil := Vector2.ZERO
 var _face_state := ""
+var _prop_angle := 0.0
 
 
 func _init(look_in: Dictionary = {}, for_export := false) -> void:
@@ -95,14 +119,14 @@ func set_look_data(d: Dictionary) -> void:
 
 static func random_look() -> Dictionary:
 	return {
-		"skin": randi() % SKIN_COLORS.size(), "outfit": randi() % OUTFIT_COLORS.size(),
-		"scarf": randi() % ACCENT_COLORS.size(), "hat": randi() % HAT_NAMES.size(),
+		"skin": randi() % SKIN_COLORS.size(), "outfit": randi() % OUTFIT_COLORS.size(), "pants": randi() % PANTS_COLORS.size(),
+		"sash": randi() % ACCENT_COLORS.size(), "scarf": randi() % ACCENT_COLORS.size(), "hat": randi() % HAT_NAMES.size(),
 		"hat_color": randi() % ACCENT_COLORS.size(), "pack": randi() % ACCENT_COLORS.size(),
-		"face": randi() % FACE_NAMES.size(),
+		"face": randi() % FACE_NAMES.size(), "extra": randi() % EXTRA_NAMES.size(),
 	}
 
 
-## First person: only the shadow of the scout is visible
+## First person: only the shadow of the scout is visible (face and glasses are hidden)
 func set_shadow_only(on: bool) -> void:
 	_shadow_only = on
 	for m in _meshes:
@@ -116,28 +140,39 @@ func wave(duration := 2.2) -> void:
 	_wave_t = duration
 
 
+## Plays an idle gesture right away ("stretch", "look", "straps", "scratch", "tap"; empty = random)
+func fidget(which := "") -> void:
+	var all := ["stretch", "look", "straps", "scratch", "tap"]
+	_fidget = which if which != "" else all[randi() % all.size()]
+	_fidget_t = 0.0
+
+
 # ================================================================ Colors
 
 func apply_look() -> void:
 	var skin: Color = SKIN_COLORS[look["skin"] % SKIN_COLORS.size()]
 	var outfit: Color = OUTFIT_COLORS[look["outfit"] % OUTFIT_COLORS.size()]
-	var scarf: Color = ACCENT_COLORS[look["scarf"] % ACCENT_COLORS.size()]
+	var pants: Color = PANTS_COLORS[look["pants"] % PANTS_COLORS.size()]
 	var hat: Color = ACCENT_COLORS[look["hat_color"] % ACCENT_COLORS.size()]
 	var pack: Color = ACCENT_COLORS[look["pack"] % ACCENT_COLORS.size()]
 	_set_color("skin", skin)
-	_set_color("cheek", skin.lerp(Color("ff5a7a"), 0.35))
+	_set_color("cheek", skin.lerp(Color("ff4f7a"), 0.4))
 	_set_color("outfit", outfit)
-	_set_color("collar", outfit.lightened(0.12))
-	_set_color("pants", outfit.darkened(0.3).lerp(Color("5a4632"), 0.35))
-	_set_color("scarf", scarf)
+	_set_color("collar", outfit.darkened(0.12) if outfit.get_luminance() > 0.5 else outfit.lightened(0.18))
+	_set_color("pants", pants)
+	_set_color("sash", ACCENT_COLORS[look["sash"] % ACCENT_COLORS.size()])
+	_set_color("scarf", ACCENT_COLORS[look["scarf"] % ACCENT_COLORS.size()])
 	_set_color("hat", hat)
-	_set_color("hatband", hat.darkened(0.45))
+	_set_color("hatband", hat.darkened(0.45) if hat.get_luminance() > 0.25 else hat.lightened(0.5))
 	_set_color("pack", pack)
-	_set_color("pack2", pack.darkened(0.22))
-	# the sleeping pad contrasts with the backpack
+	_set_color("pack2", pack.darkened(0.25))
 	_set_color("pad", Color("5b86b5") if pack.b < pack.r else Color("d9824a"))
 	for i in _hats.size():
 		_hats[i].visible = i == look["hat"] % HAT_NAMES.size()
+	var ex: int = look["extra"] % EXTRA_NAMES.size()
+	_extras["glasses"].visible = ex == 1 or ex == 4
+	_extras["patch"].visible = ex == 2
+	_extras["scarf"].visible = ex == 3 or ex == 4
 	_face_state = ""
 	_recolor()
 
@@ -151,12 +186,14 @@ func _set_color(role: String, c: Color) -> void:
 
 
 const FIXED := {
-	"leather": Color("6b4428"), "sole": Color("3a2d24"), "metal": Color("9fb6c4"), "eye": Color("1d1a22"),
-	"white": Color(1, 1, 1), "sock": Color("f4efe4"), "rope": Color("cdb07a"), "mouth": Color("5a2530"),
-	"badge1": Color("d8453e"), "badge2": Color("f2c230"), "badge3": Color("3d7fd6"), "wood": Color("a0703c"),
+	"leather": Color("6b4428"), "sole": Color("e9dcc0"), "metal": Color("9fb6c4"), "eye": Color("1b1820"),
+	"white": Color(1, 1, 1), "sclera": Color("fbf7ee"), "sock": Color("f4efe4"), "rope": Color("cdb07a"),
+	"mouth": Color("4a1d28"), "tongue": Color("e0566a"), "teeth": Color("fffaf2"), "brow": Color("1b1820"),
+	"badge1": Color("d8453e"), "badge2": Color("f2c230"), "badge3": Color("3d7fd6"), "badge4": Color("3aa99c"),
+	"wood": Color("a0703c"), "button": Color("f4efe4"), "glass": Color("1b1820"), "lace": Color("f4efe4"),
 }
-const GLOSSY := ["eye", "metal", "badge1", "badge2", "badge3"]
-const CLOTH := ["outfit", "pants", "scarf", "hat", "pack", "pack2", "pad", "sock", "collar"]
+const GLOSSY := ["eye", "metal", "badge1", "badge2", "badge3", "badge4", "button", "glass"]
+const CLOTH := ["outfit", "pants", "scarf", "sash", "hat", "pack", "pack2", "pad", "sock", "collar"]
 
 
 func _mat(role: String) -> Material:
@@ -169,7 +206,7 @@ func _mat(role: String) -> Material:
 		sm.resource_name = role
 		sm.albedo_color = c
 		sm.roughness = 0.35 if role in GLOSSY else 0.9
-		if role == "white":
+		if role in ["white", "sclera", "teeth"]:
 			sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m = sm
 	else:
@@ -178,7 +215,7 @@ func _mat(role: String) -> Material:
 		shm.set_shader_parameter("color", c)
 		shm.set_shader_parameter("gloss", 1.0 if role in GLOSSY else 0.0)
 		shm.set_shader_parameter("cloth", 1.0 if role in CLOTH else 0.0)
-		shm.set_shader_parameter("emission", 1.0 if role == "white" else 0.0)
+		shm.set_shader_parameter("emission", {"white": 1.0, "sclera": 0.55, "teeth": 0.5}.get(role, 0.0))
 		m = shm
 	_mats[role] = m
 	return m
@@ -208,255 +245,465 @@ func _node(parent: Node3D, node_name: String, pos := Vector3.ZERO) -> Node3D:
 	return n
 
 
+## Pivot at an absolute rest position plus a child "space" node in which children use absolute coordinates
+func _pivot(parent_space: Node3D, node_name: String, abs_pos: Vector3) -> Array:
+	var p := _node(parent_space, node_name, abs_pos)
+	var space := _node(p, node_name + "Space", -abs_pos)
+	return [p, space]
+
+
 func _build() -> void:
 	rig = _node(self, "Rig")
-	hips = _node(rig, "Hips", Vector3(0, HIP_Y, 0))
-	# everything attached to the torso is modeled in absolute coordinates below this node
-	_upper = _node(hips, "Upper", Vector3(0, -HIP_Y, 0))
-	_build_body()
-	_build_face()
+	var h: Array = _pivot(rig, "Hips", Vector3(0, HIP_Y, 0))
+	hips = h[0]
+	var hip_space: Node3D = h[1]
+	var c: Array = _pivot(hip_space, "Chest", Vector3(0, CHEST_Y, 0))
+	chest = c[0]
+	var chest_space: Node3D = c[1]
+	var n: Array = _pivot(chest_space, "Neck", Vector3(0, NECK_Y, 0))
+	neck = n[0]
+	var head_space: Node3D = n[1]
+	_build_shorts(hip_space)
+	_build_torso(chest_space)
+	_build_head(head_space)
+	_build_face(head_space)
+	_build_hats(head_space)
 	for side: int in [-1, 1]:
-		_build_arm(side)
+		_build_arm(chest_space, side)
 		_build_leg(side)
-	_build_pack()
-	_build_hats()
+	_build_pack(chest_space)
 
 
-func _build_body() -> void:
-	var prof := []
+# ---------------------------------------------------------------- torso
+
+static func torso_r(y: float) -> float:
+	# rounded box-ish trunk: slightly wider at the belly, rounded shoulders on top
+	if y > 0.99:
+		var k := clampf((y - 0.99) / 0.06, 0.0, 1.0)
+		return 0.205 * sqrt(maxf(1.0 - k * k, 0.0))
+	return lerpf(0.198, 0.212, smoothstep(0.64, 0.84, y)) - 0.01 * smoothstep(0.9, 0.99, y)
+
+
+static func torso_point(y: float, th: float, off := 0.0) -> Array:
+	var r := torso_r(y)
+	var e := 0.004
+	var dr := (torso_r(y + e) - torso_r(y - e)) / (2.0 * e)
+	var n2 := Vector2(1.0, -dr).normalized()
+	var nrm := Vector3(n2.x * sin(th), n2.y, -n2.x * cos(th) / TORSO_DZ).normalized()
+	return [Vector3(r * sin(th), y, -r * cos(th) * TORSO_DZ) + nrm * off, nrm]
+
+
+func _build_torso(space: Node3D) -> void:
+	# shirt = the trunk itself
+	var prof := [Vector2(0.0, 0.64), Vector2(0.17, 0.642)]
+	for i in 27:
+		var y := lerpf(0.645, 1.045, i / 26.0)
+		prof.append(Vector2(torso_r(y), y))
+	prof.append(Vector2(0.0, 1.049))
+	_add(space, Mesh3.lathe(prof, 48, TORSO_DZ), "outfit", "Shirt")
+	# hem where the shirt meets the shorts
+	var hem := []
 	for i in 49:
-		var u := i / 48.0
-		var t := (1.0 - cos(PI * u)) * 0.5
-		var y := BODY_Y0 + t * BODY_H
-		prof.append(Vector2(body_r(y), y))
-	_add(_upper, Mesh3.lathe(prof, 64, BODY_DZ), "skin", "Body")
-	# shirt and shorts: shells around the lower body
-	_add(_upper, Mesh3.lathe(_shell(0.0, SHIRT_TOP, 0.013), 64, BODY_DZ), "outfit", "Shirt")
-	_add(_upper, Mesh3.lathe(_shell(0.0, 0.2, 0.024), 64, BODY_DZ), "pants", "Shorts")
-	var top_y := BODY_Y0 + SHIRT_TOP * BODY_H
-	_add(_upper, Mesh3.tube(_ring(top_y, 0.012, 48), 0.013, 8, [], 1.0, false), "collar", "Collar")
-	var belt_y := BODY_Y0 + 0.2 * BODY_H
-	var belt := _ring(belt_y, 0.03, 40)
-	_add(_upper, Mesh3.tube(belt, 0.022, 8, _ring_normals(belt_y, 40), 0.45, false), "leather", "Belt")
-	var bp: Array = body_point(belt_y, 0.0, 0.045)
-	_add(_upper, Mesh3.blob(Vector3(0.036, 0.027, 0.012), 3.0, 8, 14, _frame(bp[0], bp[1])), "metal", "Buckle")
-	# neckerchief: rolled band around the neck, a tapering flap in front and a wooden woggle
-	var roll_y := top_y + 0.02
-	_add(_upper, Mesh3.tube(_ring(roll_y, 0.016, 48), 0.02, 10, _ring_normals(roll_y, 48), 0.8, false), "scarf", "ScarfRoll")
+		var p: Array = torso_point(0.665, TAU * i / 48.0, 0.008)
+		hem.append(p[0])
+	_add(space, Mesh3.tube(hem, 0.014, 6, [], 1.0, false), "outfit", "Hem")
+	# button placket and buttons
+	var plk := []
+	var plk_n := []
+	for i in 9:
+		var y := lerpf(0.69, 0.98, i / 8.0)
+		var p: Array = torso_point(y, 0.0, 0.006)
+		plk.append(p[0])
+		plk_n.append(p[1])
+	_add(space, Mesh3.tube(plk, 0.022, 6, plk_n, 0.3), "collar", "Placket")
+	for y: float in [0.73, 0.82, 0.91]:
+		var p: Array = torso_point(y, 0.0, 0.013)
+		_add(space, Mesh3.lathe([Vector2(0, -0.004), Vector2(0.012, -0.004), Vector2(0.014, 0.0), Vector2(0.012, 0.004), Vector2(0, 0.005)], 12, 1.0, _frame_up(p[0], p[1])), "button", "Button")
+	# breast pocket with flap (wearer's left = -X)
+	var pp: Array = torso_point(0.87, -0.5, 0.004)
+	var pf := _frame(pp[0], pp[1])
+	_add(space, Mesh3.blob(Vector3(0.05, 0.055, 0.012), 4.0, 8, 14, pf), "outfit", "Pocket")
+	_add(space, Mesh3.blob(Vector3(0.054, 0.018, 0.016), 4.0, 6, 14, pf.translated_local(Vector3(0, 0.045, 0.004))), "collar", "PocketFlap")
+	# collar: a band around the neck and two rounded flaps lying on the chest
+	var band := []
+	for i in 41:
+		var p: Array = torso_point(1.03, TAU * i / 40.0, 0.004)
+		band.append(p[0])
+	_add(space, Mesh3.tube(band, 0.022, 8, [], 1.0, false), "collar", "CollarBand")
+	for side: int in [-1, 1]:
+		var cp: Array = torso_point(1.0, 0.2 * side, 0.012)
+		var f := _frame(cp[0], cp[1]).rotated_local(Vector3(0, 0, 1), -0.55 * side)
+		_add(space, Mesh3.blob(Vector3(0.05, 0.075, 0.01), 2.6, 8, 14, f.translated_local(Vector3(0, -0.035, 0))), "collar", "Collar" + ("L" if side < 0 else "R"))
+	# merit-badge sash from the right shoulder to the left hip, around the back
+	var sash := []
+	var sash_n := []
+	for i in 65:
+		var th := TAU * i / 64.0 - PI
+		var y := 0.83 + 0.15 * sin(th)
+		var p: Array = torso_point(y, th, 0.016)
+		sash.append(p[0])
+		sash_n.append(p[1])
+	_add(space, Mesh3.tube(sash, 0.045, 8, sash_n, 0.24, false), "sash", "Sash")
+	var bi := 1
+	for th: float in [-0.95, -0.55, -0.15, 0.25]:
+		var y: float = 0.83 + 0.15 * sin(th)
+		var p: Array = torso_point(y, th, 0.026)
+		var disc := [Vector2(0, -0.005), Vector2(0.021, -0.005), Vector2(0.025, 0.0), Vector2(0.021, 0.005), Vector2(0, 0.006)]
+		_add(space, Mesh3.lathe(disc, 14, 1.0, _frame_up(p[0], p[1])), "badge%d" % bi, "Badge%d" % bi)
+		bi += 1
+	# backpack straps over the shoulders
+	for side: int in [-1, 1]:
+		var ctrl := [Vector2(0.62, 0.72), Vector2(0.6, 0.86), Vector2(0.62, 0.99), Vector2(0.9, 1.045), Vector2(1.9, 1.045), Vector2(2.45, 0.98), Vector2(2.6, 0.9)]
+		var pts := []
+		var nrm := []
+		for q in Mesh3.catmull(ctrl, 5):
+			var p: Array = torso_point(q.y, q.x * side, 0.03)
+			pts.append(p[0])
+			nrm.append(p[1])
+		_add(space, Mesh3.tube(pts, 0.026, 8, nrm, 0.3), "pack2", "Strap")
+	# neckerchief (optional extra): rolled band + triangle over the collar
+	var scarf := _node(space, "Neckerchief")
+	var roll := []
+	var roll_n := []
+	for i in 41:
+		var p: Array = torso_point(1.035, TAU * i / 40.0, 0.03)
+		roll.append(p[0])
+		roll_n.append(p[1])
+	_add(scarf, Mesh3.tube(roll, 0.028, 10, roll_n, 0.75, false), "scarf")
 	var flap := []
 	var flap_n := []
 	var flap_r := []
 	for i in 9:
 		var f := i / 8.0
-		var p: Array = body_point(roll_y - f * 0.19, 0.0, 0.022 + (1.0 - f) * 0.008)
+		var p: Array = torso_point(1.02 - f * 0.16, 0.0, 0.03 + (1.0 - f) * 0.01)
 		flap.append(p[0])
 		flap_n.append(p[1])
-		flap_r.append(lerpf(0.075, 0.012, pow(f, 0.8)))
-	_add(_upper, Mesh3.tube(flap, flap_r, 10, flap_n, 0.22), "scarf", "ScarfFlap")
-	var wp: Array = body_point(roll_y - 0.06, 0.0, 0.03)
-	var ring := []
-	for i in 17:
-		var a := TAU * i / 16.0
-		ring.append(wp[0] + Vector3(cos(a) * 0.036, 0, sin(a) * 0.012))
-	_add(_upper, Mesh3.tube(ring, 0.01, 6, [], 1.0, false), "wood", "Woggle")
-	# merit badge sash: a tilted loop around the torso, three badges in front
-	var sash := []
-	var sash_n := []
-	for i in 65:
-		var th := TAU * i / 64.0 - PI
-		var y := BODY_Y0 + (0.34 - 0.2 * sin(th)) * BODY_H
-		var p: Array = body_point(y, th, 0.024)
-		sash.append(p[0])
-		sash_n.append(p[1])
-	_add(_upper, Mesh3.tube(sash, 0.034, 8, sash_n, 0.28, false), "scarf", "Sash")
-	var bi := 1
-	for th: float in [-0.62, -0.28, 0.06]:
-		var y: float = BODY_Y0 + (0.34 - 0.2 * sin(th)) * BODY_H
-		var p: Array = body_point(y, th, 0.034)
-		var disc := [Vector2(0, -0.006), Vector2(0.022, -0.006), Vector2(0.027, 0.0), Vector2(0.022, 0.006), Vector2(0, 0.007)]
-		_add(_upper, Mesh3.lathe(disc, 16, 1.0, _frame_up(p[0], p[1])), "badge%d" % bi, "Badge%d" % bi)
-		bi += 1
-	# backpack straps over the shoulders
+		flap_r.append(lerpf(0.085, 0.012, pow(f, 0.8)))
+	_add(scarf, Mesh3.tube(flap, flap_r, 10, flap_n, 0.22), "scarf")
+	var kp: Array = torso_point(1.0, 0.0, 0.05)
+	_add(scarf, Mesh3.blob(Vector3(0.03, 0.026, 0.022), 2.0, 8, 12, _frame(kp[0], kp[1])), "scarf")
+	_extras["scarf"] = scarf
+
+
+func _build_shorts(space: Node3D) -> void:
+	var dz := TORSO_DZ + 0.04
+	var prof := [Vector2(0.0, 0.5), Vector2(0.1, 0.505), Vector2(0.165, 0.53), Vector2(0.19, 0.57), Vector2(0.205, 0.63), Vector2(0.208, 0.69), Vector2(0.2, 0.7), Vector2(0.0, 0.702)]
+	_add(space, Mesh3.lathe(prof, 40, dz), "pants", "Shorts")
+	var belt := []
+	var belt_n := []
+	for i in 49:
+		var th := TAU * i / 48.0
+		belt.append(Vector3(0.214 * sin(th), 0.675, -0.214 * cos(th) * dz))
+		belt_n.append(Vector3(sin(th), 0, -cos(th) / dz).normalized())
+	_add(space, Mesh3.tube(belt, 0.024, 8, belt_n, 0.4, false), "leather", "Belt")
+	_add(space, Mesh3.blob(Vector3(0.03, 0.024, 0.01), 3.0, 6, 12, Transform3D(Basis(), Vector3(0, 0.675, -0.183))), "metal", "Buckle")
+
+
+# ---------------------------------------------------------------- head and face
+
+static func head_point(el: float, az: float, off := 0.0) -> Array:
+	var d := Vector3(cos(el) * sin(az), sin(el), -cos(el) * cos(az))
+	var p := HEAD_C + d * HEAD_R * HEAD_SCALE
+	var nrm := (d / HEAD_SCALE).normalized()
+	return [p + nrm * off, nrm]
+
+
+static func head_r(y: float) -> float:
+	var k := (y - HEAD_C.y) / (HEAD_R * HEAD_SCALE.y)
+	return HEAD_R * sqrt(maxf(1.0 - k * k, 0.0))
+
+
+func _build_head(space: Node3D) -> void:
+	var prof := []
+	for i in 33:
+		var a := -PI * 0.5 + PI * i / 32.0
+		prof.append(Vector2(cos(a) * HEAD_R, HEAD_C.y + sin(a) * HEAD_R * HEAD_SCALE.y))
+	_add(space, Mesh3.lathe(prof, 48, HEAD_SCALE.z), "skin", "Head")
 	for side: int in [-1, 1]:
-		var ctrl := [Vector2(-0.5, 0.74), Vector2(-0.6, 0.93), Vector2(-0.8, 1.06), Vector2(-1.2, 1.11),
-			Vector2(-1.9, 1.1), Vector2(-2.4, 1.02), Vector2(-2.6, 0.95)]
-		var pts := []
-		var nrm := []
-		for c in Mesh3.catmull(ctrl, 5):
-			var p: Array = body_point(c.y, c.x * side, 0.03)
-			pts.append(p[0])
-			nrm.append(p[1])
-		_add(_upper, Mesh3.tube(pts, 0.022, 8, nrm, 0.35), "pack2", "Strap%s" % ("L" if side < 0 else "R"))
+		var cp: Array = head_point(-0.16, 0.66 * side, -0.002)
+		_add(space, Mesh3.blob(Vector3(0.05, 0.03, 0.01), 2.0, 6, 12, _frame(cp[0], cp[1])), "cheek", "Cheek")
 
 
-func _build_face() -> void:
-	var fy := 1.29
+## A face feature pivot on the head surface: +Z out of the face, +Y up
+func _face_pivot(space: Node3D, node_name: String, el: float, az: float, off := 0.0) -> Node3D:
+	var p: Array = head_point(el, az, off)
+	var n := Node3D.new()
+	n.name = node_name
+	n.transform = _frame(p[0], p[1])
+	space.add_child(n)
+	n.set_meta("rest", n.transform)
+	return n
+
+
+func _build_face(space: Node3D) -> void:
 	for side: int in [-1, 1]:
 		var s := "L" if side < 0 else "R"
-		var th: float = 0.36 * side
-		var p: Array = body_point(fy, th, -0.004)
-		var pivot := Node3D.new()
-		pivot.name = "Eye" + s
-		pivot.transform = _frame(p[0], p[1])
-		_upper.add_child(pivot)
-		_add(pivot, Mesh3.blob(Vector3(0.047, 0.074, 0.024), 2.0, 12, 18), "eye")
-		var hl := _add(pivot, Mesh3.blob(Vector3(0.013, 0.015, 0.008), 2.0, 6, 10), "white")
-		hl.position = Vector3(-0.014, 0.03, 0.02)
-		var hl2 := _add(pivot, Mesh3.blob(Vector3(0.006, 0.006, 0.006), 2.0, 5, 8), "white")
-		hl2.position = Vector3(0.015, -0.024, 0.021)
-		_face["eye" + s] = pivot
-		# eyelid (sleepy / tired): skin-colored cap over the upper half of the eye
-		var lid := _add(pivot, Mesh3.blob(Vector3(0.056, 0.042, 0.032), 2.0, 8, 14), "skin", "Lid" + s)
-		lid.position = Vector3(0, 0.04, 0.004)
+		var eye := _face_pivot(space, "Eye" + s, 0.0, 0.34 * side, -0.003)
+		_face["eye" + s] = eye
+		# drawn eye: dark outline, white sclera, pupil with highlights
+		_face["outline" + s] = _add(eye, Mesh3.blob(Vector3(0.047, 0.056, 0.012), 2.0, 10, 18), "eye", "Outline" + s)
+		var sclera := _add(eye, Mesh3.blob(Vector3(0.04, 0.049, 0.014), 2.0, 10, 18), "sclera", "Sclera" + s)
+		sclera.position.z = 0.002
+		_face["sclera" + s] = sclera
+		var pupil := _node(eye, "Pupil" + s, Vector3(0, 0, 0.012))
+		_add(pupil, Mesh3.blob(Vector3(0.021, 0.028, 0.008), 2.0, 8, 14), "eye", "PupilDot" + s)
+		var hl := _add(pupil, Mesh3.blob(Vector3(0.008, 0.009, 0.005), 2.0, 5, 8), "white", "Shine" + s)
+		hl.position = Vector3(-0.007, 0.01, 0.006)
+		_face["pupil" + s] = pupil
+		# eyelid: skin cap sliding down over the eye
+		var lid := _add(eye, Mesh3.blob(Vector3(0.056, 0.05, 0.02), 2.0, 8, 14), "skin", "Lid" + s)
+		lid.position = Vector3(0, 0.1, 0.006)
 		_face["lid" + s] = lid
-		# ^ eyes (cheery), closed eyes (sleeping) and X eyes (knocked out)
-		_face["happy" + s] = _face_curve("Happy" + s, fy - 0.01, th, _arc(0.036, 0.028, true), 0.012)
-		_face["closed" + s] = _face_curve("Closed" + s, fy - 0.012, th, _arc(0.034, -0.018, true), 0.01)
-		var x1 := _face_curve("X1" + s, fy, th, [Vector2(-0.03, 0.03), Vector2(0.03, -0.03)], 0.011)
-		var x2 := _face_curve("X2" + s, fy, th, [Vector2(-0.03, -0.03), Vector2(0.03, 0.03)], 0.011)
-		_upper.remove_child(x2)
-		x1.add_child(x2)
-		_face["x" + s] = x1
-		var cp: Array = body_point(fy - 0.085, 0.6 * side, -0.003)
-		_add(_upper, Mesh3.blob(Vector3(0.042, 0.024, 0.012), 2.0, 6, 12, _frame(cp[0], cp[1])), "cheek", "Cheek" + s)
-	var my := 1.19
-	_face["smile"] = _face_curve("Smile", my, 0.0, _arc(0.034, -0.014, false), 0.009)
-	_face["flat"] = _face_curve("Flat", my, 0.0, [Vector2(-0.022, 0.0), Vector2(0.022, 0.0)], 0.008)
+		# alternative eyes
+		_face["happy" + s] = _curve(eye, "Happy" + s, _arc(0.036, 0.03), 0.011, "eye")
+		_face["closed" + s] = _curve(eye, "Closed" + s, _arc(0.034, -0.016), 0.009, "eye")
+		var x := _curve(eye, "X" + s, [Vector3(-0.03, 0.03, 0.01), Vector3(0.03, -0.03, 0.01)], 0.01, "eye")
+		_curve(x, "X2" + s, [Vector3(-0.03, -0.03, 0.01), Vector3(0.03, 0.03, 0.01)], 0.01, "eye")
+		_face["x" + s] = x
+		# eyebrow
+		var brow := _face_pivot(space, "Brow" + s, 0.27, 0.33 * side, 0.0)
+		_curve(brow, "BrowLine" + s, _arc(0.05, 0.014), 0.018, "brow", 0.55)
+		_face["brow" + s] = brow
+	# mouth
+	var mouth := _face_pivot(space, "Mouth", -0.3, 0.0, -0.002)
+	_face["mouth"] = mouth
+	_face["smile"] = _curve(mouth, "Smile", _arc(0.04, -0.018), 0.009, "mouth")
+	_face["flat"] = _curve(mouth, "Flat", [Vector3(-0.025, 0, 0.004), Vector3(0.025, 0, 0.004)], 0.008, "mouth")
 	var wavy := []
 	for i in 9:
 		var u := i / 8.0
-		wavy.append(Vector2(lerpf(-0.03, 0.03, u), sin(u * TAU) * 0.006))
-	_face["wavy"] = _face_curve("Wavy", my, 0.0, wavy, 0.007)
-	var mp: Array = body_point(my, 0.0, -0.006)
-	var grin := _add(_upper, Mesh3.blob(Vector3(0.036, 0.024, 0.014), 2.0, 8, 12, _frame(mp[0], mp[1]).translated_local(Vector3(0, -0.006, 0))), "mouth", "Grin")
-	_face["grin"] = grin
-	var op: Array = body_point(my - 0.006, 0.0, -0.004)
-	_face["o"] = _add(_upper, Mesh3.blob(Vector3(0.016, 0.02, 0.012), 2.0, 8, 12, _frame(op[0], op[1])), "mouth", "O")
+		wavy.append(Vector3(lerpf(-0.034, 0.034, u), sin(u * TAU) * 0.007, 0.004))
+	_face["wavy"] = _curve(mouth, "Wavy", wavy, 0.007, "mouth")
+	# open mouth: dark D-shape with tongue and upper teeth; scaled for talking, panting, screaming
+	var open := _node(mouth, "Open")
+	_add(open, Mesh3.blob(Vector3(0.042, 0.03, 0.01), 2.2, 8, 16, Transform3D(Basis(), Vector3(0, -0.012, 0.002))), "mouth")
+	_add(open, Mesh3.blob(Vector3(0.024, 0.012, 0.006), 2.0, 6, 10, Transform3D(Basis(), Vector3(0, -0.03, 0.008))), "tongue")
+	_add(open, Mesh3.blob(Vector3(0.034, 0.008, 0.005), 3.0, 4, 10, Transform3D(Basis(), Vector3(0, 0.01, 0.009))), "teeth")
+	_face["open"] = open
+	# gritted teeth
+	var teeth := _node(mouth, "Teeth")
+	_add(teeth, Mesh3.blob(Vector3(0.042, 0.018, 0.008), 4.0, 6, 14, Transform3D(Basis(), Vector3(0, -0.006, 0.003))), "teeth")
+	for x: float in [-0.021, 0.0, 0.021]:
+		_curve(teeth, "Gap", [Vector3(x, -0.02, 0.011), Vector3(x, 0.008, 0.011)], 0.003, "mouth")
+	_curve(teeth, "Mid", [Vector3(-0.04, -0.006, 0.011), Vector3(0.04, -0.006, 0.011)], 0.003, "mouth")
+	_face["teeth"] = teeth
+	# cheeky: smile with the tongue sticking out
+	var cheeky := _node(mouth, "Cheeky")
+	_curve(cheeky, "CheekySmile", _arc(0.04, -0.016), 0.009, "mouth")
+	_add(cheeky, Mesh3.blob(Vector3(0.016, 0.022, 0.008), 2.0, 6, 10, Transform3D(Basis(), Vector3(0.012, -0.026, 0.008))), "tongue")
+	_face["cheeky"] = cheeky
+	# extras: round glasses, eye patch
+	var glasses := _node(space, "Glasses")
+	for side: int in [-1, 1]:
+		var p: Array = head_point(0.0, 0.34 * side, 0.03)
+		var f := _frame(p[0], p[1])
+		var pts := []
+		for i in 25:
+			var a := TAU * i / 24.0
+			pts.append(f * Vector3(cos(a) * 0.062, sin(a) * 0.062, 0.0))
+		_add(glasses, Mesh3.tube(pts, 0.008, 6, [], 1.0, false), "glass")
+		var tp: Array = head_point(0.03, 1.02 * side, 0.012)
+		_add(glasses, Mesh3.tube([f * Vector3(0.062 * side, 0.0, 0.0), tp[0]], 0.006, 5), "glass")
+	_add(glasses, Mesh3.tube([head_point(0.0, -0.13, 0.03)[0], head_point(0.03, 0.0, 0.04)[0], head_point(0.0, 0.13, 0.03)[0]], 0.007, 5), "glass")
+	_extras["glasses"] = glasses
+	var patch := _node(space, "EyePatch")
+	var pp: Array = head_point(0.0, 0.34, 0.012)
+	_add(patch, Mesh3.blob(Vector3(0.056, 0.062, 0.012), 2.4, 8, 14, _frame(pp[0], pp[1])), "glass")
+	var strap := []
+	for i in 41:
+		var a := TAU * i / 40.0
+		strap.append(head_point(0.12 * cos(a - 0.34) + 0.08, a, 0.006)[0])
+	_add(patch, Mesh3.tube(strap, 0.007, 5, [], 1.0, false), "glass")
+	_extras["patch"] = patch
 
 
-func _build_arm(side: int) -> void:
+func _curve(parent: Node3D, node_name: String, pts: Array, rad: float, role: String, flat := 0.7) -> MeshInstance3D:
+	var ups := []
+	for i in pts.size():
+		ups.append(Vector3(0, 0, 1))
+	return _add(parent, Mesh3.tube(pts, rad, 8, ups, flat), role, node_name)
+
+
+## Arc from -w to w; bump > 0 bends upwards in the middle
+static func _arc(w: float, bump: float) -> Array:
+	var pts := []
+	for i in 9:
+		var u := i / 8.0 * 2.0 - 1.0
+		pts.append(Vector3(u * w, bump * (1.0 - u * u), 0.006))
+	return pts
+
+
+# ---------------------------------------------------------------- limbs
+
+func _build_arm(space: Node3D, side: int) -> void:
 	var s := "L" if side < 0 else "R"
-	var sp: Array = body_point(0.97, PI * 0.5 * side, -0.035)
-	var shoulder := _node(_upper, "Shoulder" + s, sp[0])
-	_add(shoulder, Mesh3.capsule(0.06, 0.056, 0.25), "skin", "UpperArm" + s)
-	var sleeve := [Vector2(0.066, 0.05), Vector2(0.075, -0.02), Vector2(0.077, -0.1), Vector2(0.071, -0.128), Vector2(0.057, -0.132)]
-	_add(shoulder, Mesh3.lathe(sleeve, 18), "outfit", "Sleeve" + s)
-	var elbow := _node(shoulder, "Elbow" + s, Vector3(0, -0.25, 0))
-	_add(elbow, Mesh3.capsule(0.056, 0.052, 0.22), "skin", "Forearm" + s)
-	var hand := _node(elbow, "Hand" + s, Vector3(0, -0.22, 0))
-	_add(hand, Mesh3.blob(Vector3(0.056, 0.072, 0.046), 2.0, 10, 14, Transform3D(Basis(), Vector3(0, -0.05, 0))), "skin", "Mitten" + s)
-	var thumb_x := 0.04 * -side
-	_add(hand, Mesh3.blob(Vector3(0.022, 0.036, 0.022), 2.0, 6, 10, Transform3D(Basis(Vector3(0, 0, 1), 0.5 * side), Vector3(thumb_x, -0.035, -0.03))), "skin", "Thumb" + s)
+	var shoulder := _node(space, "Shoulder" + s, Vector3(0.205 * side, 0.965, 0.0))
+	_add(shoulder, Mesh3.capsule(0.06, 0.056, 0.22), "skin", "UpperArm" + s)
+	var sleeve := [Vector2(0.07, 0.07), Vector2(0.082, 0.0), Vector2(0.087, -0.09), Vector2(0.09, -0.125), Vector2(0.083, -0.14), Vector2(0.058, -0.142)]
+	_add(shoulder, Mesh3.lathe(sleeve, 20), "outfit", "Sleeve" + s)
+	var cuff := []
+	for i in 25:
+		var a := TAU * i / 24.0
+		cuff.append(Vector3(sin(a) * 0.088, -0.132, -cos(a) * 0.088))
+	_add(shoulder, Mesh3.tube(cuff, 0.011, 6, [], 1.0, false), "collar", "SleeveCuff" + s)
+	var elbow := _node(shoulder, "Elbow" + s, Vector3(0, -0.22, 0))
+	_add(elbow, Mesh3.capsule(0.056, 0.05, 0.19), "skin", "Forearm" + s)
+	var hand := _node(elbow, "Hand" + s, Vector3(0, -0.19, 0))
+	_add(hand, Mesh3.blob(Vector3(0.058, 0.07, 0.048), 2.2, 10, 14, Transform3D(Basis(), Vector3(0, -0.05, 0))), "skin", "Mitten" + s)
+	_add(hand, Mesh3.blob(Vector3(0.022, 0.038, 0.022), 2.0, 6, 10, Transform3D(Basis(Vector3(0, 0, 1), 0.55 * side), Vector3(0.042 * -side, -0.03, -0.03))), "skin", "Thumb" + s)
 	_arms.append([shoulder, elbow, hand])
 
 
 func _build_leg(side: int) -> void:
 	var s := "L" if side < 0 else "R"
-	var hip := _node(rig, "Hip" + s, Vector3(0.125 * side, HIP_Y, 0))
-	_add(hip, Mesh3.capsule(0.086, 0.08, 0.22), "pants", "Thigh" + s)
-	var knee := _node(hip, "Knee" + s, Vector3(0, -0.22, 0))
-	_add(knee, Mesh3.capsule(0.07, 0.066, 0.2), "skin", "Shin" + s)
-	var sock := [Vector2(0.071, -0.1), Vector2(0.075, -0.11), Vector2(0.076, -0.2), Vector2(0.07, -0.21)]
-	_add(knee, Mesh3.lathe(sock, 16), "sock", "Sock" + s)
-	var stripe := []
-	for i in 17:
-		var a := TAU * i / 16.0
-		stripe.append(Vector3(sin(a) * 0.077, -0.125, -cos(a) * 0.077))
-	_add(knee, Mesh3.tube(stripe, 0.008, 6, [], 1.0, false), "scarf", "SockStripe" + s)
-	var foot := _node(knee, "Foot" + s, Vector3(0, -0.2, 0))
-	_add(foot, Mesh3.blob(Vector3(0.08, 0.07, 0.125), 2.6, 10, 16, Transform3D(Basis(), Vector3(0, -0.04, -0.035))), "leather", "Boot" + s)
-	_add(foot, Mesh3.blob(Vector3(0.086, 0.02, 0.13), 3.0, 6, 16, Transform3D(Basis(), Vector3(0, -0.1, -0.035))), "sole", "Sole" + s)
-	var cuff := []
-	for i in 17:
-		var a := TAU * i / 16.0
-		cuff.append(Vector3(sin(a) * 0.078, 0.02, -cos(a) * 0.085 - 0.01))
-	_add(foot, Mesh3.tube(cuff, 0.018, 6, [], 1.0, false), "leather", "Cuff" + s)
+	var hip := _node(rig, "Hip" + s, Vector3(0.1 * side, HIP_Y, 0))
+	_add(hip, Mesh3.capsule(0.08, 0.075, 0.2), "skin", "Thigh" + s)
+	var leg := [Vector2(0.085, 0.06), Vector2(0.1, 0.0), Vector2(0.106, -0.1), Vector2(0.108, -0.125), Vector2(0.098, -0.135), Vector2(0.075, -0.136)]
+	_add(hip, Mesh3.lathe(leg, 20), "pants", "ShortsLeg" + s)
+	var knee := _node(hip, "Knee" + s, Vector3(0, -0.2, 0))
+	_add(knee, Mesh3.capsule(0.074, 0.07, 0.19), "skin", "Shin" + s)
+	# ribbed sock
+	var sock := []
+	for i in 15:
+		var y := lerpf(-0.2, -0.05, i / 14.0)
+		sock.append(Vector2(0.079 + 0.004 * sin(i * PI * 0.5) * sin(i * PI * 0.5), y))
+	sock.append(Vector2(0.08, -0.04))
+	sock.append(Vector2(0.074, -0.034))
+	_add(knee, Mesh3.lathe(sock, 20), "sock", "Sock" + s)
+	var foot := _node(knee, "Foot" + s, Vector3(0, -0.19, 0))
+	_add(foot, Mesh3.blob(Vector3(0.086, 0.075, 0.13), 2.8, 10, 16, Transform3D(Basis(), Vector3(0, -0.05, -0.035))), "leather", "Boot" + s)
+	_add(foot, Mesh3.blob(Vector3(0.09, 0.022, 0.135), 3.2, 6, 16, Transform3D(Basis(), Vector3(0, -0.11, -0.035))), "sole", "Sole" + s)
+	var cuffp := []
+	for i in 21:
+		var a := TAU * i / 20.0
+		cuffp.append(Vector3(sin(a) * 0.084, 0.012, -cos(a) * 0.088 - 0.01))
+	_add(foot, Mesh3.tube(cuffp, 0.02, 6, [], 1.0, false), "leather", "BootCuff" + s)
+	for k in 3:
+		var z := -0.09 - k * 0.026
+		var y := -0.0 - k * 0.02
+		_add(foot, Mesh3.tube([Vector3(-0.034, y, z), Vector3(0.034, y, z)], 0.006, 5), "lace", "Lace" + s)
 	_legs.append([hip, knee, foot])
 
 
-func _build_pack() -> void:
-	var back: Array = body_point(0.98, PI, 0.0)
-	_pack = _node(_upper, "Pack", back[0])
-	_add(_pack, Mesh3.blob(Vector3(0.215, 0.28, 0.14), 3.4, 14, 24, Transform3D(Basis(), Vector3(0, 0.0, 0.165))), "pack", "PackBody")
-	_add(_pack, Mesh3.blob(Vector3(0.222, 0.075, 0.152), 3.0, 8, 20, Transform3D(Basis(Vector3.RIGHT, -0.08), Vector3(0, 0.255, 0.17))), "pack2", "PackLid")
-	_add(_pack, Mesh3.blob(Vector3(0.15, 0.105, 0.05), 3.0, 8, 16, Transform3D(Basis(), Vector3(0, -0.1, 0.31))), "pack2", "Pocket")
-	_add(_pack, Mesh3.blob(Vector3(0.156, 0.035, 0.055), 3.0, 6, 16, Transform3D(Basis(), Vector3(0, -0.005, 0.318))), "pack", "PocketFlap")
-	_add(_pack, Mesh3.blob(Vector3(0.018, 0.012, 0.008), 2.0, 5, 8, Transform3D(Basis(), Vector3(0, -0.04, 0.37))), "metal", "PocketButton")
-	# sleeping pad rolled on top, strapped down
-	var roll := [Vector2(0, -0.27), Vector2(0.07, -0.27), Vector2(0.088, -0.255), Vector2(0.09, 0.0), Vector2(0.088, 0.255), Vector2(0.07, 0.27), Vector2(0, 0.27)]
-	_add(_pack, Mesh3.lathe(roll, 20, 1.0, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(0, 0.39, 0.16))), "pad", "Bedroll")
-	for sx: float in [-0.14, 0.14]:
+func _build_pack(space: Node3D) -> void:
+	_pack = _node(space, "Pack", Vector3(0, 0.84, 0.2 * TORSO_DZ))
+	_add(_pack, Mesh3.blob(Vector3(0.2, 0.25, 0.13), 3.4, 14, 24, Transform3D(Basis(), Vector3(0, 0.02, 0.15))), "pack", "PackBody")
+	_add(_pack, Mesh3.blob(Vector3(0.207, 0.07, 0.142), 3.0, 8, 20, Transform3D(Basis(Vector3.RIGHT, -0.08), Vector3(0, 0.25, 0.155))), "pack2", "PackLid")
+	_add(_pack, Mesh3.blob(Vector3(0.14, 0.095, 0.048), 3.0, 8, 16, Transform3D(Basis(), Vector3(0, -0.08, 0.285))), "pack2", "PackPocket")
+	_add(_pack, Mesh3.blob(Vector3(0.146, 0.032, 0.052), 3.0, 6, 16, Transform3D(Basis(), Vector3(0, 0.005, 0.292))), "pack", "PackFlap")
+	_add(_pack, Mesh3.blob(Vector3(0.016, 0.011, 0.008), 2.0, 5, 8, Transform3D(Basis(), Vector3(0, -0.025, 0.343))), "metal", "PackButton")
+	var roll := [Vector2(0, -0.25), Vector2(0.065, -0.25), Vector2(0.082, -0.235), Vector2(0.084, 0.0), Vector2(0.082, 0.235), Vector2(0.065, 0.25), Vector2(0, 0.25)]
+	_add(_pack, Mesh3.lathe(roll, 20, 1.0, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(0, 0.37, 0.15))), "pad", "Bedroll")
+	for sx: float in [-0.13, 0.13]:
 		var band := []
 		for i in 21:
 			var a := TAU * i / 20.0
-			band.append(Vector3(sx, 0.39 + cos(a) * 0.095, 0.16 + sin(a) * 0.095))
-		_add(_pack, Mesh3.tube(band, 0.016, 6, [], 0.4, false), "leather", "RollStrap")
-	# bottle, mug and rope coil at the sides
-	var bottle := [Vector2(0, -0.09), Vector2(0.04, -0.09), Vector2(0.046, -0.07), Vector2(0.046, 0.05), Vector2(0.03, 0.08), Vector2(0.018, 0.09), Vector2(0.02, 0.12), Vector2(0, 0.122)]
-	_add(_pack, Mesh3.lathe(bottle, 16, 1.0, Transform3D(Basis(), Vector3(0.255, -0.1, 0.17))), "metal", "Bottle")
-	var mug := [Vector2(0, -0.035), Vector2(0.036, -0.035), Vector2(0.04, 0.035), Vector2(0.034, 0.036), Vector2(0.03, -0.02), Vector2(0, -0.02)]
-	_add(_pack, Mesh3.lathe(mug, 16, 1.0, Transform3D(Basis(), Vector3(-0.25, -0.02, 0.2))), "metal", "Mug")
+			band.append(Vector3(sx, 0.37 + cos(a) * 0.089, 0.15 + sin(a) * 0.089))
+		_add(_pack, Mesh3.tube(band, 0.015, 6, [], 0.4, false), "leather", "RollStrap")
+	var bottle := [Vector2(0, -0.085), Vector2(0.038, -0.085), Vector2(0.043, -0.065), Vector2(0.043, 0.045), Vector2(0.028, 0.075), Vector2(0.017, 0.085), Vector2(0.019, 0.112), Vector2(0, 0.114)]
+	_add(_pack, Mesh3.lathe(bottle, 16, 1.0, Transform3D(Basis(), Vector3(0.24, -0.08, 0.16))), "metal", "Bottle")
+	var mug := [Vector2(0, -0.033), Vector2(0.034, -0.033), Vector2(0.038, 0.033), Vector2(0.032, 0.034), Vector2(0.028, -0.018), Vector2(0, -0.018)]
+	_add(_pack, Mesh3.lathe(mug, 16, 1.0, Transform3D(Basis(), Vector3(-0.235, 0.0, 0.19))), "metal", "Mug")
 	var handle := []
 	for i in 13:
 		var a := PI * i / 12.0
-		handle.append(Vector3(-0.29 - sin(a) * 0.026, -0.02 + cos(a) * 0.025, 0.2))
+		handle.append(Vector3(-0.273 - sin(a) * 0.024, cos(a) * 0.023, 0.19))
 	_add(_pack, Mesh3.tube(handle, 0.007, 6), "metal", "MugHandle")
 	for k in 3:
 		var coil := []
 		for i in 25:
 			var a := TAU * i / 24.0
-			coil.append(Vector3(-0.232 - k * 0.018, -0.15 + cos(a) * 0.085, 0.14 + sin(a) * 0.085))
-		_add(_pack, Mesh3.tube(coil, 0.017, 6, [], 1.0, false), "rope", "Rope%d" % k)
+			coil.append(Vector3(-0.218 - k * 0.017, -0.13 + cos(a) * 0.08, 0.13 + sin(a) * 0.08))
+		_add(_pack, Mesh3.tube(coil, 0.016, 6, [], 1.0, false), "rope", "Rope%d" % k)
 
 
-func _build_hats() -> void:
-	_hat_pivot = _node(_upper, "HatPivot", Vector3(0, HAT_Y, 0))
-	var inner := _node(_hat_pivot, "HatSpace", Vector3(0, -HAT_Y, 0))
-	var dz := 0.92
-	var none := _node(inner, "HatNone")
-	_hats.append(none)
-	# ranger hat: wide flat brim, peaked crown, dark band
+# ---------------------------------------------------------------- hats
+
+func _build_hats(space: Node3D) -> void:
+	var hy := 1.45
+	_hat_pivot = _node(space, "HatPivot", Vector3(0, hy, 0))
+	var inner := _node(_hat_pivot, "HatSpace", Vector3(0, -hy, 0))
+	var dz := HEAD_SCALE.z
+	var rb := head_r(1.44) + 0.012     # radius of the head where hats sit
+	_hats.append(_node(inner, "HatNone"))
+	# ranger / campaign hat
 	var ranger := _node(inner, "HatRanger")
-	_add(ranger, Mesh3.lathe([Vector2(0.19, 1.452), Vector2(0.38, 1.456), Vector2(0.405, 1.47), Vector2(0.392, 1.484), Vector2(0.2, 1.478)], 40, dz), "hat")
-	_add(ranger, Mesh3.lathe([Vector2(0.214, 1.45), Vector2(0.212, 1.56), Vector2(0.186, 1.64), Vector2(0.11, 1.69), Vector2(0.0, 1.705)], 36, dz), "hat")
-	_add(ranger, Mesh3.lathe([Vector2(0.217, 1.474), Vector2(0.221, 1.48), Vector2(0.219, 1.52), Vector2(0.213, 1.526)], 36, dz), "hatband")
+	_add(ranger, Mesh3.lathe([Vector2(rb - 0.02, 1.432), Vector2(0.42, 1.436), Vector2(0.445, 1.45), Vector2(0.432, 1.464), Vector2(rb - 0.01, 1.458)], 44, dz), "hat")
+	_add(ranger, Mesh3.lathe([Vector2(rb, 1.43), Vector2(rb - 0.004, 1.55), Vector2(rb - 0.03, 1.64), Vector2(0.14, 1.69), Vector2(0.0, 1.705)], 40, dz), "hat")
+	_add(ranger, Mesh3.lathe([Vector2(rb + 0.003, 1.455), Vector2(rb + 0.006, 1.46), Vector2(rb + 0.004, 1.5), Vector2(rb - 0.002, 1.506)], 40, dz), "hatband")
 	_hats.append(ranger)
-	# bucket hat: soft crown with a drooping brim
+	# bucket hat
 	var bucket := _node(inner, "HatBucket")
-	_add(bucket, Mesh3.lathe([Vector2(0.232, 1.43), Vector2(0.222, 1.56), Vector2(0.2, 1.635), Vector2(0.12, 1.662), Vector2(0.0, 1.668)], 36, dz), "hat")
-	_add(bucket, Mesh3.lathe([Vector2(0.22, 1.43), Vector2(0.33, 1.37), Vector2(0.345, 1.378), Vector2(0.338, 1.392), Vector2(0.232, 1.455)], 40, dz), "hat")
-	_add(bucket, Mesh3.lathe([Vector2(0.232, 1.455), Vector2(0.235, 1.46), Vector2(0.232, 1.49), Vector2(0.228, 1.495)], 36, dz), "hatband")
+	_add(bucket, Mesh3.lathe([Vector2(rb + 0.02, 1.41), Vector2(rb + 0.005, 1.54), Vector2(rb - 0.025, 1.62), Vector2(0.14, 1.65), Vector2(0.0, 1.656)], 40, dz), "hat")
+	_add(bucket, Mesh3.lathe([Vector2(rb + 0.01, 1.41), Vector2(0.37, 1.35), Vector2(0.385, 1.36), Vector2(0.378, 1.372), Vector2(rb + 0.02, 1.436)], 44, dz), "hat")
+	_add(bucket, Mesh3.lathe([Vector2(rb + 0.02, 1.436), Vector2(rb + 0.024, 1.44), Vector2(rb + 0.02, 1.475), Vector2(rb + 0.014, 1.48)], 40, dz), "hatband")
 	_hats.append(bucket)
-	# beanie: knitted dome, thick cuff and a pompom
+	# beanie with cuff and pompom
 	var beanie := _node(inner, "HatBeanie")
 	var dome := []
 	for i in 17:
-		var y := lerpf(1.36, 1.615, i / 16.0)
-		dome.append(Vector2(body_r(y) + 0.028, y))
-	dome.append(Vector2(0.09, 1.648))
-	dome.append(Vector2(0.0, 1.655))
-	_add(beanie, Mesh3.lathe(dome, 32, BODY_DZ + 0.02), "hat")
-	_add(beanie, Mesh3.lathe([Vector2(0.262, 1.33), Vector2(0.285, 1.345), Vector2(0.285, 1.43), Vector2(0.262, 1.445)], 32, BODY_DZ + 0.02), "hatband")
-	_add(beanie, Mesh3.blob(Vector3(0.075, 0.07, 0.075), 2.0, 10, 14, Transform3D(Basis(), Vector3(0, 1.7, 0))), "hat")
+		var y := lerpf(1.37, 1.56, i / 16.0)
+		dome.append(Vector2(head_r(y) + 0.022, y))
+	dome.append(Vector2(0.1, 1.585))
+	dome.append(Vector2(0.0, 1.592))
+	_add(beanie, Mesh3.lathe(dome, 36, dz), "hat")
+	var r0 := head_r(1.37) + 0.028
+	_add(beanie, Mesh3.lathe([Vector2(r0 - 0.01, 1.34), Vector2(r0 + 0.012, 1.352), Vector2(r0 + 0.012, 1.42), Vector2(r0 - 0.012, 1.432)], 36, dz), "hatband")
+	_add(beanie, Mesh3.blob(Vector3(0.072, 0.068, 0.072), 2.0, 10, 14, Transform3D(Basis(), Vector3(0, 1.64, 0))), "hat")
 	_hats.append(beanie)
-	# cap: snug dome with a visor
-	var cap := _node(inner, "HatCap")
+	# cap with visor
 	var cdome := []
 	for i in 15:
-		var y := lerpf(1.44, 1.615, i / 14.0)
-		cdome.append(Vector2(body_r(y) + 0.016, y))
-	cdome.append(Vector2(0.07, 1.638))
-	cdome.append(Vector2(0.0, 1.642))
-	_add(cap, Mesh3.lathe(cdome, 32, BODY_DZ + 0.01), "hat")
-	_add(cap, Mesh3.blob(Vector3(0.15, 0.012, 0.14), 2.2, 8, 20, Transform3D(Basis(Vector3.RIGHT, 0.22), Vector3(0, 1.455, -0.24))), "hatband")
-	_add(cap, Mesh3.blob(Vector3(0.022, 0.012, 0.022), 2.0, 5, 8, Transform3D(Basis(), Vector3(0, 1.645, 0))), "hatband")
+		var y := lerpf(1.42, 1.565, i / 14.0)
+		cdome.append(Vector2(head_r(y) + 0.014, y))
+	cdome.append(Vector2(0.08, 1.585))
+	cdome.append(Vector2(0.0, 1.59))
+	var cap := _node(inner, "HatCap")
+	_add(cap, Mesh3.lathe(cdome, 36, dz), "hat")
+	_add(cap, Mesh3.blob(Vector3(0.17, 0.012, 0.15), 2.2, 8, 20, Transform3D(Basis(Vector3.RIGHT, 0.18), Vector3(0, 1.43, -0.27))), "hatband")
+	_add(cap, Mesh3.blob(Vector3(0.024, 0.012, 0.024), 2.0, 5, 8, Transform3D(Basis(), Vector3(0, 1.59, 0))), "hatband")
 	_hats.append(cap)
+	# helmet: round shell with a brim and a first-aid heart
+	var helmet := _node(inner, "HatHelmet")
+	var hd := []
+	for i in 13:
+		var a := PI * 0.5 * i / 12.0
+		hd.append(Vector2(cos(a) * (rb + 0.03), 1.42 + sin(a) * 0.2))
+	_add(helmet, Mesh3.lathe(hd, 40, dz), "hat")
+	_add(helmet, Mesh3.lathe([Vector2(rb + 0.02, 1.415), Vector2(0.36, 1.405), Vector2(0.37, 1.415), Vector2(0.362, 1.428), Vector2(rb + 0.03, 1.43)], 44, dz), "hat")
+	var hf := Transform3D(Basis(), Vector3(0, 1.53, -(rb + 0.02) * dz)).rotated_local(Vector3.RIGHT, -0.5)
+	_add(helmet, Mesh3.blob(Vector3(0.05, 0.045, 0.012), 2.2, 8, 12, hf), "badge1")
+	_add(helmet, Mesh3.blob(Vector3(0.028, 0.009, 0.006), 3.0, 4, 8, hf.translated_local(Vector3(0, 0, 0.012))), "white")
+	_add(helmet, Mesh3.blob(Vector3(0.009, 0.028, 0.006), 3.0, 4, 8, hf.translated_local(Vector3(0, 0, 0.012))), "white")
+	_hats.append(helmet)
+	# propeller cap: four colored panels, a visor and a spinning propeller
+	var prop := _node(inner, "HatPropeller")
+	_add(prop, Mesh3.lathe(cdome, 36, dz), "hat")
+	_add(prop, Mesh3.blob(Vector3(0.16, 0.012, 0.14), 2.2, 8, 20, Transform3D(Basis(Vector3.RIGHT, 0.18), Vector3(0, 1.43, -0.27))), "badge3")
+	for k in 4:
+		var a := TAU * k / 4.0 + PI / 4.0
+		var seg := []
+		for i in 9:
+			var y := lerpf(1.43, 1.575, i / 8.0)
+			seg.append(Vector3(sin(a) * (head_r(y) + 0.017), y, -cos(a) * (head_r(y) + 0.017) * dz))
+		_add(prop, Mesh3.tube(seg, 0.012, 5), ["badge1", "badge2", "badge3", "badge4"][k])
+	_add(prop, Mesh3.lathe([Vector2(0.0, 1.58), Vector2(0.012, 1.585), Vector2(0.012, 1.64), Vector2(0.0, 1.645)], 8), "metal")
+	_propeller = _node(prop, "Propeller", Vector3(0, 1.645, 0))
+	for k in 2:
+		var b := Basis(Vector3.UP, PI * k)
+		_add(_propeller, Mesh3.blob(Vector3(0.1, 0.006, 0.026), 2.2, 6, 12, Transform3D(b * Basis(Vector3.RIGHT, 0.3), b * Vector3(0.095, 0, 0))), ["badge1", "badge2"][k])
+	_hats.append(prop)
+	# sailor cap: white drum with a colored band
+	var sailor := _node(inner, "HatSailor")
+	_add(sailor, Mesh3.lathe([Vector2(0.0, 1.418), Vector2(rb - 0.01, 1.42), Vector2(rb + 0.01, 1.47), Vector2(rb + 0.035, 1.53), Vector2(rb + 0.03, 1.56), Vector2(0.0, 1.565)], 40, dz), "sock")
+	_add(sailor, Mesh3.lathe([Vector2(rb + 0.002, 1.435), Vector2(rb + 0.012, 1.44), Vector2(rb + 0.02, 1.47), Vector2(rb + 0.012, 1.475)], 40, dz), "hat")
+	_hats.append(sailor)
 
 
 # ================================================================ Merging
 
 ## Merges the static parts of every animated node into one mesh with vertex colors:
-## ~20 draw calls instead of ~90 (matters for the shadow cascades in first person).
+## far fewer draw calls (matters for the shadow cascades in first person).
 func _bake() -> void:
 	_baked_mat = ShaderMaterial.new()
 	_baked_mat.shader = preload("res://shaders/scout.gdshader")
@@ -464,13 +711,14 @@ func _bake() -> void:
 	var skip := {}
 	for v in _face.values():
 		skip[v] = true
-	var nodes: Array = [_upper, _pack]
-	for a in _arms:
-		nodes.append_array(a)
-	for l in _legs:
-		nodes.append_array(l)
-	nodes.append_array(_hats)
+	var nodes: Array = []
+	for n in find_children("*", "Node3D", true, false):
+		if not (n is MeshInstance3D):
+			nodes.append(n)
 	for node: Node3D in nodes:
+		# face features stay separate (they switch on and off and move)
+		if skip.has(node) or node.get_parent() == _face.get("mouth"):
+			continue
 		var parts: Array[MeshInstance3D] = []
 		for c in node.get_children():
 			if c is MeshInstance3D and not skip.has(c) and not (c.get_meta("role", "") in NO_BAKE):
@@ -481,6 +729,7 @@ func _bake() -> void:
 		var norms := PackedVector3Array()
 		var idx := PackedInt32Array()
 		var roles := PackedStringArray()
+		var shadow := true
 		for mi in parts:
 			var arr := mi.mesh.surface_get_arrays(0)
 			var xf := mi.transform
@@ -492,6 +741,8 @@ func _bake() -> void:
 			for i in arr[Mesh.ARRAY_INDEX]:
 				idx.append(base + i)
 			var role: String = mi.get_meta("role")
+			if role in NO_SHADOW:
+				shadow = false
 			for i in (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
 				roles.append(role)
 			_meshes.erase(mi)
@@ -501,6 +752,10 @@ func _bake() -> void:
 		merged.name = "Merged"
 		merged.mesh = ArrayMesh.new()
 		merged.material_override = _baked_mat
+		# a merged group made only of shadowless parts (glasses) keeps casting no shadow
+		merged.set_meta("role", "merged" if shadow else "glass")
+		if not shadow:
+			merged.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(merged)
 		_meshes.append(merged)
 		_baked.append([merged, verts, norms, idx, roles])
@@ -533,26 +788,12 @@ func _recolor() -> void:
 
 # ================================================================ Geometry helpers
 
-## Radius of the bean body at height y
-static func body_r(y: float) -> float:
-	var t := clampf((y - BODY_Y0) / BODY_H, 0.0, 1.0)
-	var big := lerpf(0.31, 0.272, smoothstep(0.25, 0.9, t))
-	return big * pow(maxf(1.0 - pow(absf(2.0 * t - 1.0), 2.6), 0.0), 1.0 / 2.6)
-
-
-## Point on the body surface at height y and angle th (0 = front, positive towards +X): [position, normal]
-static func body_point(y: float, th: float, off := 0.0) -> Array:
-	var r := body_r(y)
-	var e := 0.004
-	var dr := (body_r(y + e) - body_r(y - e)) / (2.0 * e)
-	var n2 := Vector2(1.0, -dr).normalized()
-	var n := Vector3(n2.x * sin(th), n2.y, -n2.x * cos(th) / BODY_DZ).normalized()
-	return [Vector3(r * sin(th), y, -r * cos(th) * BODY_DZ) + n * off, n]
-
-
-## Local frame on the surface: +Z along the normal, +Y roughly up
+## Local frame on a surface: +Z along the normal, +Y roughly up
 static func _frame(p: Vector3, n: Vector3) -> Transform3D:
-	var x := Vector3.UP.cross(n).normalized()
+	var x := Vector3.UP.cross(n)
+	if x.length() < 0.001:
+		x = Vector3.RIGHT
+	x = x.normalized()
 	var y := n.cross(x)
 	return Transform3D(Basis(x, y, n), p)
 
@@ -562,63 +803,6 @@ static func _frame_up(p: Vector3, n: Vector3) -> Transform3D:
 	var x := Vector3.UP.cross(n).normalized()
 	var z := x.cross(n)
 	return Transform3D(Basis(x, n, z), p)
-
-
-## Profile of a shell around the body between two height fractions
-func _shell(t0: float, t1: float, off: float) -> Array:
-	var prof := []
-	for i in 29:
-		var u := i / 28.0
-		# dense near the bottom pole
-		var t := t1 * (1.0 - cos(PI * 0.5 * u)) if t0 <= 0.0 else lerpf(t0, t1, u)
-		var y := BODY_Y0 + t * BODY_H
-		var r := body_r(y)
-		var e := 0.004
-		var dr := (body_r(y + e) - body_r(y - e)) / (2.0 * e)
-		var n2 := Vector2(1.0, -dr).normalized()
-		if t <= 0.0005:
-			n2 = Vector2(0, -1)
-		prof.append(Vector2(r, y) + n2 * off)
-	prof[0].x = 0.0
-	return prof
-
-
-func _ring(y: float, off: float, n: int) -> Array:
-	var pts := []
-	for i in n + 1:
-		var p: Array = body_point(y, TAU * i / n, off)
-		pts.append(p[0])
-	return pts
-
-
-func _ring_normals(y: float, n: int) -> Array:
-	var ns := []
-	for i in n + 1:
-		var p: Array = body_point(y, TAU * i / n, 0.0)
-		ns.append(p[1])
-	return ns
-
-
-## Arc from -w to w; bump > 0 bends upwards in the middle
-static func _arc(w: float, bump: float, _eye: bool) -> Array:
-	var pts := []
-	for i in 9:
-		var u := i / 8.0 * 2.0 - 1.0
-		pts.append(Vector2(u * w, bump * (1.0 - u * u)))
-	return pts
-
-
-## A curve drawn on the face (eyes, mouths), following the body surface
-func _face_curve(node_name: String, y0: float, th0: float, pts2d: Array, rad: float) -> MeshInstance3D:
-	var pts := []
-	var nrm := []
-	for q in pts2d:
-		var y: float = y0 + q.y
-		var p: Array = body_point(y, th0 + q.x / body_r(y), rad * 0.3)
-		pts.append(p[0])
-		nrm.append(p[1])
-	var role := "mouth" if node_name in ["Smile", "Flat", "Wavy"] else "eye"
-	return _add(_upper, Mesh3.tube(pts, rad, 8, nrm, 0.7), role, node_name)
 
 
 # ================================================================ Animation
@@ -635,164 +819,375 @@ func _spring(key: String, target: float, delta: float, k := 140.0, d := 13.0) ->
 	return s.x
 
 
+func _kick(key: String, impulse: float) -> void:
+	var s: Vector2 = _springs.get(key, Vector2.ZERO)
+	s.y += impulse
+	_springs[key] = s
+
+
 func _process(delta: float) -> void:
-	animate(minf(delta, 0.05))
+	if is_visible_in_tree():
+		animate(minf(delta, 0.05))
 
 
 func animate(delta: float) -> void:
 	_t += delta
-	var moving := pose == Pose.STAND and on_floor
-	_amp = lerpf(_amp, clampf(speed / 3.4, 0.0, 1.5) if moving else 0.0, 1.0 - exp(-8.0 * delta))
+	var standing := pose == Pose.STAND
+	var moving := standing and on_floor
+	_amp = lerpf(_amp, clampf(speed / 3.4, 0.0, 1.6) if moving else 0.0, 1.0 - exp(-8.0 * delta))
 	var a := _amp
-	_phase += delta * speed * TAU / (1.5 if sprint else 1.25)
+	var run := sprint and a > 0.3
+	_phase += delta * speed * TAU / (1.7 if run else 1.2)
 	var s := sin(_phase)
 	var c := cos(_phase)
-	var breathe := sin(_t * 1.7)
+	var tired := mood == Mood.TIRED
+	var breathe := sin(_t * (1.7 + (2.5 if tired else 0.0)))
 	_wave_t = maxf(_wave_t - delta, 0.0)
 
-	var rig_pos := Vector3(0, absf(c) * 0.045 * a - 0.02 * a, 0)
-	var rig_rot := Vector3.ZERO
-	var hip_rot := Vector3(-0.1 * a - (0.12 if sprint and a > 0.2 else 0.0), s * 0.12 * a, s * 0.05 * a - turn_rate * 0.06 * a)
-	var leg := [[s * 0.62 * a, -maxf(0.0, c) * 0.95 * a], [-s * 0.62 * a, -maxf(0.0, -c) * 0.95 * a]]
-	var arm := [[-s * 0.6 * a + 0.05, -0.14 - 0.05 * a - turn_rate * 0.12, 0.25 + 0.35 * a],
-		[s * 0.6 * a + 0.05, 0.14 + 0.05 * a - turn_rate * 0.12, 0.25 + 0.35 * a]]
-	if sprint and a > 0.2:
-		arm[0][2] += 0.5
-		arm[1][2] += 0.5
-	var squash := 1.0 + breathe * 0.012 * (1.0 - minf(a, 1.0))
+	# airborne / landing
+	if standing and not on_floor:
+		_air_t += delta
+		_fall_v = maxf(_fall_v, -vy)
+	else:
+		if _air_t > 0.25:
+			_land = clampf(_fall_v * 0.03 + 0.08, 0.08, 0.35)
+			_kick("land", _land * 7.0)
+		_air_t = 0.0
+		_fall_v = 0.0
+	var land := maxf(_spring("land", 0.0, delta, 120.0, 11.0), 0.0)
+
+	# idle fidgets
+	if moving and a < 0.05 and not waving and _wave_t <= 0.0 and mood in [Mood.NORMAL, Mood.COLD]:
+		_idle_t += delta
+		_next_fidget -= delta
+		if _next_fidget <= 0.0 and _fidget == "":
+			fidget()
+			_next_fidget = randf_range(7.0, 14.0)
+	elif a > 0.2:
+		_fidget = ""
+	if _fidget != "":
+		_fidget_t += delta
+		if _fidget_t > 2.2:
+			_fidget = ""
+
+	# ------------------------------------------------ pose targets
+	var rig_pos := Vector3(0, absf(c) * 0.05 * a - 0.025 * a - land * 0.5, 0)
+	var rig_rot := Vector3(0, 0, -turn_rate * 0.05 * a)
+	var lean := -0.05 * a - load * 0.12 - (0.22 if run else 0.0) - (0.1 if tired else 0.0)
+	var hip_rot := Vector3(lean * 0.4, s * 0.1 * a, s * 0.04 * a)
+	var chest_rot := Vector3(lean * 0.6 - (0.1 if tired else 0.0), -s * 0.16 * a, -s * 0.03 * a)
+	var head_rot := Vector3(-absf(c) * 0.06 * a + 0.02 * a - (0.16 if tired else 0.0) - lean * 0.5, s * 0.1 * a, 0.0)
+	var knee_base := -0.08 * a - land * 1.6
+	var leg := [[s * 0.62 * a + land * 0.6, -maxf(0.0, c) * 1.0 * a + knee_base], [-s * 0.62 * a + land * 0.6, -maxf(0.0, -c) * 1.0 * a + knee_base]]
+	var swing := 0.62 * (0.6 if tired else 1.0)
+	var arm := [[-s * swing * a + 0.05, -0.12 - 0.06 * a - land, 0.2 + 0.3 * a],
+		[s * swing * a + 0.05, 0.12 + 0.06 * a + land, 0.2 + 0.3 * a]]
+	if run:
+		arm = [[-s * 0.95 * a + 0.2, -0.15, 1.45], [s * 0.95 * a + 0.2, 0.15, 1.45]]
+	var squash := 1.0 + breathe * 0.012 * (1.0 - minf(a, 1.0)) - land * 0.25
+
+	# face targets: brow_r raise (-1 low .. 1 high), brow_a angle (-1 worried .. 1 angry), lid 0..1, mouth, open 0..1
+	var face := _face_base()
 
 	match pose:
 		Pose.CROUCH:
-			rig_pos.y -= 0.17
-			hip_rot.x = -0.38
-			leg = [[1.1 + s * 0.25 * a, -1.6], [1.1 - s * 0.25 * a, -1.6]]
-			arm = [[0.55 - s * 0.3 * a, -0.25, 0.6], [0.55 + s * 0.3 * a, 0.25, 0.6]]
+			rig_pos.y -= 0.18
+			hip_rot.x = -0.25
+			chest_rot.x = -0.2
+			head_rot.x = 0.3
+			leg = [[1.15 + s * 0.3 * a, -1.7], [1.15 - s * 0.3 * a, -1.7]]
+			arm = [[0.75 - s * 0.25 * a, -0.2, 1.3], [0.75 + s * 0.25 * a, 0.2, 1.3]]
+			face["brow_a"] = 0.3
 		Pose.SIT:
-			rig_pos = Vector3(0, -0.37, 0.05)
-			hip_rot = Vector3(0.1, 0, 0)
-			leg = [[1.35, -0.55], [1.25, -0.45]]
-			arm = [[0.3, -0.45, 0.25], [0.3, 0.45, 0.25]]
+			var asleep := mood == Mood.ASLEEP
+			rig_pos = Vector3(0, -0.4, 0.05)
+			hip_rot = Vector3(0.22, 0, 0)
+			chest_rot = Vector3(-0.3 if asleep else -0.05, 0, sin(_t * 0.4) * 0.03)
+			head_rot = Vector3(-0.45 if asleep else -0.08, 0.0 if asleep else sin(_t * 0.3) * 0.2, 0.2 if asleep else 0.0)
+			leg = [[1.4, -0.35], [1.25, -0.5]]
+			arm = [[-0.55, -0.3, 0.1], [-0.55, 0.3, 0.1]]
+			squash = 1.0 + breathe * 0.02
 		Pose.LIE:
-			rig_pos = Vector3(0.9, 0.3, 0)
+			rig_pos = Vector3(0.95, 0.3, 0)
 			rig_rot = Vector3(0, 0, 1.45)
 			hip_rot = Vector3(0.1, 0, 0)
+			head_rot = Vector3(0.1, 0, -0.2)
 			leg = [[0.5, -0.8], [0.25, -0.5]]
 			arm = [[0.6, -0.2, 0.5], [-0.2, 0.9, 0.3]]
-			squash = 1.0 + breathe * 0.02
+			squash = 1.0 + breathe * 0.025
 		Pose.SWIM:
-			rig_pos.y = 0.12
+			rig_pos.y = 0.08
 			hip_rot = Vector3(-0.55, 0, 0)
-			var pa := _t * 3.6
-			arm = [[1.6 + sin(pa) * 0.9, -0.5, 0.4], [1.6 + sin(pa + PI) * 0.9, 0.5, 0.4]]
-			leg = [[sin(_t * 7.0) * 0.35, -0.3], [-sin(_t * 7.0) * 0.35, -0.3]]
+			chest_rot = Vector3(-0.1, 0, 0)
+			head_rot = Vector3(0.5, sin(_t * 0.7) * 0.15, 0)
+			var pa := _t * 5.0
+			arm = [[1.5 + sin(pa) * 0.7, -0.35, 1.1 + cos(pa) * 0.4], [1.5 + sin(pa + PI) * 0.7, 0.35, 1.1 - cos(pa) * 0.4]]
+			leg = [[sin(_t * 8.0) * 0.4, -0.35], [-sin(_t * 8.0) * 0.4, -0.35]]
+			face["brow_r"] = 0.4
 		Pose.CLIMB:
-			var ca := _t * 5.0
-			arm = [[2.75 + sin(ca) * 0.2, -0.2, 0.6], [2.75 - sin(ca) * 0.2, 0.2, 0.6]]
-			leg = [[0.5 + sin(ca) * 0.3, -0.8], [0.5 - sin(ca) * 0.3, -0.8]]
+			var ca := _t * 4.0
+			arm = [[2.8 + sin(ca) * 0.3, -0.2, 0.5 + maxf(0.0, -sin(ca)) * 0.8], [2.8 - sin(ca) * 0.3, 0.2, 0.5 + maxf(0.0, sin(ca)) * 0.8]]
+			leg = [[0.5 + sin(ca) * 0.35, -0.9], [0.5 - sin(ca) * 0.35, -0.9]]
+			head_rot.x = 0.3
+			face["mouth"] = "teeth"
+			face["brow_a"] = 0.8
 		_:
 			if not on_floor:
-				# PEAK-style flailing when airborne
-				var fa := _t * 16.0
-				arm = [[2.3 + sin(fa) * 0.35, -0.7, 0.3], [2.3 + sin(fa + 2.0) * 0.35, 0.7, 0.3]]
-				leg = [[sin(_t * 11.0) * 0.4, -0.4], [-sin(_t * 11.0) * 0.4, -0.4]]
-				hip_rot.x = 0.1
-	var waving_now := waving or _wave_t > 0.0
-	if waving_now and pose == Pose.STAND and on_floor:
-		arm[1] = [0.35, 2.55, 0.0]
+				if _air_t < 0.45 and vy > -3.0:
+					# jump: stretch, arms up, knees tucked
+					arm = [[1.3, -0.5, 0.4], [1.3, 0.5, 0.4]]
+					leg = [[0.4, -0.9], [0.1, -0.5]]
+					head_rot.x = 0.15
+					squash = 1.06
+					face["mouth"] = "open"
+					face["open"] = 0.5
+				else:
+					# PEAK-style flailing when falling
+					var fa := _t * 17.0
+					arm = [[2.4 + sin(fa) * 0.4, -0.8, 0.3 + sin(fa * 1.3) * 0.3], [2.4 + sin(fa + 2.0) * 0.4, 0.8, 0.3 + cos(fa) * 0.3]]
+					leg = [[sin(_t * 12.0) * 0.5, -0.4], [-sin(_t * 12.0) * 0.5, -0.5]]
+					hip_rot.x = 0.15
+					head_rot.x = 0.1
+					face["eyes"] = "wide"
+					face["mouth"] = "open"
+					face["open"] = 1.0
+					face["brow_r"] = 1.0
+					face["brow_a"] = -0.6
+			elif a < 0.05:
+				_idle_pose(arm, leg, face)
+				hip_rot.z += sin(_t * 0.6) * 0.03
+				chest_rot.z -= sin(_t * 0.6) * 0.02
+				var k := _fidget_k()
+				match _fidget:
+					"stretch":
+						chest_rot.x += 0.15 * k
+						head_rot.x += 0.35 * k
+					"look":
+						head_rot.y += sin(_fidget_t * 2.6) * 0.8 * k
+						head_rot.x += 0.1 * k
+					"straps":
+						head_rot.x -= 0.3 * k
+					"scratch":
+						head_rot.z -= 0.15 * k
+				# cold: arms hugged in, shivering
+				if mood == Mood.COLD:
+					arm[0] = [0.55, 0.35, 1.9]
+					arm[1] = [0.55, -0.35, 1.9]
+					chest_rot.z += sin(_t * 40.0) * 0.012
+					head_rot.x -= 0.12
 
-	# rig and torso (lying poses are eased, not sprung)
-	rig.position = rig.position.lerp(rig_pos, 1.0 - exp(-10.0 * delta))
+	var waving_now := (waving or _wave_t > 0.0) and standing and on_floor
+	if waving_now:
+		arm[1] = [0.3, 2.7, 0.2]
+		head_rot.z = 0.18
+		chest_rot.z = -0.06
+		rig_pos.y += absf(sin(_t * 5.0)) * 0.025
+		face["eyes"] = "happy"
+		face["mouth"] = "open"
+		face["open"] = 0.7
+		face["brow_r"] = 0.6
+
+	# the head turns towards a look target (scout editor: the camera) or glances around
+	head_rot += _glance(delta, a)
+
+	# ------------------------------------------------ apply
+	rig.position = rig.position.lerp(rig_pos, 1.0 - exp(-12.0 * delta))
 	rig.rotation = rig.rotation.lerp(rig_rot, 1.0 - exp(-6.0 * delta))
-	hips.rotation = Vector3(_spring("hx", hip_rot.x, delta, 90.0, 14.0), _spring("hy", hip_rot.y, delta, 90.0, 14.0), _spring("hz", hip_rot.z, delta, 90.0, 12.0))
+	hips.rotation = Vector3(_spring("hx", hip_rot.x, delta, 110.0, 14.0), _spring("hy", hip_rot.y, delta, 110.0, 14.0), _spring("hz", hip_rot.z, delta, 110.0, 12.0))
 	hips.scale = Vector3(1.0 / sqrt(squash), squash, 1.0 / sqrt(squash))
+	chest.rotation = Vector3(_spring("cx", chest_rot.x, delta, 90.0, 11.0), _spring("cy", chest_rot.y, delta, 90.0, 11.0), _spring("cz", chest_rot.z, delta, 120.0, 10.0))
+	# the big head lags a little behind the body (wobbly, PEAK-like)
+	neck.rotation = Vector3(_spring("nx", head_rot.x, delta, 70.0, 8.0), _spring("ny", head_rot.y, delta, 60.0, 9.0), _spring("nz", head_rot.z, delta, 70.0, 7.0))
 	for i in 2:
 		var lg: Array = _legs[i]
 		var hx := _spring("lx%d" % i, leg[i][0], delta, 260.0, 26.0)
 		var kx := _spring("kx%d" % i, leg[i][1], delta, 260.0, 26.0)
 		lg[0].rotation = Vector3(hx, 0, 0)
 		lg[1].rotation = Vector3(kx, 0, 0)
-		# keep the soles roughly level
 		lg[2].rotation = Vector3(-(hx + kx) * (0.8 if pose != Pose.LIE else 0.3), 0, 0)
 		lg[0].position.y = HIP_Y + (maxf(0.0, c if i == 0 else -c) * 0.03 * a if moving else 0.0)
 	for i in 2:
 		var am: Array = _arms[i]
-		# floppy noodle arms: soft springs, the elbow lags behind the shoulder
 		var sx := _spring("ax%d" % i, arm[i][0], delta, 120.0, 9.0)
 		var sz := _spring("az%d" % i, arm[i][1], delta, 110.0, 8.0)
 		var ex := _spring("ex%d" % i, arm[i][2], delta, 90.0, 7.0)
 		am[0].rotation = Vector3(sx, 0, sz)
-		var wave_z := sin(_t * 10.0) * 0.55 if waving_now and i == 1 and pose == Pose.STAND else 0.0
+		var wave_z := sin(_t * 11.0) * 0.6 if waving_now and i == 1 else 0.0
 		am[1].rotation = Vector3(ex, 0, _spring("ez%d" % i, wave_z, delta, 160.0, 10.0))
-		am[2].rotation = Vector3(ex * 0.3, 0, 0)
-	# backpack and hat bounce along
+		am[2].rotation = Vector3(ex * 0.25, 0, 0)
 	var bounce := rig.position.y - rig_pos.y + absf(c) * 0.04 * a
-	_pack.rotation.x = _spring("pack", 0.05 * a + bounce * 1.6, delta, 70.0, 5.0)
-	_pack.rotation.z = _spring("packz", -hip_rot.z * 0.6, delta, 70.0, 5.0)
-	_hat_pivot.rotation.x = _spring("hat", -0.04 * a - bounce * 0.9, delta, 120.0, 6.0)
+	_pack.rotation.x = _spring("pack", 0.05 * a + bounce * 1.8 + land * 0.6, delta, 70.0, 5.0)
+	_pack.rotation.z = _spring("packz", -hip_rot.z * 0.8, delta, 70.0, 5.0)
+	_hat_pivot.rotation.x = _spring("hat", -0.04 * a - bounce * 1.0 + land * 0.4, delta, 120.0, 6.0)
 	_hat_pivot.rotation.z = _spring("hatz", s * 0.03 * a + turn_rate * 0.03, delta, 120.0, 6.0)
-	_update_face(delta, waving_now)
+	if _propeller:
+		_prop_angle += delta * (3.0 + speed * 6.0 + (25.0 if not on_floor else 0.0))
+		_propeller.rotation.y = _prop_angle
+	_update_face(delta, face)
 
 
-func _update_face(delta: float, waving_now: bool) -> void:
-	var m := mood
-	if waving_now and m == Mood.NORMAL:
-		m = Mood.JOY
-	var eyes := "oval"
-	var mouth := "smile"
-	var lid := false
-	match int(look["face"]):
-		1:
-			eyes = "happy"
-			mouth = "grin"
-		2:
-			lid = true
-		3:
-			mouth = "o"
-	match m:
-		Mood.TIRED:
-			eyes = "oval"
-			lid = true
-			mouth = "wavy"
-		Mood.KNOCKED_OUT:
-			eyes = "x"
-			mouth = "o"
-		Mood.ASLEEP:
-			eyes = "closed"
-			mouth = "flat"
-		Mood.JOY:
-			eyes = "happy"
-			mouth = "grin"
-	var big := int(look["face"]) == 3 and m == Mood.NORMAL
-	var state := "%s/%s/%s/%s/%s" % [eyes, mouth, lid, big, _shadow_only]
-	if state != _face_state:
-		_face_state = state
-		# first person: the face casts no shadow and must not show up in front of the camera
-		var show := not _shadow_only
-		for s in ["L", "R"]:
-			var eye: Node3D = _face["eye" + s]
-			eye.visible = show and eyes == "oval"
-			(_face["lid" + s] as Node3D).visible = lid
-			(_face["happy" + s] as Node3D).visible = show and eyes == "happy"
-			(_face["closed" + s] as Node3D).visible = show and eyes == "closed"
-			(_face["x" + s] as Node3D).visible = show and eyes == "x"
-		for k in ["smile", "grin", "flat", "wavy", "o"]:
-			(_face[k] as Node3D).visible = show and k == mouth
-	# blinking and glancing around
-	_next_blink -= delta
-	if _next_blink <= 0.0:
-		_blink = 0.14
-		_next_blink = randf_range(1.8, 5.0)
-	_blink = maxf(_blink - delta, 0.0)
+func _fidget_k() -> float:
+	return smoothstep(0.0, 0.35, _fidget_t) * (1.0 - smoothstep(1.7, 2.2, _fidget_t))
+
+
+func _idle_pose(arm: Array, leg: Array, face: Dictionary) -> void:
+	var ft := _fidget_t
+	var k := _fidget_k()
+	match _fidget:
+		"stretch":
+			var up := [[2.9, -0.35, 0.2], [2.9, 0.35, 0.2]]
+			for i in 2:
+				arm[i] = [lerpf(arm[i][0], up[i][0], k), lerpf(arm[i][1], up[i][1], k), lerpf(arm[i][2], up[i][2], k)]
+			if k > 0.5:
+				face["eyes"] = "closed"
+				face["mouth"] = "open"
+				face["open"] = 0.9
+		"look":
+			face["brow_r"] = 0.5
+		"straps":
+			arm[0] = [lerpf(arm[0][0], 0.45, k), lerpf(arm[0][1], 0.35, k), lerpf(arm[0][2], 1.7, k)]
+			arm[1] = [lerpf(arm[1][0], 0.45, k), lerpf(arm[1][1], -0.35, k), lerpf(arm[1][2], 1.7, k)]
+		"scratch":
+			arm[1] = [lerpf(arm[1][0], 2.3, k), lerpf(arm[1][1], 0.9, k), lerpf(arm[1][2], 1.9 + sin(ft * 18.0) * 0.2, k)]
+			face["brow_a"] = -0.5
+			face["mouth"] = "wavy"
+		"tap":
+			leg[1] = [0.15 * k, -0.2 * k - absf(sin(ft * 9.0)) * 0.25 * k]
+			arm[0][1] -= 0.15 * k
+			arm[1][1] += 0.15 * k
+
+
+func _glance(delta: float, a: float) -> Vector3:
+	if look_target != Vector3.INF and is_inside_tree():
+		var local: Vector3 = (neck.get_parent() as Node3D).global_transform.affine_inverse() * look_target - neck.position
+		var yaw := atan2(-local.x, -local.z)
+		var pitch := atan2(local.y - 0.3, Vector2(local.x, local.z).length())
+		_pupil = Vector2(clampf(yaw * 0.8, -1.0, 1.0), clampf(pitch * 1.5, -0.6, 0.6))
+		return Vector3(clampf(pitch, -0.5, 0.5) * 0.6, clampf(yaw, -1.0, 1.0) * 0.7, 0.0)
 	_look_timer -= delta
 	if _look_timer <= 0.0:
-		_look_timer = randf_range(1.0, 3.5)
-		_look_eyes = Vector2(randf_range(-1, 1), randf_range(-0.6, 0.6)) if randf() < 0.6 else Vector2.ZERO
-	var sy := 0.12 if _blink > 0.0 else (1.18 if big else 1.0)
+		_look_timer = randf_range(1.2, 4.0)
+		_look = Vector2(randf_range(-0.5, 0.5), randf_range(-0.15, 0.2)) if randf() < 0.5 else Vector2.ZERO
+		_pupil = Vector2(signf(_look.x) * 0.7 if absf(_look.x) > 0.1 else randf_range(-0.5, 0.5), randf_range(-0.4, 0.4))
+	var k := 1.0 - minf(a, 1.0) * 0.7
+	return Vector3(_look.y * k, _look.x * k, 0.0)
+
+
+func _face_base() -> Dictionary:
+	var f := {"eyes": "dot", "mouth": "smile", "open": 0.0, "brow_r": 0.0, "brow_a": 0.0, "lid": 0.0}
+	match int(look["face"]) % FACE_NAMES.size():
+		1:
+			f["eyes"] = "sclera"
+			f["brow_r"] = 0.3
+		2:
+			f["eyes"] = "sclera"
+			f["lid"] = 0.45
+			f["mouth"] = "flat"
+			f["brow_r"] = -0.3
+		3:
+			f["mouth"] = "cheeky"
+			f["brow_a"] = 0.25
+			f["brow_r"] = 0.2
+		4:
+			f["eyes"] = "sclera"
+			f["brow_a"] = 0.7
+			f["mouth"] = "flat"
+	match mood:
+		Mood.TIRED:
+			f["lid"] = 0.5
+			f["brow_a"] = -0.7
+			f["brow_r"] = -0.2
+			f["mouth"] = "open" if speed > 0.5 else "wavy"
+			f["open"] = 0.35 + 0.25 * sin(_t * 9.0)
+		Mood.KNOCKED_OUT:
+			f["eyes"] = "x"
+			f["mouth"] = "open"
+			f["open"] = 0.4
+			f["brow_r"] = -0.5
+		Mood.ASLEEP:
+			f["eyes"] = "closed"
+			f["mouth"] = "flat"
+			f["brow_r"] = -0.4
+			f["lid"] = 0.0
+		Mood.JOY:
+			f["eyes"] = "happy"
+			f["mouth"] = "open"
+			f["open"] = 0.7
+			f["brow_r"] = 0.6
+		Mood.EFFORT:
+			f["mouth"] = "teeth"
+			f["brow_a"] = 0.9
+			f["lid"] = 0.2
+		Mood.SCARED:
+			f["eyes"] = "wide"
+			f["mouth"] = "open"
+			f["open"] = 1.0
+			f["brow_r"] = 1.0
+			f["brow_a"] = -0.6
+		Mood.COLD:
+			f["mouth"] = "teeth"
+			f["brow_a"] = -0.8
+			f["brow_r"] = 0.2
+	if sprint and speed > 3.0 and f["mouth"] in ["smile", "flat", "wavy", "cheeky"]:
+		f["mouth"] = "open"
+		f["open"] = 0.45 + 0.2 * sin(_t * 12.0)
+	return f
+
+
+func _update_face(delta: float, f: Dictionary) -> void:
+	var eyes: String = f["eyes"]
+	var mouth: String = f["mouth"]
+	var state := "%s/%s/%s" % [eyes, mouth, _shadow_only]
+	if state != _face_state:
+		_face_state = state
+		var show := not _shadow_only
+		var drawn := eyes in ["dot", "sclera", "wide"]
+		for s in ["L", "R"]:
+			(_face["eye" + s] as Node3D).visible = show
+			(_face["outline" + s] as Node3D).visible = drawn and eyes != "dot"
+			(_face["sclera" + s] as Node3D).visible = drawn and eyes != "dot"
+			(_face["pupil" + s] as Node3D).visible = drawn
+			(_face["lid" + s] as Node3D).visible = drawn
+			(_face["happy" + s] as Node3D).visible = eyes == "happy"
+			(_face["closed" + s] as Node3D).visible = eyes == "closed"
+			(_face["x" + s] as Node3D).visible = eyes == "x"
+			(_face["brow" + s] as Node3D).visible = show
+		(_face["mouth"] as Node3D).visible = show
+		for k in ["smile", "flat", "wavy", "open", "teeth", "cheeky"]:
+			(_face[k] as Node3D).visible = k == mouth
+	if _shadow_only:
+		return
+	# blinking
+	_next_blink -= delta
+	if _next_blink <= 0.0:
+		_blink = 0.13
+		_next_blink = randf_range(1.8, 5.0)
+	_blink = maxf(_blink - delta, 0.0)
+	var wide := eyes == "wide"
+	var lid := _spring("lid", 1.0 if _blink > 0.0 else float(f["lid"]), delta, 500.0, 40.0)
+	var pup_s := _spring("pups", 0.62 if wide else (1.0 if eyes == "sclera" else 1.35), delta, 200.0, 20.0)
+	var eye_s := _spring("eyes", 1.2 if wide else 1.0, delta, 200.0, 16.0)
+	var px := _spring("pupx", _pupil.x, delta, 300.0, 30.0)
+	var py := _spring("pupy", _pupil.y, delta, 300.0, 30.0)
+	var brow_r := _spring("browr", float(f["brow_r"]), delta, 200.0, 16.0)
+	var brow_a := _spring("browa", float(f["brow_a"]), delta, 200.0, 16.0)
 	for i in 2:
 		var s: String = ["L", "R"][i]
+		var side := -1.0 if i == 0 else 1.0
 		var eye: Node3D = _face["eye" + s]
-		var base: Transform3D = eye.get_meta("rest", eye.transform)
-		if not eye.has_meta("rest"):
-			eye.set_meta("rest", base)
-		var sc := Vector3(1.18 if big else 1.0, _spring("blink%d" % i, sy, delta, 900.0, 50.0), 1.0)
-		eye.transform = base.translated_local(Vector3(_look_eyes.x * 0.008, _look_eyes.y * 0.006, 0)).scaled_local(sc)
+		eye.transform = (eye.get_meta("rest") as Transform3D).scaled_local(Vector3(eye_s, eye_s, 1.0))
+		var lidn: Node3D = _face["lid" + s]
+		lidn.position.y = lerpf(0.1, 0.018, clampf(lid, 0.0, 1.0))
+		lidn.visible = lid > 0.03 and eyes in ["dot", "sclera", "wide"]
+		var pupil: Node3D = _face["pupil" + s]
+		var r := 0.013 if eyes != "dot" else 0.005
+		# local +X of the face frame points to the character's left
+		pupil.position = Vector3(px * r, py * r, 0.012)
+		pupil.scale = Vector3(pup_s, pup_s, 1.0)
+		var brow: Node3D = _face["brow" + s]
+		# angry: inner ends down; worried: inner ends up
+		brow.transform = (brow.get_meta("rest") as Transform3D).translated_local(Vector3(0, brow_r * 0.028, 0.004)).rotated_local(Vector3(0, 0, 1), brow_a * 0.35 * side)
+	var open: Node3D = _face["open"]
+	var o := _spring("open", float(f["open"]), delta, 260.0, 18.0)
+	open.scale = Vector3(lerpf(0.6, 1.0, o), lerpf(0.3, 1.25, o), 1.0)
+	(_face["teeth"] as Node3D).position.x = sin(_t * 60.0) * 0.003 if mood == Mood.COLD else 0.0

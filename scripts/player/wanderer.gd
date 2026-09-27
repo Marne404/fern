@@ -150,6 +150,8 @@ func _process(delta: float) -> void:
 	scout.speed = spd
 	scout.sprint = _sprinting
 	scout.on_floor = is_on_floor() or swimming or climbing or fly_mode != 0 or not rope.is_empty()
+	scout.vy = velocity.y
+	scout.load = clampf((inventory.total_weight() - 8.0) / 16.0, 0.0, 1.0)
 	var collapsed_now := body.state == Body.State.COLLAPSED
 	if collapsed_now or sleeping:
 		scout.pose = Scout.Pose.LIE
@@ -167,8 +169,14 @@ func _process(delta: float) -> void:
 		scout.mood = Scout.Mood.KNOCKED_OUT
 	elif sleeping:
 		scout.mood = Scout.Mood.ASLEEP
+	elif climbing or not rope.is_empty():
+		scout.mood = Scout.Mood.EFFORT
+	elif not is_on_floor() and not swimming and velocity.y < -7.0:
+		scout.mood = Scout.Mood.SCARED
 	elif body.state >= Body.State.TIRED:
 		scout.mood = Scout.Mood.TIRED
+	elif body.feel_temp < 8.0:
+		scout.mood = Scout.Mood.COLD
 	else:
 		scout.mood = Scout.Mood.NORMAL
 

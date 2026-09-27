@@ -83,6 +83,7 @@ func _place(snap: bool, delta: float) -> void:
 	scout.global_position = sp
 	scout.rotation = Vector3(0, _scout_yaw, 0)
 	scout.speed = 0.0 if portrait else speed
+	scout.look_target = global_position if _blend > 0.3 else Vector3.INF
 	if _blend <= 0.0:
 		global_transform = flight
 		return

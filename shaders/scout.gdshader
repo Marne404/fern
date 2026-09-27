@@ -60,7 +60,9 @@ void light() {
 	DIFFUSE_LIGHT += LIGHT_COLOR * rim * 0.45 * sun / PI;
 	// cool fill in the shadow, warm bounce from below
 	float shade = 1.0 - lit;
-	DIFFUSE_LIGHT += vec3(0.06, 0.09, 0.2) * shade * 0.35 * shade_hue;
+	DIFFUSE_LIGHT += vec3(0.06, 0.09, 0.2) * shade * 0.15 * shade_hue;
+	// keep colors rich in the shadow (painted look): add back a saturated share of the albedo
+	DIFFUSE_LIGHT += ALBEDO * shade * 0.32 * sun;
 	DIFFUSE_LIGHT += vec3(0.12, 0.09, 0.04) * clamp(-NORMAL.y * 0.5 + 0.2, 0.0, 1.0) * 0.12;
 	if (v_gloss > 0.0) {
 		vec3 h = normalize(LIGHT + VIEW);
