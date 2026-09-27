@@ -187,6 +187,7 @@ func _process(delta: float) -> void:
 	scout.speed = spd
 	scout.sprint = _sprinting
 	scout.on_floor = is_on_floor() or swimming or climbing or fly_mode != 0 or not rope.is_empty()
+	scout.talk = Voice.mouth if Settings.values.get("voice_lipsync", true) else 0.0
 	scout.vy = velocity.y
 	scout.load = clampf((inventory.total_weight() - 8.0) / 16.0, 0.0, 1.0)
 	var collapsed_now := body.state == Body.State.COLLAPSED

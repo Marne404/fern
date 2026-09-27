@@ -63,6 +63,8 @@ var load := 0.0
 var vy := 0.0
 ## Optional point (global) the head turns to, e.g. the camera in the scout editor
 var look_target := Vector3.INF
+## Voice level 0..1 (lip sync)
+var talk := 0.0
 
 var look := DEFAULT_LOOK.duplicate()
 ## true: StandardMaterial3D instead of the toon shader and no merging (for glTF export)
@@ -1033,6 +1035,13 @@ func animate(delta: float) -> void:
 		face["mouth"] = "open"
 		face["open"] = 0.7
 		face["brow_r"] = 0.6
+
+	# lip sync: the voice opens the mouth unless an emote or a strong mood face is showing
+	if talk > 0.04 and _emote == "" and not waving_now and mood in [Mood.NORMAL, Mood.TIRED, Mood.COLD, Mood.JOY] and pose != Pose.LIE:
+		face["mouth"] = "open"
+		face["open"] = clampf(talk, 0.0, 1.0)
+		face["brow_r"] = float(face["brow_r"]) + talk * 0.3
+		head_rot.x += sin(_t * 9.0) * 0.04 * talk
 
 	# the head turns towards a look target (scout editor: the camera) or glances around
 	head_rot += _glance(delta, a)

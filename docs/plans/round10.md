@@ -208,6 +208,22 @@ exposes `level`, `talking`, `mouth_open`. HUD shows a small mic icon when transm
 (small O at low level, open at high). Emotes / overriding faces (fear, effort, knocked out, asleep) take
 priority.
 
+**Details**
+
+- Autoload `Voice` (`scripts/audio/voice.gd`): off until enabled in the settings (no microphone access before).
+  Bus "Mic" (muted unless "Hear myself") with `AudioEffectCapture` + `AudioEffectSpectrumAnalyzer`;
+  `AudioStreamMicrophone` player on that bus.
+- Every frame: RMS of the captured frames → dB; voice share = energy 250–3400 Hz / 60–8000 Hz.
+- Gate (pure function, unit-tested): push to talk = key held; always on; voice activation = open when level >
+  threshold and voice share > 0.35, stays open 0.35 s after the level falls 6 dB below the threshold.
+- `mouth` = smoothed, compressed level while transmitting (0..1, fast attack 25 ms, release 90 ms, small
+  jitter so it looks like syllables).
+- Settings: enable, input device, mode, threshold, hear myself, mouth moves; live meter with threshold marker.
+- HUD: little microphone badge while transmitting.
+- Scout: `talk` input opens the mouth (open-mouth shape scaled by the level) unless an emote or a strong mood
+  face (fear, effort, knocked out, asleep) is active.
+- Real-signal test: record from the output monitor while the harmonica plays → voice activation must open.
+
 **Tests:** device enumeration and level readout (headless test with the default device; if no microphone
 exists the UI shows "No microphone found"), mode switching logic unit test with a synthetic level signal,
 lip-sync visible in studio with a fake signal.

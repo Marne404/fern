@@ -23,6 +23,8 @@ var _messages: VBoxContainer
 var _needs: Label
 
 
+var _mic: Control
+
 func _ready() -> void:
 	layer = 5
 	_overlay = ColorRect.new()
@@ -124,6 +126,16 @@ func _ready() -> void:
 	_needs.add_theme_color_override("font_color", Color(1.0, 0.85, 0.6))
 	add_child(_needs)
 
+	# microphone badge while you transmit (voice test)
+	_mic = MicWidgets.Badge.new()
+	var mic := _mic
+	mic.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	mic.offset_left = 26
+	mic.offset_top = -120
+	mic.offset_right = 82
+	mic.offset_bottom = -64
+	add_child(mic)
+
 	_hint = _label(17, HORIZONTAL_ALIGNMENT_LEFT)
 	_hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_hint.offset_left = 26
@@ -145,6 +157,7 @@ func _label(size: int, align: HorizontalAlignment) -> Label:
 
 
 func set_playing(on: bool) -> void:
+	_mic.visible = on
 	_distance.visible = on
 	_state_box.visible = on
 	_prompt.visible = on

@@ -456,6 +456,34 @@ func _build_settings() -> Control:
 	_section(list, "Audio")
 	_check(list, "music", "Music")
 	_slider(list, "music_volume", "Music volume", 0.0, 1.0, 0.05, func(v): return "%d %%" % roundi(v * 100))
+	_section(list, "Voice (local test – nothing is sent)")
+	_check(list, "voice_enabled", "Use microphone")
+	var dev_row := _row(list, "Input device")
+	var dev := OptionButton.new()
+	dev.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dev.pressed.connect(func():
+		# refresh the list when opened (devices can come and go)
+		dev.clear()
+		for d in Voice.devices():
+			dev.add_item(d)
+		var cur := Voice.devices().find(Settings.values.get("voice_device", "Default"))
+		dev.select(maxi(cur, 0)))
+	for d in Voice.devices():
+		dev.add_item(d)
+	dev.select(maxi(Voice.devices().find(Settings.values.get("voice_device", "Default")), 0))
+	dev.item_selected.connect(func(i: int): Settings.set_value("voice_device", dev.get_item_text(i), false))
+	dev_row.add_child(dev)
+	_option(list, "voice_mode", "Mode", Voice.MODE_NAMES)
+	var hint := Label.new()
+	hint.text = "Push to talk: hold T."
+	hint.add_theme_font_size_override("font_size", 14)
+	hint.add_theme_color_override("font_color", Color(1, 1, 1, 0.55))
+	list.add_child(hint)
+	_slider(list, "voice_threshold", "Voice activation threshold", -60.0, -10.0, 1.0, func(v): return "%d dB" % int(v))
+	var meter_row := _row(list, "Level")
+	meter_row.add_child(MicWidgets.Meter.new())
+	_check(list, "voice_monitor", "Hear myself")
+	_check(list, "voice_lipsync", "My scout's mouth moves when I talk")
 	_section(list, "Controls")
 	_check(list, "emote_camera", "Emote camera (first person steps back while an emote plays)")
 	for i in 8:
@@ -486,6 +514,16 @@ func _emote_slot(list: VBoxContainer, i: int) -> void:
 		w[i] = ids[k]
 		Settings.set_value("emote_wheel", w, false))
 	row.add_child(ob)
+
+
+## Test helper: scroll the settings so the section whose title starts with `text` is at the top
+func scroll_settings_to(text: String) -> void:
+	await get_tree().process_frame
+	for l in _settings.find_children("*", "Label", true, false):
+		if (l as Label).text.to_lower().begins_with(text.to_lower()):
+			var sc := _settings.find_children("*", "ScrollContainer", true, false)[0] as ScrollContainer
+			sc.scroll_vertical = int(l.position.y)
+			return
 
 
 func _section(list: VBoxContainer, text: String) -> void:

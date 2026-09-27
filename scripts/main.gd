@@ -246,6 +246,10 @@ func _ready() -> void:
 		music.set_menu()
 		if _args.has("settings"):
 			menus._open_settings(menus._main)
+			if _args["settings"] != "1":
+				menus.scroll_settings_to.call_deferred(_args["settings"])
+		if _args.has("fakevoice"):
+			Voice.fake_db = float(_args["fakevoice"])
 		if _args.has("scout"):
 			menus._open_scout()
 	if _args.has("obtest"):
@@ -253,6 +257,11 @@ func _ready() -> void:
 		ot.main = self
 		add_child(ot)
 		ot.run()
+	if _args.has("voicetest"):
+		var vt: Node = preload("res://scripts/tests/voice_test.gd").new()
+		vt.main = self
+		add_child(vt)
+		vt.run(_args["voicetest"])
 	if _args.has("selftest"):
 		var t: Node = preload("res://scripts/tests/selftest.gd").new()
 		t.main = self

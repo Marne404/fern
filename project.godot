@@ -16,9 +16,14 @@ run/main_scene="res://main.tscn"
 config/icon="res://icon.png"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
+[audio]
+
+driver/enable_input=true
+
 [autoload]
 
 Settings="*res://scripts/core/settings.gd"
+Voice="*res://scripts/audio/voice.gd"
 
 [display]
 

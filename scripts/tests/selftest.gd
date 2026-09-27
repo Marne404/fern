@@ -140,6 +140,7 @@ func run() -> void:
 
 	await _test_all_items(p)
 	await _test_emotes(p)
+	await _test_voice(p)
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -251,3 +252,34 @@ func _test_emotes(p: Wanderer) -> void:
 	wheel.open()
 	check("Emote wheel opens with 8 slots", wheel.is_open() and wheel._ids.size() == 8 and wheel._icons.all(func(t): return t != null))
 	wheel.close(false)
+
+
+func _test_voice(p: Wanderer) -> void:
+	# gate logic with synthetic levels (threshold -38 dB)
+	var v: Node = Voice
+	var g := func(mode: int, db: float, share: float, key: bool, dt: float) -> bool: return v.gate(mode, db, share, -38.0, key, dt)
+	check("Voice activation opens on speech", g.call(2, -25.0, 0.8, false, 0.016))
+	var still := true
+	for i in 12:
+		still = still and g.call(2, -70.0, 0.8, false, 0.016)
+	check("Voice activation holds briefly", still)
+	var closed := false
+	for i in 30:
+		closed = not g.call(2, -70.0, 0.8, false, 0.016)
+	check("Voice activation closes after silence", closed)
+	check("Noise without voice does not open", not g.call(2, -20.0, 0.1, false, 0.016))
+	check("Push to talk needs the key", g.call(0, -70.0, 0.0, true, 0.016) and not g.call(0, -10.0, 0.9, false, 0.016))
+	check("Always on", g.call(1, -80.0, 0.0, false, 0.016))
+	# lip sync with a fake signal
+	var old_mode = Settings.values["voice_mode"]
+	Settings.values["voice_mode"] = 1
+	v.fake_db = -18.0
+	var opened := false
+	for i in 40:
+		await get_tree().process_frame
+		opened = opened or p.scout._face_state.begins_with("dot/open") or p.scout._face_state.contains("/open/")
+	check("Talking moves the scout's mouth", v.transmitting and v.mouth > 0.05 and opened, "mouth %.2f face %s" % [v.mouth, p.scout._face_state])
+	v.fake_db = NAN
+	Settings.values["voice_mode"] = old_mode
+	for i in 10:
+		await get_tree().process_frame

@@ -73,6 +73,12 @@ var values := {
 	"third_person": false,
 	"emote_wheel": [],          # 8 emote ids for the wheel (empty = Scout.DEFAULT_WHEEL)
 	"emote_camera": true,       # first person: show the emote from behind while it plays
+	"voice_enabled": false,     # local microphone test (nothing is sent)
+	"voice_device": "Default",
+	"voice_mode": 2,            # 0 push to talk (T), 1 always on, 2 voice activation
+	"voice_threshold": -38.0,   # dB for voice activation
+	"voice_monitor": false,     # hear your own microphone
+	"voice_lipsync": true,      # your scout's mouth follows your voice
 }
 
 ## On scene reload: generate this world and start hiking right away
