@@ -4,6 +4,8 @@ extends Node
 ## Grass, trees, leaves, sand and tumbleweeds all react to the same gust (global shader value wind_strength).
 
 var gust := 0.0          # current gust strength 0..1
+## Last value written to the global wind_strength (readable outside the editor)
+static var current_strength := 1.0
 var strength := 0.5      # how gusty the biome is (desert and autumn stronger)
 var force := -1.0        # test helper: fixed gust strength
 var _next := 6.0
@@ -42,4 +44,5 @@ func _process(delta: float) -> void:
 	if force >= 0.0:
 		target = force
 	gust = lerpf(gust, target, 1.0 - exp(-4.0 * delta))
-	RenderingServer.global_shader_parameter_set("wind_strength", 1.0 + gust * (0.6 + 1.0 * strength))
+	current_strength = 1.0 + gust * (0.6 + 1.0 * strength)
+	RenderingServer.global_shader_parameter_set("wind_strength", current_strength)

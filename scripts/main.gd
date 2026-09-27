@@ -723,6 +723,9 @@ func _on_knot_done(q: float) -> void:
 		player.input_enabled = true
 	if not backpack.is_open():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# gloves: a firmer grip makes knots a bit stronger
+	if player and q >= 0.0 and player._wears("handschuhe"):
+		q = minf(q * 1.1 + 0.02, 1.0)
 	if _knot_cb.is_valid():
 		var cb := _knot_cb
 		_knot_cb = Callable()

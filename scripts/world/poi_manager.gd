@@ -75,33 +75,51 @@ static func _weighted(rng: RandomNumberGenerator) -> String:
 static func _loot(type: String, biome: int, rng: RandomNumberGenerator) -> Array:
 	var cold := biome in [6, 7]          # Mountain Pines, Deadwood Bog
 	var hot := biome == 2                # Desert Valley
-	var food := ["apfel", "apfel", "brot", "muesliriegel", "bohnen", "beeren"]
-	var drink := ["wasserflasche", "limonade"] if not hot else ["wasserflasche", "wasserflasche", "limonade"]
-	var gear := ["verband", "seil", "taschenlampe", "fernglas", "feldhandbuch", "kamera"]
-	var clothes := ["regenjacke", "pullover", "muetze"] if not hot else ["sonnenhut", "sonnenhut", "regenjacke"]
+	var forest := biome in [1, 5, 10]    # Forest Trail, Red Maple Wood, Glowing Forest
+	var coast := biome == 8              # Sunset Coast
+	var food := ["apfel", "apfel", "brot", "muesliriegel", "bohnen", "beeren", "kaese", "sandwich", "schokolade",
+		"trockenobst", "moehre", "keks", "honig", "glueckskeks"]
+	if forest:
+		food += ["pilze", "pilze", "beeren"]
+	var drink := ["wasserflasche", "limonade", "saft"]
+	if hot:
+		drink += ["wasserflasche", "saft", "wasserflasche"]
 	if cold:
-		clothes = ["pullover", "muetze", "regenjacke", "pullover"]
+		drink += ["tee", "kakao", "tee"]
+	var gear := ["verband", "seil", "taschenlampe", "fernglas", "feldhandbuch", "kamera", "kompass", "karte", "messer",
+		"stock", "laterne", "pflaster", "erste_hilfe", "pfeife"]
+	var clothes := ["regenjacke", "pullover", "muetze", "poncho", "schal", "handschuhe", "stiefel"]
+	if hot:
+		clothes = ["sonnenhut", "sonnenhut", "sonnencreme", "sonnencreme", "stiefel", "poncho"]
+	if cold:
+		clothes = ["pullover", "muetze", "regenjacke", "pullover", "schal", "handschuhe", "stiefel"]
+	var fun := ["wasserpistole", "gummihuhn", "kamera", "fernglas", "stein", "mundharmonika", "drachen", "federn", "pfeife"]
+	if coast:
+		fun += ["muschel", "muschel", "muschel", "drachen"]
+	if biome == 6:
+		fun += ["tannenzapfen", "tannenzapfen"]
 	var out := []
+	var pick := func(list: Array) -> String: return list[rng.randi() % list.size()]
 	match type:
 		"picknick":
 			for i in rng.randi_range(2, 4):
-				out.append(food[rng.randi() % food.size()])
-			out.append(drink[rng.randi() % drink.size()])
+				out.append(pick.call(food))
+			out.append(pick.call(drink))
 		"rucksack":
-			out.append(clothes[rng.randi() % clothes.size()])
-			out.append(gear[rng.randi() % gear.size()])
+			out.append(pick.call(clothes))
+			out.append(pick.call(gear))
 			if rng.randf() < 0.6:
-				out.append(food[rng.randi() % food.size()])
+				out.append(pick.call(food))
 		"kiste":
-			out.append(gear[rng.randi() % gear.size()])
-			out.append(clothes[rng.randi() % clothes.size()])
+			out.append(pick.call(gear))
+			out.append(pick.call(clothes))
 			if rng.randf() < 0.5:
-				out.append("verband")
+				out.append(pick.call(["verband", "pflaster", "erste_hilfe"]))
 		"bank":
 			if rng.randf() < 0.35:
-				out.append(food[rng.randi() % food.size()])
+				out.append(pick.call(food))
 		"fund":
-			out.append(["wasserpistole", "gummihuhn", "kamera", "fernglas", "stein"][rng.randi() % 5])
+			out.append(pick.call(fun))
 	return out
 
 

@@ -21,6 +21,12 @@ var health := 100.0     # injuries
 var wet := 0.0          # 0..1, dries slowly
 var feel_temp := 18.0   # felt temperature °C
 var state := State.FIT
+## Timers from items: warming drinks, sunscreen
+var warm_bonus_t := 0.0
+var heat_protect_t := 0.0
+## Multipliers set by the owner each frame: climbing effort (stick, boots), rest recovery (harmonica)
+var climb_factor := 1.0
+var rest_bonus := 1.0
 
 
 ## Upper stamina limit from all background factors
@@ -68,14 +74,20 @@ func update(delta: float, effort: int, climb: float, load: float, air_temp: floa
 	wet = maxf(wet - delta / (70.0 + maxf(10.0 - air_temp, 0.0) * 8.0), 0.0)
 	# felt temperature: air + clothing + movement - wetness
 	var target: float = air_temp + clothing + [0.0, 2.0, 5.0, -4.0][effort] - wet * 10.0
+	warm_bonus_t = maxf(warm_bonus_t - delta, 0.0)
+	heat_protect_t = maxf(heat_protect_t - delta, 0.0)
+	if warm_bonus_t > 0.0:
+		target += 6.0
+	if heat_protect_t > 0.0 and target > 24.0:
+		target = 24.0 + (target - 24.0) * 0.5
 	feel_temp = lerpf(feel_temp, target, 1.0 - exp(-delta / 20.0))
 
 	var load_over := maxf(load - Inventory.COMFORT_WEIGHT, 0.0)
 	var mx := max_stamina()
 	var change := 0.0
 	match effort:
-		0: change = 10.0 if not resting else 18.0
-		1: change = 2.6 - load_over * 0.45 - climb * 2.2 * (1.0 + load_over * 0.08)
+		0: change = 10.0 if not resting else 18.0 * rest_bonus
+		1: change = 2.6 - load_over * 0.45 - climb * climb_factor * 2.2 * (1.0 + load_over * 0.08)
 		2: change = -11.0 - load_over * 0.6
 		3: change = -3.5 - load_over * 0.4
 	change *= 1.0 - comfort_penalty() * 0.5 if change > 0.0 else 1.0

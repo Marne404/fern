@@ -5,7 +5,7 @@ extends RefCounted
 ## Grid of rows x cols vertices -> triangle mesh. The winding is detected once (Godot: clockwise = front).
 static func grid(verts: PackedVector3Array, norms: PackedVector3Array, rows: int, cols: int) -> ArrayMesh:
 	var flip := false
-	var r := rows / 2
+	var r := clampi(rows / 2, 0, rows - 2)
 	for cc in cols - 1:
 		var a := r * cols + cc
 		var cr := (verts[a + 1] - verts[a]).cross(verts[a + cols] - verts[a])

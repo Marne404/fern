@@ -176,11 +176,13 @@ func _row(it: Dictionary) -> Control:
 	var d := ItemDefs.def(it["id"])
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 12)
-	var swatch := ColorRect.new()
-	swatch.color = d["color"]
-	swatch.custom_minimum_size = Vector2(18, 18)
-	swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(swatch)
+	var icon := TextureRect.new()
+	icon.texture = ItemDefs.icon(it["id"])
+	icon.custom_minimum_size = Vector2(44, 44)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(icon)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 0)

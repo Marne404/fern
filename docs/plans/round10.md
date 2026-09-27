@@ -89,6 +89,24 @@ Every model is ~10–30 cm, origin at the bottom center, lying naturally.
 **Where they appear:** loot tables of the finds (picnic, lost backpack, chest, bench …) per biome (shells at the coast,
 pinecones in pines, mushrooms in forests, cocoa/tea in cold biomes, sunscreen in the desert).
 
+**Implementation details**
+
+- `ItemModels.mesh(id)`: one cached `ArrayMesh` per item with vertex colors (alpha = material flag: 1 plain,
+  0.5 cloth weave, 0 glossy), built by a small `B` builder that transforms and merges `Mesh3` parts; centered on
+  its bounding box (RigidBody center of mass), shared toon material (scout shader, vertex color mode).
+- `ItemDefs`: 30 new entries; `shape/size/color` replaced by the model; `half_extent()` from the model's AABB.
+  New fields: `stamina`, `warm_time`, `queasy`, `charges` for food/medicine, `heat_protect`, new slots
+  `hals` (neck), `haende` (hands), `fuesse` (feet).
+- Effects in `Wanderer.use_item` / `_use_special`: warming drinks (`Body.warm_bonus` timer adds felt °C),
+  sunscreen (`Body.heat_protect` timer halves heat), queasy mushrooms, fortune cookie texts, compass and map
+  messages (heading of the trail / distance to the next obstacle), knife cuts a rope in two, flashlight and
+  lantern toggle a light on the scout, whistle and harmonica play synthesized sounds (harmonica: resting
+  recovers 50 % faster), kite flies behind you for 20 s, shell "you hear the sea".
+- Passive: walking stick in the backpack −15 % stamina uphill, boots worn −20 % climbing cost,
+  gloves worn make knots 10 % stronger.
+- Loot tables per biome (shells at the coast, pinecones/tea/cocoa/scarves in cold biomes, mushrooms in forests,
+  sunscreen/juice in the desert) and a wider mix for all finds.
+
 **Tests:** item studio render (grid of all 50 models), spawn test (every item can be created, dropped, picked up,
 used without errors), selftest extended, backpack UI shows names/weights.
 

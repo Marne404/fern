@@ -138,5 +138,78 @@ func run() -> void:
 		var spawned: int = root.get_children().filter(func(c): return c is WorldItem).size()
 		check("Chest releases items", spawned == (kiste["items"] as Array).size(), "%d items" % spawned)
 
+	await _test_all_items(p)
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
+
+
+## Every item: model, add, use, drop as a world item; plus the special effects
+func _test_all_items(p: Wanderer) -> void:
+	var inv := p.inventory
+	for it in inv.items.duplicate():
+		inv.remove(it)
+	var bad := []
+	for id in ItemDefs.ITEMS:
+		var m := ItemModels.mesh(id)
+		if m == null or m.get_surface_count() == 0 or m.get_aabb().size.length() < 0.02 or m.get_aabb().size.length() > 1.5:
+			bad.append(id)
+	check("All %d item models built" % ItemDefs.ITEMS.size(), bad.is_empty(), str(bad))
+	var icons := ItemDefs.ITEMS.keys().filter(func(id): return ItemDefs.icon(id) == null)
+	check("All item icons exist", icons.is_empty(), str(icons))
+	var used := 0
+	for id in ItemDefs.ITEMS:
+		var it := ItemDefs.make(id)
+		if not inv.add(it):
+			continue
+		p.body.food = 50.0
+		p.body.water = 50.0
+		p.use_item(it)
+		used += 1
+		if inv.items.has(it):
+			p.drop_item(it)
+		await frames(1)
+	check("Every item can be used and dropped", used == ItemDefs.ITEMS.size(), "%d used" % used)
+	for c in main.dropped.get_children():
+		c.free()
+	# charges: the cookie tin lasts three times
+	var tin := ItemDefs.make("keks")
+	inv.add(tin)
+	p.use_item(tin)
+	p.use_item(tin)
+	check("Cookie tin has charges", inv.items.has(tin) and tin["charges"] == 1)
+	p.use_item(tin)
+	check("Cookie tin used up", not inv.items.has(tin))
+	# warming drink and sunscreen timers
+	var tea := ItemDefs.make("tee")
+	inv.add(tea)
+	p.use_item(tea)
+	check("Tea warms", p.body.warm_bonus_t > 60.0)
+	var sun := ItemDefs.make("sonnencreme")
+	inv.add(sun)
+	p.use_item(sun)
+	check("Sunscreen protects", p.body.heat_protect_t > 100.0)
+	# knife cuts a rope
+	for it in inv.items.duplicate():
+		inv.remove(it)
+	var rope := ItemDefs.make("seil")
+	inv.add(rope)
+	var knife := ItemDefs.make("messer")
+	inv.add(knife)
+	p.use_item(knife)
+	var ropes := inv.items.filter(func(i): return i["id"] == "seil")
+	check("Knife cuts the rope in two", ropes.size() == 2 and ropes[0]["length"] == 5 and ropes[1]["length"] == 5)
+	# lantern light on and off with dropping
+	var lamp := ItemDefs.make("laterne")
+	inv.add(lamp)
+	p.use_item(lamp)
+	check("Lantern gives light", p._light != null)
+	p.drop_item(lamp)
+	for i in 3:
+		await get_tree().process_frame
+	check("Light goes when the lantern is dropped", p._light == null)
+	# walking stick lowers climbing effort
+	inv.add(ItemDefs.make("stock"))
+	await frames(3)
+	check("Walking stick eases climbs", p.body.climb_factor < 1.0, "%.2f" % p.body.climb_factor)
+	for c in main.dropped.get_children():
+		c.free()

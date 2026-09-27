@@ -136,6 +136,11 @@ func view_origin() -> Vector3:
 
 
 func _process(delta: float) -> void:
+	# the lamp was dropped or thrown: its light goes with it
+	if _light and not _has_item(_light_item):
+		_light.queue_free()
+		_light = null
+		_light_item = ""
 	if scout == null:
 		return
 	var hv := Vector2(velocity.x, velocity.z)
@@ -336,6 +341,10 @@ func _physics_process(delta: float) -> void:
 	else:
 		_wall_push = 0.0
 
+	# passive item effects: walking stick in the pack, boots worn, harmonica after playing
+	body.climb_factor = (0.85 if _has_item("stock") else 1.0) * (0.8 if _wears("stiefel") else 1.0)
+	_harmonica_t = maxf(_harmonica_t - delta, 0.0)
+	body.rest_bonus = 1.5 if _harmonica_t > 0.0 else 1.0
 	var effort := 3 if swimming else (2 if sprint else (1 if dir != Vector3.ZERO else 0))
 	var climb := maxf(get_real_velocity().y, 0.0) if on_floor else 0.0
 	body.update(delta, effort, climb, inventory.total_weight(), air_temp, inventory.warmth(), resting)
@@ -861,6 +870,13 @@ func _find_refillable() -> Dictionary:
 	return {}
 
 
+func _wears(id: String) -> bool:
+	for it in inventory.items:
+		if it["id"] == id and it.get("equipped", false):
+			return true
+	return false
+
+
 func _has_item(id: String) -> bool:
 	for it in inventory.items:
 		if it["id"] == id and it["condition"] >= 0.35:
@@ -887,13 +903,27 @@ func use_item(item: Dictionary) -> void:
 				return
 			body.food = minf(body.food + d.get("food", 0.0), 100.0)
 			body.water = minf(body.water + d.get("water", 0.0), 100.0)
-			body.stamina = minf(body.stamina + 8.0, body.max_stamina())
-			inventory.remove(item)
-			message.emit("%s – tasty." % d["name"])
+			body.stamina = minf(body.stamina + 8.0 + d.get("stamina", 0.0), body.max_stamina())
+			if d.has("warm_time"):
+				body.warm_bonus_t = maxf(body.warm_bonus_t, d["warm_time"])
+			_consume(item, d)
+			if randf() < d.get("queasy", 0.0):
+				body.spend(10.0)
+				message.emit("Hmm. Your tummy doesn't like that.")
+			elif item["id"] == "glueckskeks":
+				message.emit("\"%s\"" % FORTUNES[randi() % FORTUNES.size()])
+			elif d.has("warm_time"):
+				message.emit("%s – warm all the way down." % d["name"])
+			else:
+				message.emit("%s – tasty." % d["name"])
 		"medizin":
 			body.health = minf(body.health + d.get("heal", 0.0), 100.0)
-			inventory.remove(item)
-			message.emit("Bandage applied.")
+			if d.has("heat_protect"):
+				body.heat_protect_t = d["heat_protect"]
+				message.emit("Sunscreen on. The heat bothers you less.")
+			else:
+				message.emit("%s – better." % d["name"])
+			_consume(item, d)
 		"kleidung":
 			inventory.toggle_equip(item)
 			message.emit("%s %s." % [d["name"], "put on" if item["equipped"] else "taken off"])
@@ -912,7 +942,28 @@ func _use_special(item: Dictionary) -> void:
 			get_viewport().get_texture().get_image().save_png(path)
 			message.emit("Click! Photo saved.")
 		"gummihuhn":
+			Sfx.play(self, "squeak")
 			message.emit("SQUEAK!")
+		"pfeife":
+			Sfx.play(self, "whistle", -8.0)
+			message.emit("FWEEEET!")
+		"mundharmonika":
+			Sfx.play(self, "harmonica", -4.0)
+			message.emit("A little tune. Resting feels even better now." if resting else "A little tune.")
+			_harmonica_t = 40.0
+		"taschenlampe", "laterne":
+			_toggle_light(item["id"])
+		"kompass":
+			var tan := world.gen.path_point(_world_pos().z - 20.0) - world.gen.path_point(_world_pos().z)
+			message.emit("The trail heads %s." % _dir_name(Vector2(tan.x, tan.z)))
+		"karte":
+			message.emit(_next_obstacle_text())
+		"messer":
+			_cut_rope()
+		"drachen":
+			_fly_kite()
+		"muschel":
+			message.emit("Whoosh... you can hear the sea.")
 		"wasserpistole":
 			message.emit("Pssshh! (In multiplayer this hits your friends.)")
 		"fernglas":
@@ -921,6 +972,105 @@ func _use_special(item: Dictionary) -> void:
 			message.emit("Page 1: knots. Page 2: fire. Page 3: ... the pages are stuck together.")
 		_:
 			message.emit(ItemDefs.def(item["id"])["desc"])
+
+
+const FORTUNES := ["The next hill is smaller than it looks.", "A friend will share their snacks with you.",
+	"Your knots will hold today.", "Look up. The clouds are worth it.", "The river is shallower than you fear.",
+	"Something shiny waits near a bench.", "Walk slower, see more.", "Your backpack is heavier than it needs to be.",
+	"Adventure is just bad planning. Enjoy it.", "Tomorrow's trail starts with today's step."]
+
+var _harmonica_t := 0.0
+var _light: Light3D
+var _light_item := ""
+
+
+## Uses up one charge (cookie tin, thermos, first aid kit) or the whole item
+func _consume(item: Dictionary, d: Dictionary) -> void:
+	if d.has("charges") and not d.get("refill", false):
+		item["charges"] -= 1
+		if item["charges"] > 0:
+			inventory.changed.emit()
+			return
+	inventory.remove(item)
+
+
+func _world_pos() -> Vector3:
+	return world.local_to_world(global_position) if world else global_position
+
+
+static func _dir_name(v: Vector2) -> String:
+	# world -Z is north
+	var a := fposmod(atan2(v.x, -v.y), TAU)
+	return ["north", "north-east", "east", "south-east", "south", "south-west", "west", "north-west"][int(round(a / (TAU / 8.0))) % 8]
+
+
+func _next_obstacle_text() -> String:
+	var z := _world_pos().z
+	var best := {}
+	for probe in [z, z - 600.0, z - 1200.0]:
+		for o in world.gen.obstacles_near(probe):
+			if o["z"] < z - 5.0 and (best.is_empty() or o["z"] > best["z"]):
+				best = o
+	if best.is_empty():
+		return "The map shows nothing but trail for a while."
+	var names := {"fallen_tree": "a fallen tree", "river": "a river with a broken bridge", "cliff": "a cliff"}
+	return "The map shows %s about %d m ahead." % [names.get(best["type"], "something"), roundi(z - best["z"])]
+
+
+func _cut_rope() -> void:
+	for it in inventory.items:
+		if it["id"] == "seil" and int(it.get("length", 10)) >= 10:
+			if not inventory.can_add(ItemDefs.make("seil")):
+				message.emit("No room for a second rope.")
+				return
+			var half := int(it["length"]) / 2
+			it["length"] = half
+			var other := ItemDefs.make("seil")
+			other["length"] = half
+			other["knot"] = it.get("knot", 1.0)
+			inventory.add(other)
+			inventory.changed.emit()
+			message.emit("Snip. Two ropes of %d m." % half)
+			return
+	message.emit("Nothing to cut. (Needs a rope of 10 m or more.)")
+
+
+func _toggle_light(id: String) -> void:
+	if _light and _light_item == id:
+		_light.queue_free()
+		_light = null
+		_light_item = ""
+		message.emit("Light off.")
+		return
+	if _light:
+		_light.queue_free()
+	if id == "laterne":
+		var o := OmniLight3D.new()
+		o.light_color = Color(1.0, 0.8, 0.5)
+		o.light_energy = 2.2
+		o.omni_range = 9.0
+		o.shadow_enabled = false
+		o.position = Vector3(0.25, 1.0, -0.2)
+		_light = o
+		add_child(o)
+	else:
+		var sp := SpotLight3D.new()
+		sp.light_color = Color(1.0, 0.96, 0.85)
+		sp.light_energy = 4.0
+		sp.spot_range = 30.0
+		sp.spot_angle = 24.0
+		sp.shadow_enabled = true
+		_light = sp
+		head.add_child(sp)
+	_light_item = id
+	message.emit("Light on.")
+
+
+func _fly_kite() -> void:
+	var kite := Kite.new()
+	kite.owner_body = self
+	get_parent().add_child(kite)
+	message.emit("Up it goes!")
 
 
 func drop_item(item: Dictionary, throw := false) -> void:
@@ -936,7 +1086,7 @@ func drop_item(item: Dictionary, throw := false) -> void:
 
 
 static func _kg(v: float) -> String:
-	return ("%.1f" % v).replace(".", ",")
+	return "%.1f" % v
 
 
 # ================================================================ Camera
