@@ -236,7 +236,36 @@ Research PEAK's UI (menus, HUD, stamina bar, item slots, fonts) from pictures on
 pause, settings, backpack, HUD messages, prompts, biome toast, knot game, scout editor, emote wheel in a
 consistent style (hand-drawn, chunky outlines, warm paper colors, Luckiest-style display font, playful icons).
 
-Detailed plan after the research (section 5b).
+**Research (PEAK store screenshots):** bottom-left a long stamina bar with a thin light outline and rounded ends:
+green fill, then hatched segments for what limits the maximum (weight brown, hunger yellow, injury red) with tiny
+icons above; a thin bonus bar with a lightning icon below. Center prompt: item name in chunky caps, below a tiny
+keycap and a lowercase action ("E grab"). Bottom-right: translucent rounded item slots with numbers, the
+selected one light. Right: small hints "drop Q", "throw Q hold". Big status shouts in the display font
+("MORALE BOOST!!"). Everything slightly hand-drawn, translucent dark, cream outlines.
+
+**5a – style, fonts, menus**
+- Fonts: Luckiest Guy (display) + Nunito (body, variable weight 600/800/900) instead of the default font.
+- Menus become "field guide" paper cards like the website: cream panels with an ink outline and a drop shadow,
+  chunky buttons (sun yellow primary, cream secondary) with a bottom shadow that presses in, hover wiggle.
+- Title screen: multicolored FERN logo like the website, tagline, record as a merit-badge chip, seed on a
+  luggage tag, buttons in a column.
+- Settings in tabs: Graphics · Performance · Display · Audio & voice · Controls & emotes (no endless scroll).
+- Pause, scout editor, knot game in the same style.
+
+**5b – HUD like PEAK**
+- Stamina bar bottom-left (hand-drawn outline, rounded): current stamina green → yellow → orange → red,
+  hatched segments at the end for everything that lowers the maximum: hunger, thirst, tiredness, cold/heat,
+  injury, weight – each with a tiny icon; state shouts ("EXHAUSTED!") above the bar in the display font.
+- Distance top center in the display font with a trail icon; biome toast bigger and outlined.
+- Center prompt: NAME in caps + keycap + action; messages as soft pills.
+- Bottom-right: backpack slot (count badge, weight) and quick keys (G emotes, V view).
+
+**5c – backpack**
+- Paper card with a slot grid (item icons, count/charges badge, worn marker), the selected item on the right with
+  name, weight, properties, description and action buttons; body section with the same segmented bar.
+
+**Tests:** screenshots of every screen at 1080p and 1366×768, keyboard focus, all buttons still work (selftest and
+obstacle test use the backpack/knot game).
 
 ---
 
