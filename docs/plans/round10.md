@@ -119,6 +119,24 @@ bridge posts and planks, rope posts, broken bridge stubs, ruins/arches/stone cir
 Box/Cylinder primitives with `Mesh3` models (planks with rounded edges, nail heads, wood grain via vertex color,
 mossy stone blocks with bevels). One merged mesh per structure where possible.
 
+**Detailed list** (`scripts/world/structure_models.gd`, vertex-colored meshes like the items, colliders unchanged):
+
+| Where | Now | New model |
+|---|---|---|
+| Picnic | flat checker plane + cylinder | plaid blanket with soft folds and fringe, woven basket with handle and lid flaps |
+| Lost backpack | two boxes | proper hiking pack lying on its side (lid, pocket, straps, bedroll) |
+| Bench | boxes | slatted seat and back with gaps, curly cast-iron sides, little brass plaque |
+| Spring | pebble ring + disc | ring of beveled stones of different sizes, carved spout stone with a wooden pipe and a trickle |
+| Chest | two boxes | planked chest with iron bands, rounded lid, brass lock |
+| Signpost | square post + flat boards | round post with a cap, arrow-shaped boards with a painted border |
+| Rope posts (river, cliff) | cylinder | tapered wooden post with a cut top, iron band and rope wraps |
+| Bridge planks, beams | boxes | boards with rounded edges, grain lines, nail heads |
+| Bridge abutments | stone box | masonry of beveled stone blocks |
+| Logs | textured cylinder with bark on the cut ends | same, plus tree-ring end caps |
+| Giant fallen tree | squashed sphere as root plate | root plate: soil disc with roots reaching out, clods |
+| Ruins | cylinders, boxes, dark box as window | fluted columns with base and capital, a block wall with a real arched window and broken top, worn steps |
+| Stone circle | boxes | lumpy standing stones, some with lintels (trilithons), an altar with a mossy top |
+
 **Tests:** POI/landmark renders in several biomes, obstacle test (colliders unchanged), FPS check.
 
 ---

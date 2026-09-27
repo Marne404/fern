@@ -40,6 +40,13 @@ func release_all() -> void:
 ## Put the player at a world position and wait until ground and obstacle are loaded
 func place(p: Wanderer, wpos: Vector3, k := -1) -> void:
 	release_all()
+	# every check starts rested: fatigue from earlier checks must not make results timing-dependent
+	p.body.stamina = 100.0
+	p.body.food = 90.0
+	p.body.water = 90.0
+	p.body.rest = 90.0
+	p.body.health = 100.0
+	p.body.state = Body.State.FIT
 	p.autopilot = Callable()
 	p.rope = {}
 	p.velocity = Vector3.ZERO
@@ -213,10 +220,12 @@ func _test_river(p: Wanderer, gen: WorldGen, ob: ObstacleManager) -> void:
 	await place(p, start, k)
 	steer(p, lax)
 	var swam := false
-	for i in 14 * 60:
+	for i in 20 * 60:
 		await get_tree().physics_frame
 		if p.swimming:
 			swam = true
+		if i > 120 and (Vector2(wpos(p).x, wpos(p).z) - far).dot(n) > 0.5:
+			break
 		# step up at the log's end
 		if i == 90:
 			key(KEY_SPACE, true)

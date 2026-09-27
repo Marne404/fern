@@ -155,6 +155,15 @@ func _mat(color: Color, rough := 0.85) -> StandardMaterial3D:
 	return _mats[key]
 
 
+func _model(parent: Node3D, mesh: Mesh, pos: Vector3, yaw := 0.0) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.position = pos
+	mi.rotation.y = yaw
+	parent.add_child(mi)
+	return mi
+
+
 func _box(parent: Node3D, size: Vector3, pos: Vector3, color: Color, rot := Vector3.ZERO) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var b := BoxMesh.new()
@@ -177,39 +186,17 @@ func _build(p: Dictionary, corner: Vector2) -> Node3D:
 	var spots: Array[Vector3] = []
 	match p["type"]:
 		"picknick":
-			var tex := _checker()
-			var blanket := MeshInstance3D.new()
-			var pm := PlaneMesh.new()
-			pm.size = Vector2(1.8, 1.4)
-			blanket.mesh = pm
-			var bm := StandardMaterial3D.new()
-			bm.albedo_texture = tex
-			bm.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
-			bm.roughness = 1.0
-			blanket.material_override = bm
-			blanket.position.y = 0.04
-			root.add_child(blanket)
-			var basket := MeshInstance3D.new()
-			var cyl := CylinderMesh.new()
-			cyl.top_radius = 0.22
-			cyl.bottom_radius = 0.18
-			cyl.height = 0.25
-			basket.mesh = cyl
-			basket.material_override = _mat(Color(0.62, 0.42, 0.22))
-			basket.position = Vector3(0.6, 0.16, -0.4)
-			root.add_child(basket)
+			_model(root, StructureModels.picnic_blanket(), Vector3(0, 0.02, 0))
+			_model(root, StructureModels.basket(), Vector3(0.6, 0.03, -0.4), 0.4)
 			spots = [Vector3(-0.4, 0.2, 0.2), Vector3(0.0, 0.2, -0.2), Vector3(0.3, 0.2, 0.35), Vector3(-0.2, 0.2, -0.45), Vector3(0.45, 0.2, 0.1)]
 		"rucksack":
-			var bag := _box(root, Vector3(0.38, 0.5, 0.24), Vector3(0, 0.22, 0), Color(0.28, 0.42, 0.3), Vector3(0.25, 0.4, 0.2))
-			_box(bag, Vector3(0.3, 0.18, 0.08), Vector3(0, -0.08, 0.15), Color(0.22, 0.34, 0.24))
+			var packs := [Color("4f8f4a"), Color("d1493f"), Color("3f5fae"), Color("ec8a34"), Color("8b5a36")]
+			_model(root, StructureModels.lost_pack(packs[int(p["seed"]) % packs.size()]), Vector3.ZERO, 0.4)
 			spots = [Vector3(0.5, 0.2, 0.1), Vector3(-0.45, 0.2, 0.25), Vector3(0.15, 0.2, 0.55)]
 		"bank":
 			var body := StaticBody3D.new()
 			root.add_child(body)
-			_box(body, Vector3(1.6, 0.07, 0.42), Vector3(0, 0.46, 0), Color(0.55, 0.36, 0.2))
-			_box(body, Vector3(1.6, 0.35, 0.06), Vector3(0, 0.75, -0.2), Color(0.55, 0.36, 0.2), Vector3(-0.2, 0, 0))
-			for sx in [-0.7, 0.7]:
-				_box(body, Vector3(0.08, 0.46, 0.4), Vector3(sx, 0.23, 0), Color(0.3, 0.3, 0.32))
+			_model(body, StructureModels.bench(), Vector3.ZERO)
 			var cs := CollisionShape3D.new()
 			var shape := BoxShape3D.new()
 			shape.size = Vector3(1.6, 0.5, 0.45)
@@ -223,16 +210,7 @@ func _build(p: Dictionary, corner: Vector2) -> Node3D:
 					w.message.emit("What a view."))
 			spots = [Vector3(0.3, 0.6, 0.0)]
 		"quelle":
-			var stones: Array = ["Pebble_Round_1", "Pebble_Round_2", "Pebble_Round_3", "Pebble_Round_4"]
-			var ring := 10
-			for i in ring:
-				var a := i * TAU / ring
-				var mi := MeshInstance3D.new()
-				mi.mesh = lib.mesh(stones[i % stones.size()], {"rock": {"flatten": 0.5, "flat_color": Color(0.7, 0.7, 0.68)}})
-				mi.position = Vector3(cos(a) * 0.75, 0.0, sin(a) * 0.75)
-				mi.scale = Vector3.ONE * 2.6
-				mi.rotation.y = a * 1.7
-				root.add_child(mi)
+			_model(root, StructureModels.spring_stones(int(p["seed"]) % 4), Vector3(0, -0.04, 0))
 			var pool := MeshInstance3D.new()
 			var disc := CylinderMesh.new()
 			disc.top_radius = 0.66
@@ -258,8 +236,7 @@ func _build(p: Dictionary, corner: Vector2) -> Node3D:
 		"kiste":
 			var box := StaticBody3D.new()
 			root.add_child(box)
-			_box(box, Vector3(0.8, 0.5, 0.55), Vector3(0, 0.25, 0), Color(0.5, 0.34, 0.18))
-			_box(box, Vector3(0.84, 0.08, 0.59), Vector3(0, 0.52, 0), Color(0.42, 0.28, 0.14))
+			_model(box, StructureModels.chest_body(), Vector3.ZERO)
 			var cs2 := CollisionShape3D.new()
 			var sh2 := BoxShape3D.new()
 			sh2.size = Vector3(0.8, 0.56, 0.55)
@@ -367,14 +344,14 @@ func _signpost(root: Node3D, p: Dictionary) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = p["seed"]
 	root.rotation.y = 0.0
-	_box(root, Vector3(0.1, 2.1, 0.1), Vector3(0, 1.05, 0), Color(0.45, 0.32, 0.2))
+	_model(root, StructureModels.signpost_post(), Vector3.ZERO)
 	var names := PLACES.duplicate()
 	for i in 2:
 		var arm := Node3D.new()
 		arm.position = Vector3(0, 1.75 - i * 0.36, 0)
 		arm.rotation.y = rng.randf_range(-0.6, 0.6) + (PI if i == 1 else 0.0)
 		root.add_child(arm)
-		_box(arm, Vector3(1.1, 0.24, 0.04), Vector3(0.55, 0, 0), Color(0.92, 0.88, 0.75))
+		_model(arm, StructureModels.sign_arrow(1.2), Vector3(0.05, 0, 0))
 		var label := Label3D.new()
 		var place: String = names.pop_at(rng.randi() % names.size())
 		label.text = "%s  %d km" % [place, rng.randi_range(2, 999)] if p["k"] != 0 else ("Fern  ∞ km" if i == 0 else "Home  0 km")
@@ -382,10 +359,10 @@ func _signpost(root: Node3D, p: Dictionary) -> void:
 		label.pixel_size = 0.004
 		label.modulate = Color(0.25, 0.18, 0.12)
 		label.outline_size = 0
-		label.position = Vector3(0.55, 0, 0.025)
+		label.position = Vector3(0.52, 0, 0.026)
 		arm.add_child(label)
 		var back := label.duplicate()
-		back.position = Vector3(0.55, 0, -0.025)
+		back.position = Vector3(0.52, 0, -0.026)
 		back.rotation.y = PI
 		arm.add_child(back)
 

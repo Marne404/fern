@@ -160,64 +160,71 @@ func _build(p: Dictionary, corner: Vector2, lod: int) -> Node3D:
 				var gy: float = ground.call(cx, cz)
 				var standing := rng.randf() < 0.65
 				var hh := rng.randf_range(2.5, 6.0) if standing else 0.0
-				var cm := CylinderMesh.new()
-				cm.top_radius = 0.45
-				cm.bottom_radius = 0.52
-				cm.radial_segments = 12
 				if standing:
-					cm.height = hh
+					# fluted column with base and capital (mesh is centered)
+					hh = snappedf(hh, 0.5)
 					var sh := CylinderShape3D.new()
 					sh.radius = 0.5
 					sh.height = hh
-					_piece(root, cm, Transform3D(Basis(), Vector3(cx, gy + hh * 0.5 - 0.2, cz)), mat, sh, lod)
-					# capital
-					var cap := BoxMesh.new()
-					cap.size = Vector3(1.3, 0.35, 1.3)
-					_piece(root, cap, Transform3D(Basis(), Vector3(cx, gy + hh - 0.05, cz)), mat, null, lod)
+					_piece(root, StructureModels.column(hh, sand), Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(cx, gy + hh * 0.5 - 0.2, cz)), null, sh, lod)
 				else:
-					cm.height = rng.randf_range(3.0, 5.0)
+					var ln := snappedf(rng.randf_range(3.0, 5.0), 0.5)
 					var lie := Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, PI * 0.5)
 					var sh2 := CylinderShape3D.new()
 					sh2.radius = 0.5
-					sh2.height = cm.height
-					_piece(root, cm, Transform3D(lie, Vector3(cx, gy + 0.35, cz)), mat, sh2, lod)
+					sh2.height = ln
+					_piece(root, StructureModels.column(ln, sand), Transform3D(lie, Vector3(cx, gy + 0.35, cz)), null, sh2, lod)
 			# wall remains with a window arch
-			var wall := BoxMesh.new()
-			wall.size = Vector3(5.5, 4.2, 0.9)
+			# block wall with a real arched window, broken off at the top
 			var wy: float = ground.call(0.0, -2.0)
 			var wbox := BoxShape3D.new()
-			wbox.size = wall.size
-			_piece(root, wall, Transform3D(Basis(Vector3.RIGHT, 0.04), Vector3(0, wy + 1.8, -2.0)), mat, wbox, lod)
-			var hole := BoxMesh.new()
-			hole.size = Vector3(1.4, 2.2, 1.0)
-			var hm := StandardMaterial3D.new()
-			hm.albedo_color = Color(0.2, 0.22, 0.2)
-			_piece(root, hole, Transform3D(Basis(), Vector3(0, wy + 2.0, -2.0)), hm, null, lod)
+			wbox.size = Vector3(5.5, 4.2, 0.9)
+			var wall_xf := Transform3D(Basis(Vector3.RIGHT, 0.04), Vector3(0, wy - 0.3, -2.0))
+			_piece(root, StructureModels.arch_wall(5.5, 4.2, 0.9, p["seed"] % 7, sand), wall_xf, null, null, lod)
+			if lod == 0:
+				var wb := StaticBody3D.new()
+				var wcs := CollisionShape3D.new()
+				wcs.shape = wbox
+				wb.add_child(wcs)
+				wb.transform = Transform3D(Basis(Vector3.RIGHT, 0.04), Vector3(0, wy + 1.8, -2.0))
+				root.add_child(wb)
+			var sy: float = ground.call(0.0, 3.0)
+			_piece(root, StructureModels.steps(3, 4.0, sand), Transform3D(Basis(), Vector3(0, sy, 3.0)), null, null, lod)
 			for i in 3:
-				var stp := BoxMesh.new()
-				stp.size = Vector3(4.0 - i * 0.6, 0.35, 1.2)
 				var sb := BoxShape3D.new()
-				sb.size = stp.size
-				_piece(root, stp, Transform3D(Basis(), Vector3(0, ground.call(0.0, 3.0) + 0.15 + i * 0.35, 3.0 - i * 0.9)), mat, sb, lod)
+				sb.size = Vector3(4.0 - i * 0.6, 0.35, 1.2)
+				if lod == 0:
+					var body := StaticBody3D.new()
+					var cs := CollisionShape3D.new()
+					cs.shape = sb
+					body.add_child(cs)
+					body.position = Vector3(0, sy + 0.15 + i * 0.35, 3.0 - i * 0.9)
+					root.add_child(body)
 			_greenery(root, rng, ground, 8.0, sand)
 		"steinkreis":
 			var n := rng.randi_range(7, 11)
+			var trilith_h := -1.0
 			for i in n:
 				var ang2 := i * TAU / n + rng.randf_range(-0.1, 0.1)
 				var sx := cos(ang2) * 7.5
 				var sz := sin(ang2) * 7.5
-				var bm := BoxMesh.new()
-				bm.size = Vector3(1.2, rng.randf_range(2.6, 4.2), 0.7)
+				var sh_h := snappedf(rng.randf_range(2.6, 4.2), 0.4)
+				if trilith_h > 0.0:
+					sh_h = trilith_h
+				trilith_h = sh_h if (i % 3 == 1 and i + 1 < n) else -1.0
 				var bs := BoxShape3D.new()
-				bs.size = bm.size
+				bs.size = Vector3(1.2, sh_h, 0.7)
 				var b := Basis(Vector3.UP, -ang2) * Basis(Vector3.FORWARD, rng.randf_range(-0.12, 0.12))
-				_piece(root, bm, Transform3D(b, Vector3(sx, ground.call(sx, sz) + bm.size.y * 0.5 - 0.4, sz)), mat, bs, lod)
+				var sp := Vector3(sx, ground.call(sx, sz) + sh_h * 0.5 - 0.4, sz)
+				_piece(root, StructureModels.standing_stone(sh_h, i + int(p["seed"]) % 5, sand), Transform3D(b, sp), null, bs, lod)
+				# every third pair carries a lintel (trilithon)
+				if i % 3 == 1 and i + 1 < n:
+					var ang3 := (i + 0.5) * TAU / n
+					_piece(root, StructureModels.lintel(3.6, i, sand), Transform3D(Basis(Vector3.UP, -ang3 + PI * 0.5), Vector3(cos(ang3) * 7.4, sp.y + sh_h * 0.5 + 0.28, sin(ang3) * 7.4)), null, null, lod)
 			# flat altar stone in the middle, ringed by flowers
-			var alt := BoxMesh.new()
-			alt.size = Vector3(2.4, 0.6, 1.4)
 			var ab := BoxShape3D.new()
-			ab.size = alt.size
-			_piece(root, alt, Transform3D(Basis(), Vector3(0, ground.call(0.0, 0.0) + 0.2, 0)), mat, ab, lod)
+			ab.size = Vector3(2.4, 0.6, 1.4)
+			_piece(root, StructureModels.altar(sand), Transform3D(Basis(), Vector3(0, ground.call(0.0, 0.0) + 0.2, 0)), null, ab, lod)
 			_flowers(root, rng, ground, 5.5)
 		"aussicht":
 			# large, flat rock you can climb onto – with a lone tree on top

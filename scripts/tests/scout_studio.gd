@@ -128,6 +128,47 @@ func _initialize() -> void:
 				_scouts.append(sc)
 			_cam.fov = 28.0
 			_cam.look_at_from_position(Vector3(0, 1.25, -8.2), Vector3(0, 0.82, 0.3))
+		"structures":
+			var items := [
+				[StructureModels.picnic_blanket(), Vector3(-7, 0, 0)], [StructureModels.basket(), Vector3(-6.2, 0, -0.6)],
+				[StructureModels.lost_pack(Color("d1493f")), Vector3(-4.2, 0, 0)], [StructureModels.bench(), Vector3(-2.2, 0, 0)],
+				[StructureModels.spring_stones(1), Vector3(0.3, 0, 0)], [StructureModels.chest_body(), Vector3(2.4, 0, 0)],
+				[StructureModels.signpost_post(), Vector3(4.2, 0, 0)], [StructureModels.post(1.35), Vector3(5.4, 0.6, 0)],
+				[StructureModels.plank(Vector3(2.4, 0.07, 0.34)), Vector3(7.0, 0.1, 0)],
+			]
+			for it in items:
+				var mi := MeshInstance3D.new()
+				mi.mesh = it[0]
+				mi.position = it[1]
+				world.add_child(mi)
+			for k in 2:
+				var arm := MeshInstance3D.new()
+				arm.mesh = StructureModels.sign_arrow(1.2)
+				arm.position = Vector3(4.25, 1.75 - k * 0.36, 0)
+				arm.rotation.y = 0.4 + PI * k
+				world.add_child(arm)
+			_cam.fov = 40.0
+			_cam.look_at_from_position(Vector3(0, 3.2, -10.5), Vector3(0, 0.6, 0))
+		"landmarks":
+			var parts := [
+				[StructureModels.column(4.5, false), Vector3(-6, 2.25, 2)], [StructureModels.column(3.0, true), Vector3(-4.2, 1.5, 2)],
+				[StructureModels.arch_wall(5.5, 4.2, 0.9, 1, false), Vector3(0, 0, 3)], [StructureModels.steps(3, 4.0, false), Vector3(0, 0, 0.5)],
+				[StructureModels.standing_stone(3.4, 2, false), Vector3(5, 1.7, 2)], [StructureModels.standing_stone(3.4, 3, false), Vector3(8.2, 1.7, 2)],
+				[StructureModels.lintel(3.6, 1, false), Vector3(6.6, 3.7, 2)], [StructureModels.altar(false), Vector3(6.5, 0.3, -1)],
+				[StructureModels.masonry(Vector3(3.8, 3.0, 2.4), 3), Vector3(-7, 1.5, -2)], [StructureModels.root_plate(2.4, 1), Vector3(-2.5, 1.2, -3)],
+			]
+			for it in parts:
+				var mi := MeshInstance3D.new()
+				mi.mesh = it[0]
+				mi.position = it[1]
+				world.add_child(mi)
+			var cap := MeshInstance3D.new()
+			cap.mesh = StructureModels.log_cap(0.7)
+			cap.position = Vector3(-2.5, 1.2, -1.2)
+			cap.rotation.x = -PI * 0.5
+			world.add_child(cap)
+			_cam.fov = 45.0
+			_cam.look_at_from_position(Vector3(0, 5.0, -15.0), Vector3(0, 1.6, 1))
 		"back":
 			for i in 3:
 				var sc := Scout.new(Scout.random_look() if i > 0 else Scout.DEFAULT_LOOK)

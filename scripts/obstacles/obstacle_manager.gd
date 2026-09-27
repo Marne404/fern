@@ -136,6 +136,9 @@ func _mat(key: String) -> Material:
 	return m
 
 
+var _plank_n := 0
+
+
 func _box(parent: Node3D, size: Vector3, pos: Vector3, basis: Basis, mat: String, collide := true) -> Node3D:
 	var holder: Node3D
 	if collide:
@@ -149,10 +152,16 @@ func _box(parent: Node3D, size: Vector3, pos: Vector3, basis: Basis, mat: String
 	else:
 		holder = Node3D.new()
 	var mi := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mi.mesh = bm
-	mi.material_override = _mat(mat)
+	if mat == "plank":
+		mi.mesh = StructureModels.plank(size, _plank_n)
+		_plank_n += 1
+	elif mat == "stone":
+		mi.mesh = StructureModels.masonry(size, 3, false)
+	else:
+		var bm := BoxMesh.new()
+		bm.size = size
+		mi.mesh = bm
+		mi.material_override = _mat(mat)
 	holder.add_child(mi)
 	holder.transform = Transform3D(basis, pos)
 	parent.add_child(holder)
@@ -168,13 +177,7 @@ func _post(parent: Node3D, pos: Vector3, height := 1.35) -> void:
 	cs.shape = sh
 	body.add_child(cs)
 	var mi := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = 0.1
-	cm.bottom_radius = 0.13
-	cm.height = height
-	cm.radial_segments = 10
-	mi.mesh = cm
-	mi.material_override = _mat("wood")
+	mi.mesh = StructureModels.post(height)
 	body.add_child(mi)
 	body.position = pos + Vector3(0, height * 0.5 - 0.15, 0)
 	parent.add_child(body)
@@ -433,6 +436,12 @@ func _log_body(length: float, radius: float, mass_kg: float) -> RigidBody3D:
 	mi.material_override = _mat("log")
 	mi.rotation.x = PI * 0.5
 	body.add_child(mi)
+	# tree-ring caps on the cut ends (instead of bark on the end faces)
+	for e in [-1.0, 1.0]:
+		var cap_mi := MeshInstance3D.new()
+		cap_mi.mesh = StructureModels.log_cap(radius * (0.85 if e > 0.0 else 1.0))
+		cap_mi.transform = Transform3D(Basis(Vector3.RIGHT, PI * 0.5 * e), Vector3(0, 0, e * length * 0.5))
+		body.add_child(cap_mi)
 	# moss on top
 	var moss := MeshInstance3D.new()
 	var mm := CylinderMesh.new()
@@ -794,17 +803,15 @@ func _build_fallen_tree(o: Dictionary, root: Node3D) -> void:
 	root.add_child(moss)
 	# root plate at one end, half in the wall
 	var plate := MeshInstance3D.new()
-	var sm := SphereMesh.new()
-	sm.radius = 2.4
-	sm.height = 4.8
-	plate.mesh = sm
-	var pmat := StandardMaterial3D.new()
-	pmat.albedo_color = Color(0.55, 0.42, 0.28)
-	pmat.roughness = 1.0
-	plate.material_override = pmat
+	plate.mesh = StructureModels.root_plate(2.4, int(o["seed"]) % 3)
 	var root_end := center - dir * length * 0.5 * side
-	plate.transform = Transform3D(basis.scaled(Vector3(1.0, 0.3, 1.0)), root_end)
+	plate.transform = Transform3D(basis, root_end)
 	root.add_child(plate)
+	# the broken top end shows its tree rings
+	var top_cap := MeshInstance3D.new()
+	top_cap.mesh = StructureModels.log_cap(radius * (0.8 if side > 0.0 else 1.1))
+	top_cap.transform = Transform3D(basis * (Basis() if side > 0.0 else Basis(Vector3.RIGHT, PI)), center + dir * length * 0.5 * side)
+	root.add_child(top_cap)
 	# branch stubs, mushrooms, ferns, flowers on the trunk
 	var rng := RandomNumberGenerator.new()
 	rng.seed = o["seed"]
