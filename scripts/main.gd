@@ -1,0 +1,790 @@
+extends Node3D
+## Game flow: main menu with camera flight, hiking, pause.
+## Connects world streaming, atmosphere, effects, player and UI.
+##
+## Command line (after "--"): --play  --z=-5000 (start point)  --autowalk  --shot=image.png --wait=300
+##     --size=1920x1080  --ui  --fps  --seed=1
+
+enum Mode { MENU, PLAYING, PAUSED }
+
+const RECORD_PATH := "user://records.cfg"
+
+var mode := Mode.MENU
+var gen: WorldGen
+var lib := AssetLibrary.new()
+var world: ChunkManager
+var atmosphere: Atmosphere
+var menu_cam: MenuCamera
+var player: Wanderer
+var hud: Hud
+var backpack: Backpack
+var pois: PoiManager
+var landmarks: LandmarkManager
+var dropped: Node3D
+var menus: Menus
+var streaks: WindStreaks
+var butterflies: Butterflies
+var particles: AmbientParticles
+var gusts: WindGusts
+var leaf_fall: LeafFall
+var desert_fx: DesertFx
+var mountains: Mountains
+var birds: Birds
+var shafts: MeshInstance3D
+var outlines: MeshInstance3D
+var film: ColorRect
+var underwater_fx: ColorRect
+var _underwater := 0.0
+var grass: GrassField
+var sea: Sea
+var obstacles: ObstacleManager
+var music: MusicDirector
+var _passed_obstacles := {}
+var knot_game: KnotGame
+var _knot_cb: Callable
+var _shaft_mat: ShaderMaterial
+
+var start_z := 0.0
+var best_distance := 0.0
+var journey_distance := 0.0
+var _last_biome := -1
+var _args := {}
+var _frame := 0
+var _spawn_pending := false
+var _shot_vp: SubViewport
+var _shot_cam: Camera3D
+
+
+func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	for a in OS.get_cmdline_user_args():
+		var kv := a.trim_prefix("--").split("=", true, 1)
+		_args[kv[0]] = kv[1] if kv.size() > 1 else "1"
+	best_distance = _load_record()
+	# test helper: --preset=High  --set=veg_density:0.5,sun_shafts:false
+	if _args.has("preset") or _args.has("set"):
+		Settings.persist = false
+	if _args.has("preset"):
+		Settings.apply_preset(_args["preset"])
+	if _args.has("set"):
+		for pair in _args["set"].split(","):
+			var kv2: PackedStringArray = pair.split(":")
+			Settings.set_value(kv2[0], str_to_var(kv2[1]))
+	if _args.has("timescale"):
+		Engine.time_scale = float(_args["timescale"])
+	var seed_v: int = Settings.values["last_seed"]
+	if Settings.next_seed >= 0:
+		seed_v = Settings.next_seed
+		Settings.next_seed = -1
+	if _args.has("seed"):
+		seed_v = Settings.parse_seed(_args["seed"])
+	gen = WorldGen.new(seed_v)
+	if _args.has("profile"):
+		for i in 30:
+			var pz := -i * 100.0
+			print("Profile z=%6.0f  x=%7.1f  height %6.1f  %s" % [pz, gen.path_x(pz), gen.path_elevation(pz), gen.biomes[gen.dominant_biome(pz)]["name"]])
+	if _args.has("pathinfo"):
+		var zz := float(_args["pathinfo"])
+		print("Path at z=%.0f: x=%.2f, height %.2f, water %s, obstacles %s" % [zz, gen.path_x(zz), gen.height(gen.path_x(zz), zz), gen.water_level(gen.path_x(zz), zz), gen.obstacles_near(zz).map(func(o): return [o["type"], o["z"]])])
+	if _args.has("pondinfo"):
+		var pi_k := int(_args["pondinfo"])
+		print("Pond data: ", gen.pond(pi_k))
+	if _args.has("ponds"):
+		for k in range(1, 60):
+			var pd := gen.pond(k)
+			if pd.z > 0.0:
+				print("Pond z=%.0f x=%.0f r=%.0f path_x=%.0f biome=%s" % [pd.y, pd.x, pd.z, gen.path_x(pd.y), gen.biomes[gen.dominant_biome(pd.y)]["name"]])
+	if _args.has("biomes"):
+		for k in 12:
+			print("Segment %d: %s from %.0f m" % [k, gen.biomes[gen._segment_biome[k]]["name"], gen._segment_start[k]])
+	start_z = float(_args.get("z", "0"))
+
+	atmosphere = Atmosphere.new()
+	add_child(atmosphere)
+	atmosphere.setup(gen, self)
+
+	world = ChunkManager.new()
+	world.name = "World"
+	add_child(world)
+	world.setup(gen, lib)
+	world.origin_shifted.connect(_on_origin_shifted)
+	RenderingServer.global_shader_parameter_set("world_origin", Vector2.ZERO)
+
+	pois = PoiManager.new()
+	add_child(pois)
+	pois.setup(gen, world, lib)
+	landmarks = LandmarkManager.new()
+	add_child(landmarks)
+	landmarks.setup(gen, world, lib)
+	if _args.has("landmarks"):
+		for k in range(1, 40):
+			var lp := LandmarkManager.plan(gen, k)
+			if not lp.is_empty():
+				print("Landmark %d: %s at z=%.0f x=%.0f (path x=%.0f)" % [k, lp["type"], lp["z"], lp["x"], gen.path_x(lp["z"])])
+	if _args.has("pois"):
+		for k in 20:
+			var pp := pois.poi(k)
+			if not pp.is_empty():
+				print("Find %d: %s at z=%.0f x=%.0f (path x=%.0f) %s" % [k, pp["type"], pp["z"], pp["x"], gen.path_x(pp["z"]), pp["items"]])
+	music = MusicDirector.new()
+	add_child(music)
+	if _args.has("music"):
+		music.track_started.connect(func(t, m): print("[Music] %6.0f m  %-26s %s" % [journey_distance, t, m]))
+	obstacles = ObstacleManager.new()
+	obstacles.name = "Obstacles"
+	add_child(obstacles)
+	obstacles.setup(gen, world, lib)
+	obstacles.on_message = func(t: String): hud.show_message(t)
+	obstacles.on_knot = _open_knot
+	obstacles.on_spawn_item = _spawn_dropped
+	dropped = Node3D.new()
+	dropped.name = "Dropped"
+	add_child(dropped)
+
+	menu_cam = MenuCamera.new()
+	menu_cam.world = world
+	menu_cam.fov = 62.0
+	menu_cam.far = 4000.0
+	add_child(menu_cam)
+	menu_cam.start_z = start_z + 30.0
+	menu_cam.start()
+	menu_cam.make_current()
+
+	streaks = WindStreaks.new()
+	streaks.world = world
+	butterflies = Butterflies.new()
+	butterflies.world = world
+	particles = AmbientParticles.new()
+	birds = Birds.new()
+	birds.world = world
+	mountains = Mountains.new()
+	add_child(mountains)
+	atmosphere.mountains = mountains
+	_setup_shafts()
+	_setup_post()
+	sea = Sea.new()
+	sea.world = world
+	add_child(sea)
+	grass = GrassField.new()
+	add_child(grass)
+	grass.setup(gen, world)
+	gusts = WindGusts.new()
+	leaf_fall = LeafFall.new()
+	leaf_fall.world = world
+	leaf_fall.gusts = gusts
+	desert_fx = DesertFx.new()
+	desert_fx.world = world
+	desert_fx.gusts = gusts
+	if _args.has("gust"):
+		gusts.force = float(_args["gust"])
+	if _args.has("devil"):
+		desert_fx.devil_timer = 0.0
+		desert_fx.devil_ahead = true
+	for n in [streaks, butterflies, particles, birds, menu_cam, gusts, leaf_fall, desert_fx]:
+		n.process_mode = Node.PROCESS_MODE_PAUSABLE
+		if n != menu_cam:
+			add_child(n)
+
+	hud = Hud.new()
+	add_child(hud)
+	hud.set_playing(false)
+	backpack = Backpack.new()
+	add_child(backpack)
+	backpack.on_knot = _open_knot
+	knot_game = KnotGame.new()
+	add_child(knot_game)
+	knot_game.finished.connect(_on_knot_done)
+	menus = Menus.new()
+	add_child(menus)
+	menus.start_pressed.connect(_on_start_pressed)
+	menus.resume_pressed.connect(resume)
+	menus.main_menu_pressed.connect(end_journey)
+
+	if _args.has("shot") and not _args.has("ui") or _args.has("size"):
+		_setup_offscreen()
+	_update_focus()
+	atmosphere.update(start_z, 0.0, true)
+	menus.set_seed_text(str(gen.seed_value))
+	if _args.has("play") or _args.has("selftest") or _args.has("obtest") or Settings.autostart:
+		Settings.autostart = false
+		start_journey()
+	else:
+		menus.show_main(best_distance / 1000.0)
+		music.set_menu()
+		if _args.has("settings"):
+			menus._open_settings(menus._main)
+	if _args.has("obtest"):
+		var ot: Node = preload("res://scripts/tests/obstacle_test.gd").new()
+		ot.main = self
+		add_child(ot)
+		ot.run()
+	if _args.has("selftest"):
+		var t: Node = preload("res://scripts/tests/selftest.gd").new()
+		t.main = self
+		add_child(t)
+		t.run()
+
+
+# ================================================================ Flow
+
+func start_journey() -> void:
+	if mode != Mode.MENU or player != null:
+		return
+	if _args.has("startseed"):
+		print("[Seed] Journey started in world %d, first biome %s" % [gen.seed_value, gen.biomes[gen.dominant_biome(start_z)]["name"]])
+	menus.hide_all()
+	player = Wanderer.new()
+	player.process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_child(player)
+	var px := gen.path_x(start_z) + float(_args.get("dx", "0"))
+	if _args.has("abs_x"):
+		px = float(_args["abs_x"])
+	var pos := world.world_to_local(Vector3(px, gen.height(px, start_z) + 0.3, start_z))
+	player.global_position = pos
+	var ahead := world.world_to_local(gen.path_point(start_z - 6.0))
+	player.look_along((ahead - pos) * Vector3(1, 0, 1))
+	player.camera.make_current()
+	player.world = world
+	player.obstacles = obstacles
+	player.spawn_item = _spawn_dropped
+	player.collapsed.connect(func():
+		hud.collapse_fade(true)
+		music.stinger("kollaps"))
+	player.recovered.connect(func(): hud.collapse_fade(false))
+	player.message.connect(hud.show_message)
+	player.sleep_fade.connect(func(on): hud.collapse_fade(on, "Zzz …"))
+	if _args.has("autowalk"):
+		player.autopilot = _autopilot
+	# only start walking once the ground under the feet is loaded
+	player.set_physics_process(false)
+	_spawn_pending = true
+	journey_distance = 0.0
+	_last_biome = -1
+	music.start_biome(gen.dominant_biome(start_z))
+	mode = Mode.PLAYING
+	hud.set_playing(true)
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+## Different seed than the loaded world? Then reload the scene with the new world and start right away.
+func _on_start_pressed() -> void:
+	var s := menus.seed_value()
+	if s != gen.seed_value:
+		Settings.next_seed = s
+		Settings.autostart = true
+		Settings.set_value("last_seed", s, false)
+		get_tree().reload_current_scene.call_deferred()
+		return
+	Settings.set_value("last_seed", s, false)
+	start_journey()
+
+
+func end_journey() -> void:
+	_save_record()
+	get_tree().paused = false
+	if backpack.is_open():
+		backpack.close()
+	if player:
+		player.queue_free()
+		player = null
+	for c in dropped.get_children():
+		c.queue_free()
+	mode = Mode.MENU
+	hud.set_playing(false)
+	menu_cam.start()
+	menu_cam.make_current()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	menus.show_main(best_distance / 1000.0)
+	music.set_menu()
+
+
+func pause() -> void:
+	mode = Mode.PAUSED
+	get_tree().paused = true
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	menus.show_pause(gen.seed_value)
+
+
+func resume() -> void:
+	mode = Mode.PLAYING
+	get_tree().paused = false
+	menus.hide_all()
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_TAB:
+				if mode == Mode.PLAYING and player and not menus.is_open() and not knot_game.is_open():
+					if backpack.is_open():
+						backpack.close()
+					elif player.can_act():
+						backpack.open(player)
+			KEY_ESCAPE:
+				if backpack.is_open():
+					backpack.close()
+				elif menus.is_open():
+					menus.back()
+				elif mode == Mode.PLAYING:
+					pause()
+			KEY_F12:
+				var path := "user://screenshot_%d.png" % Time.get_unix_time_from_system()
+				get_viewport().get_texture().get_image().save_png(path)
+				print("Screenshot: ", ProjectSettings.globalize_path(path))
+	if event is InputEventMouseButton and event.pressed and mode == Mode.PLAYING and not menus.is_open() and not backpack.is_open():
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+var _script_ms := 0.0
+var _stuck_time := 0.0
+var _max_frame_ms := 0.0
+var _spikes := 0
+
+
+func _process(delta: float) -> void:
+	var t_script := Time.get_ticks_usec()
+	_process_inner(delta)
+	_script_ms = lerpf(_script_ms, (Time.get_ticks_usec() - t_script) / 1000.0, 0.1)
+
+
+func _process_inner(delta: float) -> void:
+	_frame += 1
+	if _args.has("startseed") and _frame == 90 and mode == Mode.MENU:
+		print("[Seed] Menu world %d, starting with input '%s'" % [gen.seed_value, _args["startseed"]])
+		menus.set_seed_text(_args["startseed"])
+		_on_start_pressed()
+	if _frame > 120:
+		var real_ms := delta / Engine.time_scale * 1000.0
+		_max_frame_ms = maxf(_max_frame_ms, real_ms)
+		if real_ms > 50.0:
+			_spikes += 1
+			if _args.has("fps"):
+				print("  [Hitch] %.0f ms at frame %d, chunks +%d, music %s" % [real_ms, _frame, world.pending_count(), music.now_playing()])
+	var cam := _active_camera()
+	_update_focus()
+
+	if _spawn_pending and world.is_ready_around(Vector2(world.focus.x, world.focus.y)):
+		_spawn_pending = false
+		var p := player.global_position
+		p.y = world.ground_y(p.x, p.z) + 0.2
+		player.global_position = p
+		player.set_physics_process(true)
+		if _args.has("backpack"):
+			backpack.open.call_deferred(player)
+		if _args.has("knotui"):
+			_open_knot(false, func(_q): pass)
+			knot_game._choose.call_deferred(1)
+		if _args.has("fly"):
+			# test helper: raised, fixed camera
+			player.set_physics_process(false)
+			player.global_position.y += float(_args["fly"])
+			if _args.has("abs_y"):
+				player.global_position.y = world.world_to_local(Vector3(0, float(_args["abs_y"]), 0)).y
+			var yaw := player.rotation.y
+			if _args.has("lookSun"):
+				atmosphere.update(world.local_to_world(player.global_position).z, 0.0, true)
+				var to_sun := atmosphere.sun.global_basis.z
+				yaw = atan2(-to_sun.x, -to_sun.z)
+			if _args.has("lookrel"):
+				var lr: PackedFloat64Array = _args["lookrel"].split_floats(",")
+				yaw = atan2(-lr[0], -lr[1])
+			if _args.has("lookat"):
+				var la: PackedFloat64Array = _args["lookat"].split_floats(",")
+				var tgt := world.world_to_local(Vector3(la[0], 0, la[1]))
+				var d := tgt - player.global_position
+				yaw = atan2(-d.x, -d.z)
+			player.set_look(yaw, deg_to_rad(float(_args.get("look", "-15"))))
+
+	# Floating origin
+	world.maybe_shift_origin(cam.global_position)
+
+	var wpos := world.local_to_world(cam.global_position)
+	atmosphere.update(wpos.z, delta)
+	# test helpers for tuning the lighting
+	if _args.has("tm"):
+		atmosphere.env.tonemap_mode = int(_args["tm"])
+	if _args.has("white"):
+		atmosphere.env.tonemap_white = float(_args["white"])
+	if _args.has("exp"):
+		atmosphere.env.tonemap_exposure = float(_args["exp"])
+	var fwd := -cam.global_basis.z
+	particles.set_kind(atmosphere.current.get("particles", "motes"), atmosphere.current.get("particle_color", Color.WHITE))
+	particles.follow(cam.global_position, fwd)
+	gusts.strength = atmosphere.current.get("gusts", 0.5)
+	leaf_fall.update(cam, delta)
+	desert_fx.update(cam, delta, atmosphere.current.get("dust", 0.0))
+	atmosphere.set_dust(desert_fx.fog_boost)
+	if _args.has("debugfx") and _frame % 60 == 0:
+		print("[fx] gust %.2f dust %.2f weeds %d devil %s haze %.2f leaves %s (%d)" % [gusts.gust, atmosphere.current.get("dust", 0.0), desert_fx._weeds.size(), not desert_fx._devil.is_empty(), desert_fx.fog_boost, leaf_fall.particles.emitting, leaf_fall._pm.emission_point_count])
+	streaks.camera = cam
+	streaks.enabled = Settings.values["wind_fx"]
+	butterflies.camera = cam
+	birds.camera = cam
+	birds.enabled = atmosphere.current.get("birds", true)
+	grass.update(cam.global_position)
+	obstacles.update(world.local_to_world(cam.global_position))
+	# only simulate dropped items where ground collision is loaded
+	if _frame % 10 == 0:
+		for c in dropped.get_children():
+			var rb := c as RigidBody3D
+			if rb:
+				var cw := world.local_to_world(rb.global_position)
+				rb.freeze = not world.is_ready_around(Vector2(cw.x, cw.z), 2.0)
+	if _args.has("dbgproc") and _frame % 60 == 0:
+		print("[proc] frame %d cam %s built %s chunks %d (+%d) mode %d player %s pos %s cam_is_player %s" % [_frame, world.local_to_world(cam.global_position), obstacles._built.keys(), world.loaded_count(), world.pending_count(), mode, player.get_instance_id() if player else 0, player.global_position if player else Vector3.ZERO, cam == (player.camera if player else null)])
+	if player and mode != Mode.MENU:
+		obstacles.update_carried(player)
+	sea.follow(cam.global_position, atmosphere.current)
+	RenderingServer.global_shader_parameter_set("player_pos", player.global_position if player and mode != Mode.MENU else Vector3(0, -1000, 0))
+	film.visible = Settings.values["film_look"]
+	_update_underwater(cam, delta)
+	outlines.visible = Settings.values["outlines"]
+	mountains.follow(cam.global_position, world.height_local(cam.global_position.x, cam.global_position.z) - 30.0)
+	_update_shafts(cam)
+
+	var biome := atmosphere.dominant
+	if mode != Mode.MENU:
+		music.set_biome(biome)
+	if biome != _last_biome:
+		if mode == Mode.PLAYING and _last_biome != -1 and biome in [7, 10]:
+			music.stinger("seltsam")
+		butterflies.spawn(int(gen.biomes[biome]["atmosphere"]["butterflies"]))
+		if mode == Mode.PLAYING and _last_biome != -1:
+			hud.show_biome(gen.biomes[biome]["name"], "after %s km" % Menus._km(journey_distance / 1000.0))
+		elif mode == Mode.PLAYING:
+			hud.show_biome(gen.biomes[biome]["name"], "The journey begins")
+		_last_biome = biome
+
+	if mode != Mode.MENU and player:
+		var pw := world.local_to_world(player.global_position)
+		music.set_situation(_music_situation(pw))
+		# obstacle overcome? short joyful stinger (once per obstacle)
+		for o in gen.obstacles_near(pw.z):
+			var ok: int = o["k"]
+			if pw.z > o["z"] + 6.0:
+				_passed_obstacles[ok] = false
+			elif pw.z < o["z"] - 14.0 and _passed_obstacles.get(ok, true) == false:
+				_passed_obstacles[ok] = true
+				music.stinger("geschafft")
+				hud.show_message("Made it!")
+		journey_distance = maxf(journey_distance, gen.arc_length(pw.z) - gen.arc_length(start_z))
+		hud.set_distance(journey_distance)
+		player.air_temp = atmosphere.current.get("temperature", 16.0)
+		hud.update_body(player.body.stamina, player.body.state, delta)
+		hud.set_prompt(player.prompt)
+		hud.set_needs(player.body.needs())
+		# safety net: never fall through the ground
+		if _frame % 15 == 0 and player.fly_mode == 0:
+			var ground := world.ground_y(player.global_position.x, player.global_position.z)
+			if player.global_position.y < ground - 2.0:
+				player.global_position.y = ground + 0.3
+				player.velocity = Vector3.ZERO
+	hud.update_fps(Settings.values["show_fps"] or _args.has("fps"))
+
+	if _args.has("debug") and _frame % 60 == 0 and player:
+		for ci in player.get_slide_collision_count():
+			var cc := player.get_slide_collision(ci)
+			var co := cc.get_collider() as Node
+			print("  contact: %s (%s) n=%s at %s" % [co.name if co else "?", co.get_parent().name if co and co.get_parent() else "", cc.get_normal(), cc.get_position()])
+		print("rot=%s pending=%s pos=%s vel=%s floor=%s act=%s climbing=%s state=%d stamina=%.0f input=%s rope=%s crouch=%s" % [player.rotation_degrees, _spawn_pending, player.global_position, player.velocity, player.is_on_floor(), player.can_act(), player.climbing, player.body.state, player.body.stamina, player.input_enabled, player.rope, player.crouching])
+	if _args.has("fps") and _frame % 120 == 0:
+		print("FPS %d | Chunks %d (+%d) | Distance %.0f m | Biome %s | Scale %.2f | prims %d" % [
+			Engine.get_frames_per_second(), world.loaded_count(), world.pending_count(), journey_distance,
+			gen.biomes[biome]["name"], get_viewport().scaling_3d_scale,
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)])
+		var vp_rid := _shot_vp.get_viewport_rid() if _shot_vp else get_viewport().get_viewport_rid()
+		RenderingServer.viewport_set_measure_render_time(vp_rid, true)
+		print("   draws %d | objects %d | GPU %.1f ms | Render CPU %.1f ms | Script %.1f ms | Physics %.1f ms" % [
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+			RenderingServer.viewport_get_measured_render_time_gpu(vp_rid),
+			RenderingServer.viewport_get_measured_render_time_cpu(vp_rid) + RenderingServer.get_frame_setup_time_cpu(),
+			_script_ms, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
+		print("   longest frame %.0f ms | hitches >50 ms: %d" % [_max_frame_ms, _spikes])
+		_max_frame_ms = 0.0
+	_update_shot()
+	if _args.has("off") and _frame == 30:
+		for sys in _args["off"].split(","):
+			match sys:
+				"sky": atmosphere.env.background_mode = Environment.BG_COLOR
+				"mountains": mountains.visible = false
+				"shafts": Settings.set_value("sun_shafts", false)
+				"particles": particles.visible = false
+				"shadows": atmosphere.sun.shadow_enabled = false
+				"ssao": atmosphere.env.ssao_enabled = false
+				"blades": grass.visible = false
+				"pcss": atmosphere.sun.light_angular_distance = 0.5
+				"softmed": RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM)
+				"dist100": atmosphere.sun.directional_shadow_max_distance = 100.0
+				"ssil": atmosphere.env.ssil_enabled = false
+				"vol": atmosphere.env.volumetric_fog_enabled = false
+				"dof": atmosphere.world_env.camera_attributes = null
+				"glow": atmosphere.env.glow_enabled = false
+				"fog": atmosphere.env.fog_enabled = false
+				"blend": atmosphere.sun.directional_shadow_blend_splits = false
+				"hard": RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_HARD)
+				"split2": atmosphere.sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
+				"trees":
+					for c in world.get_children():
+						for m in c.get_children():
+							if m is MultiMeshInstance3D and m.multimesh.mesh.resource_name.contains("Tree") or m is MultiMeshInstance3D and m.multimesh.mesh.resource_name.begins_with("Pine"):
+								m.visible = false
+				"grass":
+					for c in world.get_children():
+						for m in c.get_children():
+							if m is MultiMeshInstance3D and m.multimesh.mesh.resource_name.begins_with("Grass"):
+								m.visible = false
+				"terrain":
+					for c in world.get_children():
+						if c.get_child_count() > 0 and c.get_child(0) is MeshInstance3D:
+							c.get_child(0).visible = false
+
+
+func _active_camera() -> Camera3D:
+	if player and mode != Mode.MENU:
+		return player.camera
+	return menu_cam
+
+
+func _update_focus() -> void:
+	var cam := _active_camera()
+	var w := world.local_to_world(cam.global_position)
+	world.focus = Vector2(w.x, w.z)
+	var f := -cam.global_basis.z
+	world.focus_dir = Vector2(f.x, f.z).normalized() if Vector2(f.x, f.z).length() > 0.01 else Vector2(0, -1)
+
+
+func _on_origin_shifted(shift: Vector3) -> void:
+	for n in [menu_cam, player]:
+		if n:
+			n.global_position -= shift
+	menu_cam.shift_target(shift)
+	streaks.shift(shift)
+	birds.shift(shift)
+	grass.shift(shift)
+	obstacles.shift(shift)
+	for c in dropped.get_children():
+		c.global_position -= shift
+	particles.restart()
+	leaf_fall.restart()
+	desert_fx.shift(shift)
+
+
+func _setup_shafts() -> void:
+	_shaft_mat = ShaderMaterial.new()
+	_shaft_mat.shader = preload("res://shaders/sun_shafts.gdshader")
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1, 1)
+	shafts = MeshInstance3D.new()
+	shafts.mesh = quad
+	shafts.material_override = _shaft_mat
+	shafts.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	shafts.custom_aabb = AABB(Vector3(-1e5, -1e5, -1e5), Vector3(2e5, 2e5, 2e5))
+	add_child(shafts)
+
+
+## What's happening decides the music: obstacle ahead / on the rope / in the current → tension,
+## resting and sleeping → calm tracks, swimming in a lake → water music.
+func _music_situation(pw: Vector3) -> String:
+	if not player.rope.is_empty() or player.body.state == Body.State.COLLAPSED:
+		return "spannung"
+	if player.swimming and gen.river_flow(pw.x, pw.z) != Vector2.ZERO:
+		return "spannung"
+	for o in gen.obstacles_near(pw.z):
+		# from 55 m before the obstacle until just past it
+		if pw.z < o["z"] + 55.0 and pw.z > o["z"] - 10.0:
+			return "spannung"
+	if player.resting or player.sleeping:
+		return "ruhe"
+	if player.swimming:
+		return "wasser"
+	return ""
+
+
+## Camera below the water surface? Then turquoise veil, dense fog, muffled music.
+func _update_underwater(cam: Camera3D, delta: float) -> void:
+	var cw := world.local_to_world(cam.global_position)
+	var wl := gen.water_level(cw.x, cw.z)
+	var depth := wl - cw.y if wl > -INF else -1.0
+	var target := 1.0 if depth > 0.02 else 0.0
+	_underwater = move_toward(_underwater, target, delta * 4.0)
+	underwater_fx.visible = _underwater > 0.001
+	var um: ShaderMaterial = underwater_fx.material
+	um.set_shader_parameter("amount", _underwater)
+	um.set_shader_parameter("depth", maxf(depth, 0.0))
+	atmosphere.underwater = _underwater
+	music.set_underwater(_underwater)
+
+
+func _setup_post() -> void:
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1, 1)
+	var om := ShaderMaterial.new()
+	om.shader = preload("res://shaders/outlines.gdshader")
+	outlines = MeshInstance3D.new()
+	outlines.mesh = quad
+	outlines.material_override = om
+	outlines.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	outlines.custom_aabb = AABB(Vector3(-1e5, -1e5, -1e5), Vector3(2e5, 2e5, 2e5))
+	add_child(outlines)
+	# color grading as a 2D layer over the finished image, below the HUD
+	var layer := CanvasLayer.new()
+	layer.layer = 1
+	add_child(layer)
+	film = ColorRect.new()
+	film.set_anchors_preset(Control.PRESET_FULL_RECT)
+	film.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fm := ShaderMaterial.new()
+	fm.shader = preload("res://shaders/film_look.gdshader")
+	film.material = fm
+	layer.add_child(film)
+	underwater_fx = ColorRect.new()
+	underwater_fx.set_anchors_preset(Control.PRESET_FULL_RECT)
+	underwater_fx.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var um := ShaderMaterial.new()
+	um.shader = preload("res://shaders/underwater.gdshader")
+	um.set_shader_parameter("noise_tex", preload("res://assets/paint_noise.tres"))
+	underwater_fx.material = um
+	underwater_fx.visible = false
+	layer.add_child(underwater_fx)
+
+
+## Project the sun onto the screen; shafts only when it is roughly in view
+func _update_shafts(cam: Camera3D) -> void:
+	if not Settings.values["sun_shafts"]:
+		shafts.visible = false
+		return
+	var to_sun := -(atmosphere.sun.global_basis.z)
+	to_sun = -to_sun
+	var sun_pos := cam.global_position + to_sun * 1000.0
+	var facing := (-cam.global_basis.z).dot(to_sun)
+	if facing < 0.1 or cam.is_position_behind(sun_pos):
+		shafts.visible = false
+		return
+	shafts.visible = true
+	var vp := cam.get_viewport().get_visible_rect().size
+	var uv := cam.unproject_position(sun_pos) / vp
+	_shaft_mat.set_shader_parameter("sun_uv", uv)
+	_shaft_mat.set_shader_parameter("strength", smoothstep(0.1, 0.7, facing) * 0.6 * minf(atmosphere.sun.light_energy / 1.8, 1.0))
+	_shaft_mat.set_shader_parameter("sun_color", atmosphere.sun.light_color)
+	_shaft_mat.set_shader_parameter("samples", 16 if Settings.values["opt_shafts_16"] else 24)
+
+
+func _open_knot(book: bool, cb: Callable) -> void:
+	_knot_cb = cb
+	if player:
+		player.input_enabled = false
+	knot_game.start(book)
+
+
+func _on_knot_done(q: float) -> void:
+	if player:
+		player.input_enabled = true
+	if not backpack.is_open():
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if _knot_cb.is_valid():
+		var cb := _knot_cb
+		_knot_cb = Callable()
+		cb.call(q)
+
+
+func _spawn_dropped(item: Dictionary, pos: Vector3, vel: Vector3) -> void:
+	var wi := WorldItem.create(item)
+	wi.world_ref = world
+	dropped.add_child(wi)
+	wi.global_position = pos
+	wi.linear_velocity = vel
+	wi.angular_velocity = Vector3(randf(), randf(), randf()) * 4.0
+	wi.broke.connect(func(it): hud.show_message("%s broke." % ItemDefs.def(it["id"])["name"]))
+
+
+## Test helper: walks along the path automatically
+func _autopilot() -> Vector3:
+	var w := world.local_to_world(player.global_position)
+	# crouch under fallen trees
+	player.force_crouch = false
+	for o in gen.obstacles_near(w.z):
+		if o["type"] == "fallen_tree" and absf(w.z - o["z"]) < 3.5:
+			player.force_crouch = true
+	# stuck? pull up at the ledge / try climbing
+	if player.get_real_velocity().length() < 0.2 and player.is_on_floor():
+		_stuck_time += get_physics_process_delta_time()
+		if _stuck_time > 0.8:
+			_stuck_time = 0.0
+			player._try_climb()
+	else:
+		_stuck_time = 0.0
+	var ahead_z := w.z - 8.0
+	var target := Vector3(gen.path_x(ahead_z), 0.0, ahead_z)
+	var d := target - w
+	d.y = 0.0
+	return d.normalized()
+
+
+# ================================================================ Records
+
+func _load_record() -> float:
+	var cfg := ConfigFile.new()
+	if cfg.load(RECORD_PATH) != OK:
+		return 0.0
+	return cfg.get_value("records", "best_distance", 0.0)
+
+
+func _save_record() -> void:
+	# test runs don't change records
+	for a in ["autowalk", "obtest", "selftest", "shot", "set", "preset", "z"]:
+		if _args.has(a):
+			return
+	if journey_distance <= best_distance:
+		return
+	best_distance = journey_distance
+	var cfg := ConfigFile.new()
+	cfg.set_value("records", "best_distance", best_distance)
+	cfg.save(RECORD_PATH)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST and mode != Mode.MENU:
+		_save_record()
+
+
+# ================================================================ Screenshots for tests
+
+func _setup_offscreen() -> void:
+	var sz: PackedStringArray = _args.get("size", "1920x1080").split("x")
+	_shot_vp = SubViewport.new()
+	_shot_vp.size = Vector2i(int(sz[0]), int(sz[1]))
+	_shot_vp.world_3d = get_viewport().world_3d
+	_shot_vp.msaa_3d = get_viewport().msaa_3d
+	_shot_vp.use_debanding = true
+	_shot_vp.scaling_3d_mode = get_viewport().scaling_3d_mode
+	_shot_vp.scaling_3d_scale = get_viewport().scaling_3d_scale
+	_shot_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	add_child(_shot_vp)
+	_shot_cam = Camera3D.new()
+	_shot_vp.add_child(_shot_cam)
+	var film_layer := film.get_parent()
+	film_layer.get_parent().remove_child(film_layer)
+	_shot_vp.add_child(film_layer)
+	_shot_cam.make_current()
+	get_viewport().disable_3d = true
+
+
+func _update_shot() -> void:
+	if _shot_cam:
+		var cam := _active_camera()
+		_shot_cam.global_transform = cam.global_transform
+		_shot_cam.fov = cam.fov
+		_shot_cam.near = cam.near
+		_shot_cam.far = cam.far
+		_shot_vp.scaling_3d_scale = get_viewport().scaling_3d_scale
+		_shot_vp.scaling_3d_mode = get_viewport().scaling_3d_mode
+		_shot_vp.mesh_lod_threshold = get_viewport().mesh_lod_threshold
+		_shot_vp.msaa_3d = get_viewport().msaa_3d
+		_shot_vp.screen_space_aa = get_viewport().screen_space_aa
+	if _args.has("shot") and _frame == int(_args.get("wait", "300")):
+		var img := (_shot_vp.get_texture() if _shot_vp else get_viewport().get_texture()).get_image()
+		img.save_png(_args["shot"])
+		print("saved: %s  FPS %d  distance %.0f m" % [_args["shot"], Engine.get_frames_per_second(), journey_distance])
+		get_tree().quit()

@@ -1,0 +1,13 @@
+# Godot
+.godot/
+*.translation
+export_credentials.cfg
+
+# builds
+build/
+
+# music is licensed for use in the game only – it must not be redistributed as files
+assets/music/
+
+# reference images from other games (copyrighted, local only)
+docs/vergleich_genshin.jpg

@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fern – an endless hike through painted worlds</title>
+<meta name="description" content="Fern is an endless, cozy hiking game through beautiful stylized nature. Twelve biomes, physics obstacles, ropes and knots.">
+<meta property="og:title" content="Fern">
+<meta property="og:description" content="An endless hike through painted worlds.">
+<meta property="og:image" content="https://marne404.github.io/fern/banner.jpg">
+<link rel="icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  @font-face {
+    font-family: "Luckiest Guy";
+    src: url("LuckiestGuy-Regular.ttf") format("truetype");
+    font-display: swap;
+  }
+  :root {
+    --cream: #fff8e8;
+    --paper: #fdf3dc;
+    --ink: #24361f;
+    --ink-soft: #4b5e42;
+    --leaf: #5fae3a;
+    --leaf-dark: #2f5a24;
+    --sun: #ffb347;
+    --sky: #8fd0ff;
+    --card: #ffffff;
+    --shadow: 0 10px 30px rgba(36, 54, 31, 0.18);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 18px;
+    line-height: 1.6;
+  }
+  h1, h2, h3, .display {
+    font-family: "Luckiest Guy", "Nunito", sans-serif;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+  }
+  a { color: var(--leaf-dark); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    min-height: min(92vh, 900px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 80px 16px 120px;
+    color: var(--cream);
+    background: url("screenshots/coast.jpg") center 40% / cover no-repeat;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(20, 30, 50, 0.15) 0%, rgba(20, 30, 20, 0.05) 45%, rgba(24, 38, 22, 0.75) 100%);
+  }
+  .hero > * { position: relative; }
+  .hero h1 {
+    font-size: clamp(96px, 22vw, 260px);
+    margin: 0;
+    color: var(--cream);
+    -webkit-text-stroke: clamp(6px, 1.2vw, 12px) var(--ink);
+    paint-order: stroke fill;
+    text-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    animation: float 6s ease-in-out infinite;
+  }
+  @keyframes float { 50% { transform: translateY(-10px); } }
+  .tagline {
+    font-family: "Luckiest Guy", sans-serif;
+    font-size: clamp(22px, 3.4vw, 40px);
+    margin: 8px 0 34px;
+    -webkit-text-stroke: 4px var(--ink);
+    paint-order: stroke fill;
+  }
+  .buttons { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 16px 30px;
+    border-radius: 999px;
+    font-family: "Luckiest Guy", sans-serif;
+    font-size: 24px;
+    text-decoration: none;
+    color: var(--ink);
+    background: var(--sun);
+    border: 4px solid var(--ink);
+    box-shadow: 0 6px 0 var(--ink);
+    transition: transform 0.12s, box-shadow 0.12s;
+  }
+  .btn:hover { transform: translateY(-3px); box-shadow: 0 9px 0 var(--ink); }
+  .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+  .btn.green { background: var(--leaf); color: var(--cream); }
+  .btn.ghost { background: var(--cream); }
+  .hint { margin-top: 18px; font-size: 15px; opacity: 0.9; }
+
+  .wave { display: block; width: 100%; height: 70px; margin-top: -69px; position: relative; }
+
+  /* ---------- sections ---------- */
+  section { padding: 70px 16px; }
+  .wrap { max-width: 1120px; margin: 0 auto; }
+  section h2 { font-size: clamp(40px, 6vw, 64px); text-align: center; margin: 0 0 12px; color: var(--leaf-dark); }
+  .lead { text-align: center; max-width: 760px; margin: 0 auto 44px; color: var(--ink-soft); font-size: 20px; }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+  .card {
+    background: var(--card);
+    border: 3px solid var(--ink);
+    border-radius: 22px;
+    padding: 24px;
+    box-shadow: 0 6px 0 var(--ink);
+  }
+  .card .icon { font-size: 36px; }
+  .card h3 { font-size: 26px; margin: 8px 0 6px; color: var(--ink); }
+  .card p { margin: 0; color: var(--ink-soft); font-size: 17px; }
+
+  /* ---------- gallery ---------- */
+  .gallery-section { background: var(--ink); color: var(--cream); }
+  .gallery-section h2 { color: var(--sun); }
+  .gallery-section .lead { color: #d8e6cc; }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .gallery figure { margin: 0; position: relative; border-radius: 16px; overflow: hidden; cursor: zoom-in;
+    border: 3px solid rgba(255, 248, 232, 0.2); }
+  .gallery img { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover; transition: transform 0.4s; }
+  .gallery figure:hover img { transform: scale(1.05); }
+  .gallery figcaption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 26px 14px 10px;
+    font-family: "Luckiest Guy", sans-serif; font-size: 22px;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  }
+  .lightbox { position: fixed; inset: 0; background: rgba(10, 15, 10, 0.92); display: none;
+    align-items: center; justify-content: center; z-index: 10; padding: 16px; cursor: zoom-out; }
+  .lightbox.open { display: flex; }
+  .lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+
+  /* ---------- obstacles ---------- */
+  .obstacles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+  .obstacle { background: var(--cream); border-radius: 22px; padding: 24px; border: 3px dashed var(--leaf-dark); }
+  .obstacle h3 { font-size: 28px; margin: 0 0 10px; color: var(--leaf-dark); }
+  .obstacle ul { margin: 0; padding-left: 20px; color: var(--ink-soft); }
+
+  /* ---------- controls ---------- */
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px 26px; max-width: 900px; margin: 0 auto; }
+  .control { display: flex; align-items: center; gap: 12px; }
+  kbd {
+    font-family: "Luckiest Guy", sans-serif; font-size: 17px;
+    min-width: 44px; text-align: center;
+    padding: 6px 10px 3px;
+    background: var(--card); border: 3px solid var(--ink); border-radius: 10px;
+    box-shadow: 0 3px 0 var(--ink);
+  }
+
+  /* ---------- download ---------- */
+  .download { text-align: center; background: linear-gradient(180deg, var(--paper), #e9f5d8); }
+  .download .buttons { margin: 10px 0 18px; }
+  .download p { color: var(--ink-soft); max-width: 700px; margin: 8px auto; }
+
+  footer { background: var(--ink); color: #cfdcc4; text-align: center; padding: 40px 16px; font-size: 15px; }
+  footer .display { font-size: 42px; color: var(--cream); }
+  footer a { color: var(--sun); }
+
+  @media (max-width: 600px) {
+    body { font-size: 17px; }
+    section { padding: 54px 16px; }
+    .btn { font-size: 20px; padding: 14px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>Fern</h1>
+  <div class="tagline">An endless hike through painted worlds</div>
+  <div class="buttons">
+    <a class="btn" href="https://github.com/Marne404/fern/releases/latest/download/Fern-Windows.zip">⬇ Windows</a>
+    <a class="btn green" href="https://github.com/Marne404/fern/releases/latest/download/Fern-Linux.zip">⬇ Linux</a>
+    <a class="btn ghost" href="#screenshots">Screenshots</a>
+  </div>
+  <div class="hint">Free · no installation · unzip and play</div>
+</header>
+<svg class="wave" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M0,40 C240,80 480,0 720,30 C960,60 1200,10 1440,35 L1440,70 L0,70 Z" fill="#fdf3dc"/>
+</svg>
+
+<section>
+  <div class="wrap">
+    <h2>Walk. Wonder. Keep going.</h2>
+    <p class="lead">Fern is a game about the journey, not the destination. The trail never ends and your distance is your
+      score. Most of the time you simply walk and take in the landscape – until the world puts a real, physical problem
+      in your way, and there is no scripted solution.</p>
+    <div class="features">
+      <div class="card"><div class="icon">🌍</div><h3>Endless world</h3>
+        <p>Every world grows from a seed. Type any word, share it with friends, and you'll walk the very same trail.</p></div>
+      <div class="card"><div class="icon">🍂</div><h3>12 biomes</h3>
+        <p>Autumn meadows, blossom groves, mountain pines, sunset coasts, glowing forests, endless deserts and more.</p></div>
+      <div class="card"><div class="icon">🌬️</div><h3>Living weather</h3>
+        <p>Gusts roll through the grass, leaves drift from the trees, tumbleweeds bounce and dust devils wander by.</p></div>
+      <div class="card"><div class="icon">🎒</div><h3>Backpack &amp; body</h3>
+        <p>Hunger, thirst, cold and a heavy backpack wear you down. Swim with your camera and it's gone.</p></div>
+      <div class="card"><div class="icon">🪢</div><h3>Ropes &amp; knots</h3>
+        <p>Tie ropes in a little knot minigame. A sloppy knot might hold… or give way halfway across the river.</p></div>
+      <div class="card"><div class="icon">🎵</div><h3>Dynamic music</h3>
+        <p>56 tracks: every biome has its own playlist, tense music near obstacles and quiet tunes while resting.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="gallery-section" id="screenshots">
+  <div class="wrap">
+    <h2>Postcards from the trail</h2>
+    <p class="lead">All screenshots are in-game (Ultra preset). Click to enlarge.</p>
+    <div class="gallery">
+      <figure><img src="screenshots/autumn.jpg" alt="Autumn Meadow" loading="lazy"><figcaption>Autumn Meadow</figcaption></figure>
+      <figure><img src="screenshots/coast.jpg" alt="Sunset Coast" loading="lazy"><figcaption>Sunset Coast</figcaption></figure>
+      <figure><img src="screenshots/spring.jpg" alt="Spring Meadow" loading="lazy"><figcaption>Spring Meadow</figcaption></figure>
+      <figure><img src="screenshots/blossom.jpg" alt="Blossom Grove" loading="lazy"><figcaption>Blossom Grove</figcaption></figure>
+      <figure><img src="screenshots/desert.jpg" alt="Desert Valley" loading="lazy"><figcaption>Desert Valley</figcaption></figure>
+      <figure><img src="screenshots/glow.jpg" alt="Glowing Forest" loading="lazy"><figcaption>Glowing Forest</figcaption></figure>
+      <figure><img src="screenshots/cliffs.jpg" alt="Cliff Lands" loading="lazy"><figcaption>Cliff Lands</figcaption></figure>
+      <figure><img src="screenshots/pines.jpg" alt="Mountain Pines" loading="lazy"><figcaption>Mountain Pines</figcaption></figure>
+      <figure><img src="screenshots/maple.jpg" alt="Red Maple Wood" loading="lazy"><figcaption>Red Maple Wood</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>No scripted solutions</h2>
+    <p class="lead">Obstacles are made of systems – weight, physics, stamina, water and knot quality. The same river plays
+      out differently every time.</p>
+    <div class="obstacles">
+      <div class="obstacle"><h3>The broken bridge</h3><ul>
+        <li>Push a log across and balance over it</li>
+        <li>Swim through the current – and soak your backpack</li>
+        <li>Knot two ropes, stretch them between the posts, climb across</li></ul></div>
+      <div class="obstacle"><h3>The fallen giant</h3><ul>
+        <li>A trunk wedged across a narrowing gorge</li>
+        <li>Crouch underneath – not with a heavy backpack!</li>
+        <li>Or spend your stamina climbing over it</li></ul></div>
+      <div class="obstacle"><h3>The waterfall cliff</h3><ul>
+        <li>After a long climb, a 20 m drop</li>
+        <li>Jump into the pool – the water breaks your fall</li>
+        <li>Rappel down on a rope, or take the long way round</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:#fff8e8">
+  <div class="wrap">
+    <h2>Controls</h2>
+    <div class="controls">
+      <div class="control"><kbd>WASD</kbd> walk</div>
+      <div class="control"><kbd>Shift</kbd> run</div>
+      <div class="control"><kbd>Space</kbd> jump · climb</div>
+      <div class="control"><kbd>Ctrl</kbd> crouch</div>
+      <div class="control"><kbd>E</kbd> pick up · use</div>
+      <div class="control"><kbd>Tab</kbd> backpack</div>
+      <div class="control"><kbd>R</kbd> rest · sleep</div>
+      <div class="control"><kbd>RMB</kbd> binoculars</div>
+      <div class="control"><kbd>Q</kbd> untie rope</div>
+      <div class="control"><kbd>Esc</kbd> pause</div>
+    </div>
+  </div>
+</section>
+
+<section class="download" id="download">
+  <div class="wrap">
+    <h2>Grab your backpack</h2>
+    <div class="buttons">
+      <a class="btn" href="https://github.com/Marne404/fern/releases/latest/download/Fern-Windows.zip">⬇ Windows</a>
+      <a class="btn green" href="https://github.com/Marne404/fern/releases/latest/download/Fern-Linux.zip">⬇ Linux</a>
+    </div>
+    <p>Unzip and run <b>Fern.exe</b> (Windows) or <b>Fern.x86_64</b> (Linux). Windows may warn about an unknown
+      publisher – click <i>More info → Run anyway</i>.</p>
+    <p>Runs on integrated graphics on the Medium preset; High and Ultra (real grass blades, film look, soft shadows)
+      want a proper graphics card.</p>
+    <p><a href="https://github.com/Marne404/fern">Source code on GitHub</a> ·
+      <a href="https://github.com/Marne404/fern/blob/main/docs/GAME_DESIGN.md">Game design</a> ·
+      <a href="https://github.com/Marne404/fern/blob/main/docs/DEVLOG.md">Devlog</a></p>
+  </div>
+</section>
+
+<footer>
+  <div class="display">Fern</div>
+  <p>Made with <a href="https://godotengine.org/">Godot</a>. Models by <a href="https://quaternius.com/">Quaternius</a> (CC0),
+    music by AlkaKrab, font Luckiest Guy by Astigmatic.</p>
+  <p>© 2026 Marne Kismann · All rights reserved</p>
+</footer>
+
+<div class="lightbox" id="lightbox"><img alt=""></div>
+<script>
+  const box = document.getElementById("lightbox");
+  const big = box.querySelector("img");
+  document.querySelectorAll(".gallery figure").forEach(f => f.addEventListener("click", () => {
+    const img = f.querySelector("img");
+    big.src = img.src; big.alt = img.alt;
+    box.classList.add("open");
+  }));
+  box.addEventListener("click", () => box.classList.remove("open"));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") box.classList.remove("open"); });
+</script>
+</body>
+</html>
