@@ -173,6 +173,7 @@ func _ready() -> void:
 	add_child(mountains)
 	atmosphere.mountains = mountains
 	_setup_shafts()
+	atmosphere.apply_quality()
 	_setup_post()
 	sea = Sea.new()
 	sea.world = world

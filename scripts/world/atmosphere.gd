@@ -22,6 +22,9 @@ var _timer := 0.0
 var _last_z := INF
 
 
+## Distance at which the haze reaches full strength
+var fog_end := 1100.0
+
 func setup(p_gen: WorldGen, parent: Node) -> void:
 	gen = p_gen
 	sky_mat = ShaderMaterial.new()
@@ -52,7 +55,7 @@ func setup(p_gen: WorldGen, parent: Node) -> void:
 	env.fog_enabled = true
 	env.fog_mode = Environment.FOG_MODE_DEPTH
 	env.fog_depth_begin = 70.0
-	env.fog_depth_end = 1100.0
+	env.fog_depth_end = fog_end
 	env.fog_depth_curve = 1.25   # middle clear, only the distance turns blue (Genshin aerial perspective)
 	env.fog_sky_affect = 0.0
 	env.fog_aerial_perspective = 0.65
@@ -80,6 +83,11 @@ func setup(p_gen: WorldGen, parent: Node) -> void:
 
 
 func apply_quality() -> void:
+	# with large view distances the aerial-perspective haze moves further out
+	fog_end = maxf(1100.0, float(Settings.values["view_distance"]) * 64.0 * 1.15)
+	env.fog_depth_end = fog_end
+	if mountains:
+		mountains.set_view(float(Settings.values["view_distance"]) * 64.0)
 	var sp := Settings.shadow_params()
 	sun.shadow_enabled = sp["enabled"]
 	sun.directional_shadow_max_distance = sp["distance"]
@@ -154,7 +162,7 @@ func _apply_fog() -> void:
 		env.fog_light_color = env.fog_light_color.lerp(Color(0.93, 0.78, 0.55), dust * 0.6)
 		env.fog_density = minf(env.fog_density + dust * 0.25, 1.0)
 	env.fog_depth_begin = lerpf(70.0, 10.0, dust)
-	env.fog_depth_end = lerpf(1100.0, 260.0, dust)
+	env.fog_depth_end = lerpf(fog_end, 260.0, dust)
 	if underwater > 0.001:
 		_apply_underwater()
 
@@ -165,7 +173,7 @@ func _apply_underwater() -> void:
 	var u := underwater
 	env.fog_light_color = (current["fog_color"] as Color).lerp(Color(0.1, 0.42, 0.5), u)
 	env.fog_depth_begin = lerpf(70.0, 0.0, u)
-	env.fog_depth_end = lerpf(1100.0, 22.0, u)
+	env.fog_depth_end = lerpf(fog_end, 22.0, u)
 	env.fog_depth_curve = lerpf(1.25, 0.6, u)
 	env.fog_density = lerpf(clampf(0.5 + current["fog_density"] * 40.0, 0.5, 0.85), 1.0, u)
 

@@ -39,7 +39,8 @@ func _init(p_gen: WorldGen, p_coord: Vector2i, p_lod: int, p_veg: float) -> void
 	lod = p_lod
 	veg = p_veg
 	corner = Vector2(coord.x * SIZE, coord.y * SIZE)
-	spacing = 2.0 if lod == 0 else 8.0
+	# lod 0 near, 1 far, 2 very far (coarse terrain and trees only)
+	spacing = [2.0, 8.0, 16.0][lod] as float
 	n = int(SIZE / spacing) + 1
 
 
@@ -193,7 +194,7 @@ func _build_terrain() -> Dictionary:
 
 ## Path mask: 1 m (near) or 4 m (far) per texel, 65 or 17 texels wide
 func _build_path_image() -> Dictionary:
-	var res := 65 if lod == 0 else 17
+	var res: int = [65, 17, 9][lod]
 	var step := SIZE / (res - 1)
 	var bytes := PackedByteArray()
 	bytes.resize(res * res)
@@ -351,7 +352,10 @@ func _scatter() -> void:
 		present[int(bb.x)] = true
 		present[int(bb.y)] = true
 	# large objects first, so trees avoid rocks
-	for pass_kind in [["rock"], ["tree"], ["grass", "detail", "cluster", "path_stones"]]:
+	var passes := [["rock"], ["tree"], ["grass", "detail", "cluster", "path_stones"]]
+	if lod == 2:
+		passes = [["rock"], ["tree"]]
+	for pass_kind in passes:
 		for b in present:
 			var layers: Array = gen.biomes[b]["layers"]
 			for li in layers.size():

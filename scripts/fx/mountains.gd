@@ -22,6 +22,7 @@ func _ready() -> void:
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.custom_aabb = AABB(Vector3(-4000, -500, -4000), Vector3(8000, 2000, 8000))
 		mi.set_meta("height", spec[1])
+		mi.set_meta("radius", spec[0])
 		add_child(mi)
 		_layers.append(mi)
 
@@ -45,6 +46,20 @@ func _ring_mesh(segments: int, rows: int) -> ArrayMesh:
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return m
+
+
+## The ranges must stay beyond the loaded terrain
+func set_view(view_m: float) -> void:
+	for i in _layers.size():
+		var base: float = _layers[i].get_meta("radius")
+		var r := maxf(base, view_m + (1100.0 if i == 0 else 350.0))
+		(_layers[i].material_override as ShaderMaterial).set_shader_parameter("radius", r)
+		_layers[i].custom_aabb = AABB(Vector3(-r - 500, -500, -r - 500), Vector3(2 * r + 1000, 2500, 2 * r + 1000))
+
+
+func set_sea(amount: float) -> void:
+	for l in _layers:
+		(l.material_override as ShaderMaterial).set_shader_parameter("sea_open", amount)
 
 
 func follow(cam_pos: Vector3, ground_y: float) -> void:

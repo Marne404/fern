@@ -19,6 +19,7 @@ const LEVELS := {
 var gen: WorldGen
 var world: ChunkManager
 var level := 0
+var _range := 1.0
 var _meshes: Array[ArrayMesh] = []
 var _materials: Array[ShaderMaterial] = []
 var _tiles := {}          # Vector2i -> {"node": MultiMeshInstance3D, "lod": int}
@@ -29,14 +30,24 @@ func setup(p_gen: WorldGen, p_world: ChunkManager) -> void:
 	gen = p_gen
 	world = p_world
 	_apply_level()
-	Settings.changed.connect(func(k): if k == "grass_blades" or k == "preset": _apply_level())
+	Settings.changed.connect(func(k): if k in ["grass_blades", "preset", "blade_range"]: _apply_level())
+
+
+## Blade density and radii of the current level, radii scaled by the "Grass blade range" setting
+func _spec() -> Array:
+	var sp: Array = (LEVELS[level] as Array).duplicate()
+	sp[1] *= _range
+	sp[2] *= _range
+	return sp
 
 
 func _apply_level() -> void:
 	var l: int = Settings.values["grass_blades"]
-	if l == level and not _meshes.is_empty():
+	var rng_mul: float = Settings.values["blade_range"]
+	if l == level and rng_mul == _range and not _meshes.is_empty():
 		return
 	level = l
+	_range = rng_mul
 	for t in _tiles:
 		_tiles[t]["node"].queue_free()
 	_tiles.clear()
@@ -44,7 +55,7 @@ func _apply_level() -> void:
 	_materials.clear()
 	if level == 0:
 		return
-	var spec: Array = LEVELS[level]
+	var spec := _spec()
 	_meshes.append(_patch_mesh(int(spec[0] * PATCH * PATCH), 0.045, 3, 11))
 	_meshes.append(_patch_mesh(int(spec[0] * PATCH * PATCH * 0.22), 0.1, 2, 23))
 	for i in 2:
@@ -118,7 +129,7 @@ func _patch_mesh(count: int, width: float, segments: int, seed_value: int) -> Ar
 func update(cam_local: Vector3) -> void:
 	if level == 0 or gen == null:
 		return
-	var spec: Array = LEVELS[level]
+	var spec := _spec()
 	var near_r: float = spec[1]
 	var far_r: float = spec[2]
 	var cam_w := world.local_to_world(cam_local)

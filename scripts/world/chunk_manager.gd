@@ -9,6 +9,8 @@ signal chunk_ready(coord: Vector2i, node: Node3D, lod: int)
 const SIZE := ChunkBuilder.SIZE
 const ORIGIN_STEP := 1024.0
 const MAX_JOBS := 4
+## Beyond this distance chunks only get coarse terrain and trees (view distances over ~600 m)
+const FAR_LOD := 560.0
 const FINALIZE_BUDGET_MS := 6.0
 
 var gen: WorldGen
@@ -153,10 +155,12 @@ func _plan() -> void:
 			var dist := maxf(to.length() - SIZE * 0.5, 0.0)
 			if dist > r * SIZE:
 				continue
-			var lod := 0 if dist < near_distance else 1
-			# hysteresis: near chunks stay near a bit longer
+			var lod := 0 if dist < near_distance else (1 if dist < FAR_LOD else 2)
+			# hysteresis: chunks keep their finer level a bit longer
 			if _chunks.has(c) and _chunks[c]["lod"] == 0 and dist < near_distance + 24.0:
 				lod = 0
+			elif lod == 2 and _chunks.has(c) and _chunks[c]["lod"] == 1 and dist < FAR_LOD + 48.0:
+				lod = 1
 			var have: int = _chunks[c]["lod"] if _chunks.has(c) else -2
 			if have == lod:
 				continue

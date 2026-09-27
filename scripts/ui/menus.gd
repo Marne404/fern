@@ -408,7 +408,8 @@ func _build_settings() -> Control:
 
 	_section(list, "Graphics")
 	_option(list, "preset", "Preset", Settings.PRESET_NAMES + ["Custom"])
-	_slider(list, "render_scale", "Render resolution", 0.5, 1.0, 0.05, func(v): return "%d %%" % roundi(v * 100))
+	_slider(list, "render_scale", "Render resolution", 0.5, 1.5, 0.05, func(v): return "%d %%" % roundi(v * 100))
+	_option(list, "upscaler", "Upscaling below 100 %", ["FSR 1 (sharp)", "FSR 2 (temporal, smooth)", "Bilinear"])
 	_check(list, "dynamic_res", "Dynamic resolution (lowers resolution when FPS drop)")
 	_option(list, "target_fps", "Target frame rate", FPS_TARGETS.map(func(v): return "%d FPS" % v))
 	_option(list, "aa", "Anti-aliasing", AA_NAMES)
@@ -418,14 +419,16 @@ func _build_settings() -> Control:
 	_check(list, "glow", "Glow")
 	_check(list, "sun_shafts", "Sun shafts")
 	_option(list, "grass_blades", "Grass blades", ["Off", "Normal", "Dense", "Paradise"])
+	_slider(list, "blade_range", "Grass blade range", 0.6, 2.2, 0.1, func(v): return "%d %%" % roundi(v * 100))
 	_check(list, "film_look", "Film look (anime color grading)")
 	_check(list, "outlines", "Anime outlines")
 	_check(list, "ssil", "Indirect light (SSIL)")
 	_check(list, "dof", "Distance depth of field")
-	_slider(list, "lod", "Distant detail reduction", 1.0, 8.0, 0.5, func(v): return "%.1f" % v)
-	_slider(list, "view_distance", "View distance", 3, 12, 1, func(v): return "%d m" % (int(v) * 64))
-	_slider(list, "veg_density", "Vegetation density", 0.25, 1.5, 0.05, func(v): return "%d %%" % roundi(v * 100))
-	_slider(list, "grass_distance", "Grass distance", 25, 110, 5, func(v): return "%d m" % int(v))
+	_slider(list, "lod", "Distant detail reduction", 0.25, 8.0, 0.25, func(v): return "%.2f" % v)
+	_slider(list, "view_distance", "View distance", 3, 24, 1, func(v): return "%d m" % (int(v) * 64))
+	_slider(list, "veg_density", "Vegetation density", 0.25, 2.5, 0.05, func(v): return "%d %%" % roundi(v * 100))
+	_slider(list, "grass_distance", "Grass distance", 25, 250, 5, func(v): return "%d m" % int(v))
+	_slider(list, "shadow_range", "Shadow distance", 0.5, 3.0, 0.1, func(v): return "%d %%" % roundi(v * 100))
 	_check(list, "wind_fx", "Wind lines")
 	_check(list, "particles", "Leaves, pollen & weather effects")
 	_section(list, "Performance optimizations")
@@ -518,7 +521,7 @@ func _slider(list: VBoxContainer, key: String, text: String, lo: float, hi: floa
 	_controls[key] = s
 
 
-const HEAVY := ["view_distance", "veg_density", "grass_distance"]
+const HEAVY := ["view_distance", "veg_density", "grass_distance", "blade_range"]
 
 
 ## Apply heavy settings (world rebuild) only on release

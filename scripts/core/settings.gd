@@ -6,17 +6,20 @@ extends Node
 signal changed(key: String)
 
 const PATH := "user://settings.cfg"
-const PRESET_NAMES := ["Low", "Medium", "High", "Ultra"]
+const PRESET_NAMES := ["Low", "Medium", "High", "Ultra", "Extreme"]
 
 const PRESETS := {
 	"Low": {"render_scale": 0.67, "aa": 1, "shadows": 1, "ssao": false, "volumetric": false, "glow": false, "sun_shafts": false, "lod": 6.0, "grass_blades": 0, "film_look": false, "ssil": false, "dof": false,
-		"view_distance": 4, "veg_density": 0.45, "grass_distance": 35.0},
+		"view_distance": 4, "veg_density": 0.45, "grass_distance": 35.0, "blade_range": 1.0, "shadow_range": 1.0},
 	"Medium": {"render_scale": 0.85, "aa": 1, "shadows": 2, "ssao": true, "volumetric": false, "glow": true, "sun_shafts": true, "lod": 4.0, "grass_blades": 0, "film_look": false, "ssil": false, "dof": false,
-		"view_distance": 5, "veg_density": 0.6, "grass_distance": 45.0},
+		"view_distance": 5, "veg_density": 0.6, "grass_distance": 45.0, "blade_range": 1.0, "shadow_range": 1.0},
 	"High": {"render_scale": 1.0, "aa": 2, "shadows": 3, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 2.0, "grass_blades": 1, "film_look": true, "ssil": false, "dof": false,
-		"view_distance": 7, "veg_density": 1.0, "grass_distance": 65.0},
+		"view_distance": 7, "veg_density": 1.0, "grass_distance": 65.0, "blade_range": 1.0, "shadow_range": 1.0},
 	"Ultra": {"render_scale": 1.0, "aa": 3, "shadows": 4, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 1.0, "grass_blades": 3, "film_look": true, "ssil": true, "dof": true,
-		"view_distance": 9, "veg_density": 1.3, "grass_distance": 85.0},
+		"view_distance": 9, "veg_density": 1.3, "grass_distance": 85.0, "blade_range": 1.0, "shadow_range": 1.0},
+	# for strong GPUs: everything further away and denser
+	"Extreme": {"render_scale": 1.0, "aa": 3, "shadows": 4, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 0.5, "grass_blades": 3, "film_look": true, "ssil": true, "dof": true,
+		"view_distance": 16, "veg_density": 1.7, "grass_distance": 150.0, "blade_range": 1.6, "shadow_range": 1.8},
 }
 
 # aa: 0 off, 1 FXAA, 2 MSAA 2×, 3 MSAA 4×, 4 TAA
@@ -41,6 +44,9 @@ var values := {
 	"view_distance": 5,
 	"veg_density": 0.7,
 	"grass_distance": 50.0,
+	"blade_range": 1.0,         # multiplier for the grass blade carpet radius
+	"shadow_range": 1.0,        # multiplier for the sun shadow distance
+	"upscaler": 0,              # below 100 % resolution: 0 FSR 1, 1 FSR 2 (temporal), 2 bilinear
 	"fps_limit": 0,
 	"vsync": true,
 	"fov": 70.0,
@@ -136,7 +142,7 @@ func apply_all() -> void:
 func _apply(key: String) -> void:
 	var vp := get_viewport()
 	match key:
-		"render_scale", "dynamic_res":
+		"render_scale", "dynamic_res", "upscaler":
 			dynamic_factor = 1.0
 			_apply_scale()
 		"aa":
@@ -166,7 +172,12 @@ func _apply_scale() -> void:
 	var vp := get_viewport()
 	var s: float = values["render_scale"] * dynamic_factor
 	vp.scaling_3d_scale = s
-	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR if s < 0.99 else Viewport.SCALING_3D_MODE_BILINEAR
+	# above 100 %: supersampling; below: the chosen upscaler (FSR 2 also smooths edges over time)
+	var up: int = values["upscaler"]
+	if s > 1.01 or s >= 0.99:
+		vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	else:
+		vp.scaling_3d_mode = [Viewport.SCALING_3D_MODE_FSR, Viewport.SCALING_3D_MODE_FSR2, Viewport.SCALING_3D_MODE_BILINEAR][up]
 	vp.fsr_sharpness = 0.4
 
 
@@ -205,7 +216,7 @@ func shadow_params() -> Dictionary:
 		{"enabled": true, "distance": 70.0, "splits": 4},
 		{"enabled": true, "distance": 90.0, "splits": 4},
 		{"enabled": true, "distance": 130.0, "splits": 4},
-	][q]
+	][q].merged({"distance": [0.0, 45.0, 70.0, 90.0, 130.0][q] * float(values["shadow_range"])}, true)
 
 
 func save() -> void:
