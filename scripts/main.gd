@@ -822,3 +822,10 @@ func _update_shot() -> void:
 		img.save_png(_args["shot"])
 		print("saved: %s  FPS %d  distance %.0f m" % [_args["shot"], Engine.get_frames_per_second(), journey_distance])
 		get_tree().quit()
+	if _args.has("dbgwater") and _frame == int(_args.get("wait", "300")) - 2:
+		for n in get_tree().root.find_children("*", "GeometryInstance3D", true, false):
+			var gi := n as GeometryInstance3D
+			var mat = gi.material_override
+			if gi.is_visible_in_tree() and mat is ShaderMaterial and (mat.shader.resource_path.contains("water") or mat.shader.resource_path.contains("waterfall")):
+				var ab := gi.global_transform * gi.get_aabb()
+				print("[water] %s %s pos=%s aabb=%s cam=%s" % [gi.name, gi.get_parent().name, gi.global_position, ab, _active_camera().global_position])

@@ -471,13 +471,15 @@ func _compute_pond(k: int) -> Vector4:
 	var off := maxf(vw * 0.55, 6.0) + r + 5.0
 	var slope := path_slope(zc)
 	var x := path_x(zc) + side * off * sqrt(1.0 + slope * slope)
-	# water level just below the lowest shore point
+	# water level just below the lowest ground point anywhere under the water surface mesh (it reaches
+	# 1.6 × r; the terrain hides the rest). Otherwise a lower trail nearby would see the water as a ceiling.
 	var level := INF
-	for i in 8:
-		var a := i * TAU / 8.0
-		var sx := x + cos(a) * r
-		var sz := zc + sin(a) * r
-		level = minf(level, height_in_row(sx, row(sz, false)))
+	for rad: float in [r, r * 1.3, r * 1.62]:
+		for i in 16:
+			var a := i * TAU / 16.0
+			var sx := x + cos(a) * rad
+			var sz := zc + sin(a) * rad
+			level = minf(level, height_in_row(sx, row(sz, false)))
 	return Vector4(x, zc, r, level - 0.35)
 
 
