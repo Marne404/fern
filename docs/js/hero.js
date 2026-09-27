@@ -120,6 +120,35 @@ function pathAt(s) {
   return new THREE.Vector2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
 }
 
+/** Underside of a floating island: earth tapering to a rounded rocky tip, colored by wavy strata */
+const STRATA = ['#5a3b22', '#7a5230', '#a36f3f', '#8a5a36', '#c49365', '#9a6a44', '#b5845a', '#a08462'];
+function islandUnderside(edge, top, depth, SEG, LV, seed, lipGrass) {
+  const pos = [], idx = [];
+  for (let i = 0; i <= LV; i++) {
+    const t = i / LV;
+    for (let j = 0; j <= SEG; j++) {
+      const a = (j / SEG) * Math.PI * 2;
+      // smooth lumps (no per-vertex noise, so no streaks towards the tip)
+      const bump = 1 + 0.07 * (noise2(Math.cos(a) * 2 + seed, Math.sin(a) * 2 + t * 2.2) - 0.5) + 0.04 * Math.sin(a * 5 + seed + t * 3);
+      const r = edge(a) * Math.pow(Math.max(1 - Math.pow(t, 1.7), 0), 0.75) * bump;
+      const y = top - t * depth;
+      pos.push(Math.cos(a) * r, y, Math.sin(a) * r);
+    }
+  }
+  for (let i = 0; i < LV; i++) for (let j = 0; j < SEG; j++) {
+    const a = i * (SEG + 1) + j, b = a + 1, c2 = a + SEG + 1, d = c2 + 1;
+    idx.push(a, c2, b, b, c2, d);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const mat = toon({ rim: 0.25, strata: { colors: STRATA.map(C), lip: C('#4f8a2a'), top, depth, center: new THREE.Vector3(), seed } });
+  const mesh = new THREE.Mesh(g, mat);
+  mesh.castShadow = true;
+  return mesh;
+}
+
 // ---------------------------------------------------------------- textures drawn on canvas
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -234,6 +263,7 @@ export class Hero {
     }
     this.ground.geometry.attributes.color.needsUpdate = true;
     this.grass.count = Math.floor(this.grassMax * Math.min(p.grassDensity, 1));
+    for (const m of this.floaterTops ?? []) m.color.copy(p.g1);
     this.pal = p;
   }
 
@@ -326,38 +356,22 @@ export class Hero {
     this.edgeRing = [];
     for (let j = 0; j < SEG; j++) this.edgeRing.push(1 + (RINGS - 1) * SEG + j);
 
-    // underside: earth strata tapering into a rocky tip
-    const DEPTH = 10, LV = 26;
-    const sp = [], scol = [], sidx = [];
-    const bands = ['#5a3b22', '#7a5230', '#a36f3f', '#8a5a36', '#c49365', '#9a6a44', '#b5845a', '#7e6a5a', '#8d8a86'].map(C);
-    for (let i = 0; i <= LV; i++) {
-      const t = i / LV;
-      for (let j = 0; j <= SEG; j++) {
-        const a = (j / SEG) * Math.PI * 2;
-        const e = edgeR(a);
-        const bump = 1 + 0.08 * (noise2(a * 3, t * 4) - 0.5) + 0.05 * Math.sin(a * 9 + t * 6);
-        const r = e * (1 - Math.pow(t, 1.45) * 0.93) * bump;
-        const y = -0.25 - t * DEPTH - 1.6 * Math.pow(t, 3) * noise2(a * 2, 1.3);
-        sp.push(Math.cos(a) * r, y, Math.sin(a) * r);
-        const bandPos = t * 8 + (noise2(a * 5, 2) - 0.5) * 0.9;
-        const bc = bands[Math.min(Math.max(Math.floor(bandPos), 0), bands.length - 1)].clone();
-        bc.multiplyScalar(0.92 + 0.16 * noise2(a * 14, t * 20));
-        if (t < 0.03) bc.copy(C('#4f8a2a'));
-        scol.push(bc.r, bc.g, bc.b);
+    this.under = islandUnderside(edgeR, -0.2, 10.5, SEG, this.mobile ? 26 : 40, 0.0, 1);
+    this.scene.add(this.under);
+    // roots dangling from under the grass lip
+    const rootMat = toon({ color: '#5a3b22', rim: 0.2, wind: 'foliage', bend: '0.05' });
+    const rr = rng(31);
+    for (let i = 0; i < (this.mobile ? 8 : 16); i++) {
+      const a = rr() * Math.PI * 2, e = edgeR(a) * (0.9 - rr() * 0.12);
+      const len = 0.8 + rr() * 2.2;
+      const pts = [];
+      for (let k = 0; k <= 6; k++) {
+        const f = k / 6;
+        pts.push(new THREE.Vector3(Math.cos(a) * (e - f * 0.4 + Math.sin(f * 5 + i) * 0.15), -0.6 - f * len, Math.sin(a) * (e - f * 0.4) + Math.cos(f * 4 + i) * 0.15));
       }
+      const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.05 * (1 - 0.3 * rr()), 5, false);
+      this.scene.add(new THREE.Mesh(g, rootMat));
     }
-    for (let i = 0; i < LV; i++) for (let j = 0; j < SEG; j++) {
-      const a = i * (SEG + 1) + j, b = a + 1, c2 = a + SEG + 1, d = c2 + 1;
-      sidx.push(a, c2, b, b, c2, d);
-    }
-    const sg = new THREE.BufferGeometry();
-    sg.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3));
-    sg.setAttribute('color', new THREE.Float32BufferAttribute(scol, 3));
-    sg.setIndex(sidx);
-    sg.computeVertexNormals();
-    const under = new THREE.Mesh(sg, toon({ vertexColors: true, rim: 0.25 }));
-    this.scene.add(under);
-    this.under = under;
   }
 
   _buildGrass() {
@@ -498,27 +512,67 @@ export class Hero {
   }
 
   _buildFloaters() {
+    // little islands drifting around the big one: grassy top, earth layers, a rock or bush
     this.floaters = [];
+    this.floaterTops = [];
     const rr = rng(8);
-    for (let i = 0; i < 5; i++) {
-      const g = new THREE.IcosahedronGeometry(1, 1);
-      const p = g.attributes.position;
-      for (let k = 0; k < p.count; k++) {
-        const y = p.getY(k);
-        p.setY(k, y > 0.2 ? 0.35 + y * 0.15 : y * 1.6);
-        p.setX(k, p.getX(k) * (1 + (hash2(k, i) - 0.5) * 0.25));
+    const n = this.mobile ? 3 : 5;
+    for (let i = 0; i < n; i++) {
+      const rad = 1.2 + rr() * 1.6, seed = rr() * 10;
+      const edge = (a) => rad * (1 + 0.09 * Math.sin(3 * a + seed) + 0.05 * Math.sin(5 * a + seed * 2));
+      const grp = new THREE.Group();
+      // top: a gently domed disc
+      const RINGS = 6, SEG = 28;
+      const pos = [0, 0.12 * rad, 0], col = [1, 1, 1], idx = [];
+      for (let k = 1; k <= RINGS; k++) {
+        const f = k / RINGS;
+        for (let j = 0; j < SEG; j++) {
+          const a = (j / SEG) * Math.PI * 2, r = edge(a) * f;
+          pos.push(Math.cos(a) * r, 0.12 * rad * (1 - f * f) - smooth(0.85, 1, f) * 0.08, Math.sin(a) * r);
+          const v = 0.85 + 0.25 * noise2(Math.cos(a) * r * 1.5 + seed, Math.sin(a) * r * 1.5);
+          col.push(v, v, v);
+        }
       }
+      for (let j = 0; j < SEG; j++) idx.push(0, 1 + ((j + 1) % SEG), 1 + j);
+      for (let k = 1; k < RINGS; k++) for (let j = 0; j < SEG; j++) {
+        const a = 1 + (k - 1) * SEG + j, b = 1 + (k - 1) * SEG + ((j + 1) % SEG), c2 = 1 + k * SEG + j, d = 1 + k * SEG + ((j + 1) % SEG);
+        idx.push(a, b, c2, b, d, c2);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      g.setIndex(idx);
       g.computeVertexNormals();
-      const cols = [];
-      for (let k = 0; k < p.count; k++) { const c = p.getY(k) > 0.3 ? C('#6aa83a') : C(k % 3 ? '#8a5a36' : '#a36f3f'); cols.push(c.r, c.g, c.b); }
-      g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
-      const m = new THREE.Mesh(g, toon({ vertexColors: true, rim: 0.3 }));
-      const s = 0.8 + rr() * 1.8;
-      m.scale.set(s * 1.3, s, s * 1.3);
-      m.castShadow = true;
-      m.userData = { a: rr() * Math.PI * 2, d: 21 + rr() * 9, y: -3 + rr() * 5, speed: 0.02 + rr() * 0.02, bob: rr() * 6 };
-      this.floaters.push(m);
-      this.scene.add(m);
+      const topMat = toon({ vertexColors: true, color: '#86b63e', rim: 0.2 });
+      const top = new THREE.Mesh(g, topMat);
+      top.receiveShadow = true;
+      this.floaterTops.push(topMat);
+      grp.add(top);
+      const under = islandUnderside(edge, -0.06, rad * (1.6 + rr() * 0.8), SEG, 14, seed, 0);
+      grp.add(under);
+      // a few grass tufts
+      const tuft = new THREE.InstancedMesh(this.grass.geometry, this.grassMat, 26);
+      const m = new THREE.Matrix4(), q = new THREE.Quaternion();
+      for (let t = 0; t < 26; t++) {
+        const a = rr() * Math.PI * 2, d = Math.sqrt(rr()) * rad * 0.85;
+        q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rr() * 6.28);
+        m.compose(new THREE.Vector3(Math.cos(a) * d, 0.1 * rad * (1 - (d / rad) ** 2) - 0.03, Math.sin(a) * d), q, new THREE.Vector3(1, 0.4 + rr() * 0.35, 1));
+        tuft.setMatrixAt(t, m);
+      }
+      grp.add(tuft);
+      grp.userData = { a: rr() * Math.PI * 2, d: 22 + rr() * 10, y: -4 + rr() * 6, speed: 0.015 + rr() * 0.02, bob: rr() * 6, rad, prop: ['Bush_Common', 'Rock_Medium_2', 'Fern_1', 'Rock_Medium_3', 'Bush_Common_Flowers'][i % 5] };
+      this.floaters.push(grp);
+      this.scene.add(grp);
+      // a small plant or rock on top, once the model is loaded
+      this._model(grp.userData.prop).then((src) => {
+        src.userData.model = grp.userData.prop;
+        const o = this._makeMaterials(src, 'autumn', i);
+        const h = /Rock/.test(grp.userData.prop) ? rad * 0.55 : rad * 0.7;
+        o.scale.setScalar(h / Math.max(o.userData.height, 0.01));
+        o.position.set((rr() - 0.5) * rad * 0.6, 0.08 * rad, (rr() - 0.5) * rad * 0.6);
+        o.rotation.y = rr() * 6.28;
+        grp.add(o);
+      }).catch(() => {});
     }
   }
 
@@ -752,7 +806,7 @@ export class Hero {
     const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
     let down = null;
     c.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch') { down = { x: e.clientX, y: e.clientY, touch: true }; return; }
+      if (e.pointerType === 'touch') { down = { x: e.clientX, y: e.clientY, touch: true, az: o.tAz, el: o.tEl, moved: false }; return; }
       down = { x: e.clientX, y: e.clientY, az: o.tAz, el: o.tEl, moved: false };
       c.setPointerCapture(e.pointerId);
     });
@@ -760,6 +814,12 @@ export class Hero {
       const rect = c.getBoundingClientRect();
       o.mx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       o.my = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+      if (down && down.touch) {
+        // horizontal swipes turn the island, vertical ones scroll the page (touch-action: pan-y)
+        const dx = e.clientX - down.x, dy = e.clientY - down.y;
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { down.moved = true; o.tAz = down.az - dx * 0.008; }
+        else if (Math.abs(dy) > 8) down.moved = true;
+      }
       if (down && !down.touch) {
         const dx = e.clientX - down.x, dy = e.clientY - down.y;
         if (Math.abs(dx) + Math.abs(dy) > 4) down.moved = true;
@@ -812,9 +872,14 @@ export class Hero {
   setVisible(v) { this.visible = v; if (v) this._last = performance.now(); }
 
   // ------------------------------------------------------------ frame
-  _loop() {
+  _loop(ts) {
     requestAnimationFrame(this._loop);
     if (!this.visible) return;
+    // phones: 30 FPS is plenty for a background scene and saves battery
+    if (this.mobile) {
+      if (ts - (this._lastFrame ?? 0) < 30) return;
+      this._lastFrame = ts;
+    }
     const now = performance.now();
     const dt = Math.min((now - this._last) / 1000, 0.05);
     this._last = now;

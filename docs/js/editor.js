@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { toon, shared } from './toon.js';
-import { Scout, loadScoutTemplate, SKIN, OUTFIT, ACCENT, HATS, FACES, DEFAULT_LOOK, randomLook } from './scout.js';
+import { Scout, loadScoutTemplate, SKIN, OUTFIT, PANTS, ACCENT, HATS, FACES, EXTRAS, DEFAULT_LOOK, randomLook } from './scout.js';
 
 const KEY = 'fern-scout';
 export function savedLook() {
@@ -21,10 +21,10 @@ export class Editor {
     r.shadowMap.type = THREE.PCFShadowMap;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(27, 1, 0.1, 50);
-    this.camera.position.set(0, 1.7, -6.6);
-    this.camera.lookAt(0, 0.72, 0);
-    this.scene.add(new THREE.HemisphereLight(0xdcefff, 0x8a7a4a, 1.55));
-    const sun = new THREE.DirectionalLight(0xfff0d8, 2.4);
+    this.camera.position.set(0, 1.45, -5.6);
+    this.camera.lookAt(0, 0.8, 0);
+    this.scene.add(new THREE.HemisphereLight(0xe6f3ff, 0x9a8a5a, 1.9));
+    const sun = new THREE.DirectionalLight(0xfff0d8, 2.9);
     sun.position.set(-2.5, 5, -3.5);
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -43,6 +43,7 @@ export class Editor {
     new ResizeObserver(() => this._resize()).observe(canvas);
     loadScoutTemplate().then((tpl) => {
       this.scout = new Scout(tpl, this.look);
+      this.scout.lookTarget = this.camera.position;
       this.scout.root.position.y = 0.3;
       this.turn.add(this.scout.root);
       this.scout.wave(2);
@@ -86,8 +87,8 @@ export class Editor {
 
   _ui(panel) {
     const rows = [
-      ['skin', 'Color', SKIN], ['outfit', 'Uniform', OUTFIT], ['scarf', 'Neckerchief & sash', ACCENT],
-      ['hat_color', 'Hat color', ACCENT], ['pack', 'Backpack', ACCENT],
+      ['skin', 'Color', SKIN], ['outfit', 'Shirt', OUTFIT], ['pants', 'Shorts', PANTS], ['sash', 'Sash', ACCENT],
+      ['hat_color', 'Hat color', ACCENT], ['pack', 'Backpack', ACCENT], ['scarf', 'Neckerchief', ACCENT],
     ];
     this.inputs = {};
     for (const [key, label, colors] of rows) {
@@ -112,7 +113,7 @@ export class Editor {
     }
     const cy = document.createElement('div');
     cy.className = 'cyclers';
-    for (const [key, label, names] of [['hat', 'Hat', HATS], ['face', 'Face', FACES]]) {
+    for (const [key, label, names] of [['face', 'Face', FACES], ['hat', 'Hat', HATS], ['extra', 'Extras', EXTRAS]]) {
       const d = document.createElement('div');
       d.innerHTML = `<div class="row-label">${label}</div><div class="cycler"><button aria-label="Previous ${label.toLowerCase()}">‹</button><output></output><button aria-label="Next ${label.toLowerCase()}">›</button></div>`;
       const [prev, next] = d.querySelectorAll('button');
@@ -138,6 +139,7 @@ export class Editor {
   }
 
   surprise() { this.look = randomLook(); this.apply(); this.vel += 9; }
+  fidget() { this.scout?.fidget(); }
   wave() { this.scout?.wave(2.4); }
 
   apply() {

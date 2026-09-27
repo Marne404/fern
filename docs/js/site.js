@@ -16,6 +16,11 @@ const BIOME_CARDS = [
 
 // ------------------------------------------------------------ nav + reveal
 const nav = $('#nav');
+const menuBtn = $('#menu-btn');
+const setMenu = (open) => { nav.classList.toggle('open', open); menuBtn.setAttribute('aria-expanded', String(open)); };
+menuBtn.addEventListener('click', () => setMenu(!nav.classList.contains('open')));
+$$('#sheet a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
+addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
 const onScroll = () => nav.classList.toggle('scrolled', scrollY > 40);
 addEventListener('scroll', onScroll, { passive: true });
 onScroll();
@@ -113,12 +118,17 @@ async function start3D() {
       follow.setAttribute('aria-pressed', String(on));
       hero.setFollow(on);
     });
-    editor = new Editor($('#scout-canvas'), $('#editor'), (look) => hero.setLook(look));
-    $('#surprise').addEventListener('click', () => editor.surprise());
-    $('#wave').addEventListener('click', () => editor.wave());
+    // the scout editor gets its own WebGL context only when it comes close to the screen
+    const makeEditor = () => {
+      if (editor) return;
+      editor = new Editor($('#scout-canvas'), $('#editor'), (look) => hero.setLook(look));
+      $('#surprise').addEventListener('click', () => editor.surprise());
+      $('#wave').addEventListener('click', () => editor.wave());
+    };
+    new IntersectionObserver((es, obs) => { if (es.some((e) => e.isIntersecting)) { makeEditor(); obs.disconnect(); sync(); } }, { rootMargin: '600px 0px' }).observe($('.stage'));
     // only render what can be seen
     const onScreen = { hero: true, editor: false };
-    const sync = () => { hero.setVisible(onScreen.hero && !document.hidden); editor.setVisible(onScreen.editor && !document.hidden); };
+    function sync() { hero.setVisible(onScreen.hero && !document.hidden); editor?.setVisible(onScreen.editor && !document.hidden); }
     const vis = new IntersectionObserver((es) => {
       es.forEach((e) => { onScreen[e.target.id === 'top' ? 'hero' : 'editor'] = e.isIntersecting; });
       sync();

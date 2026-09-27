@@ -58,14 +58,24 @@ export function toon(opts = {}) {
   const wind = opts.wind ?? 'none';
   const crown = opts.crown ?? null;
   const grad = opts.gradient ?? null;   // { root: Color, tip: Color } for grass blades
+  const strata = opts.strata ?? null;   // { colors: Color[8], lip: Color, top, depth, center } earth layers under islands
   m.userData.crown = crown;
   m.userData.gradient = grad;
-  m.customProgramCacheKey = () => `toon-${wind}-${!!crown}-${!!grad}-${rim}-${opts.bend ?? ''}`;
+  m.customProgramCacheKey = () => `toon-${opts.sat ?? 0}-${wind}-${!!crown}-${!!grad}-${!!strata}-${rim}-${opts.bend ?? ''}`;
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uTime = shared.time;
     sh.uniforms.uWind = shared.wind;
     sh.uniforms.uRimColor = shared.rimColor;
     sh.uniforms.uRim = { value: rim };
+    sh.uniforms.uSat = { value: opts.sat ?? 0.0 };
+    if (strata) {
+      sh.uniforms.uStr = { value: strata.colors };
+      sh.uniforms.uStrLip = { value: strata.lip };
+      sh.uniforms.uStrTop = { value: strata.top };
+      sh.uniforms.uStrDepth = { value: strata.depth };
+      sh.uniforms.uStrC = { value: strata.center };
+      sh.uniforms.uStrSeed = { value: strata.seed ?? 0 };
+    }
     if (grad) {
       sh.uniforms.uRoot = { value: grad.root };
       sh.uniforms.uTip = { value: grad.tip };
@@ -78,7 +88,7 @@ export function toon(opts = {}) {
       sh.uniforms.uTint = { value: crown.tint ?? new THREE.Color(1, 1, 1) };
     }
     let vs = sh.vertexShader;
-    vs = vs.replace('#include <common>', `#include <common>\n${WIND_FN}\nvarying float vGrad;\nvarying vec3 vWorld;\n${crown ? 'uniform vec3 uCrownC; uniform vec3 uCrownE;' : ''}`);
+    vs = vs.replace('#include <common>', `#include <common>\n${WIND_FN}\nvarying float vGrad;\nvarying vec3 vWorld;\nvarying vec3 vObj;\n${crown ? 'uniform vec3 uCrownC; uniform vec3 uCrownE;' : ''}`);
     if (crown) {
       // soft spherical normals around the crown: leaf cards shade like one fluffy volume
       vs = vs.replace('#include <beginnormal_vertex>', `vec3 objectNormal = normalize((position - uCrownC) / max(uCrownE, vec3(0.01)));\n#ifdef USE_TANGENT\nvec3 objectTangent = vec3( tangent.xyz );\n#endif`);
@@ -93,6 +103,7 @@ export function toon(opts = {}) {
         wpos0 = modelMatrix * instanceMatrix * vec4(position, 1.0);
       #endif
       vWorld = wpos0.xyz;
+      vObj = position;
       ${crown ? 'vGrad = clamp(dot(normalize(position - uCrownC), normalize(vec3(0.35, 1.0, -0.25))) * 0.5 + 0.5 + (position.y - uCrownC.y) / max(uCrownE.y, 0.01) * 0.25, 0.0, 1.0);' : 'vGrad = clamp(position.y, 0.0, 1.0);'}
       ${wind !== 'none' ? `{
         vec3 off = windOffset(wpos0.xyz, ${bend});
@@ -105,10 +116,27 @@ export function toon(opts = {}) {
       }` : ''}`);
     sh.vertexShader = vs;
     let fs = sh.fragmentShader;
-    fs = fs.replace('#include <common>', `#include <common>\nuniform vec3 uRimColor; uniform float uRim;\nvarying float vGrad;\nvarying vec3 vWorld;\n${crown ? 'uniform vec3 uDark; uniform vec3 uLight; uniform vec3 uTint;' : ''}\n${grad ? 'uniform vec3 uRoot; uniform vec3 uTip;' : ''}`);
+    fs = fs.replace('#include <common>', `#include <common>\nuniform vec3 uRimColor; uniform float uRim; uniform float uSat;\nvarying float vGrad;\nvarying vec3 vWorld;\nvarying vec3 vObj;\n${crown ? 'uniform vec3 uDark; uniform vec3 uLight; uniform vec3 uTint;' : ''}\n${grad ? 'uniform vec3 uRoot; uniform vec3 uTip;' : ''}\n${strata ? 'uniform vec3 uStr[8]; uniform vec3 uStrLip; uniform float uStrTop; uniform float uStrDepth; uniform vec3 uStrC; uniform float uStrSeed;' : ''}`);
     if (crown) {
       fs = fs.replace('#include <map_fragment>', `#include <map_fragment>
         diffuseColor.rgb = mix(uDark, uLight, smoothstep(0.05, 0.95, vGrad)) * uTint;`);
+    }
+    if (strata) {
+      // wavy sediment layers by height, the grass lip on top, a slightly darker rocky tip
+      fs = fs.replace('#include <map_fragment>', `#include <map_fragment>
+        {
+          vec3 rel = vObj - uStrC;
+          float t = clamp((uStrTop - vObj.y) / uStrDepth, 0.0, 1.0);
+          float ang = atan(rel.z, rel.x) + uStrSeed;
+          float wob = sin(ang * 5.0 + t * 7.0) * 0.22 + sin(ang * 13.0 - t * 4.0) * 0.08 + sin(ang * 2.0 + uStrSeed * 3.0) * 0.3;
+          float band = t * 7.4 + wob;
+          int bi = int(clamp(floor(band), 0.0, 7.0));
+          vec3 col = uStr[bi];
+          float sub = fract(sin(floor(band * 3.0) * 12.9898 + uStrSeed) * 43758.5453);
+          col *= 0.92 + 0.12 * sub;
+          col = mix(col, uStrLip, 1.0 - smoothstep(0.015, 0.035, t + wob * 0.02));
+          diffuseColor.rgb = col;
+        }`);
     }
     if (grad) {
       fs = fs.replace('#include <map_fragment>', `#include <map_fragment>
@@ -119,6 +147,8 @@ export function toon(opts = {}) {
         float nv = clamp(abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0, 1.0);
         float rimv = smoothstep(0.6, 0.95, 1.0 - nv) * uRim;
         outgoingLight += uRimColor * rimv * diffuseColor.rgb;
+        // painted look: shadows keep their color instead of turning muddy
+        outgoingLight += diffuseColor.rgb * diffuseColor.rgb * uSat;
       }
       #include <opaque_fragment>`);
     sh.fragmentShader = fs;
