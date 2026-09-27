@@ -42,6 +42,7 @@ var obstacles: ObstacleManager
 var music: MusicDirector
 var _passed_obstacles := {}
 var knot_game: KnotGame
+var emote_wheel: EmoteWheel
 var _knot_cb: Callable
 var _shaft_mat: ShaderMaterial
 var _sea_open := 0.0
@@ -208,6 +209,11 @@ func _ready() -> void:
 	knot_game = KnotGame.new()
 	add_child(knot_game)
 	knot_game.finished.connect(_on_knot_done)
+	emote_wheel = EmoteWheel.new()
+	add_child(emote_wheel)
+	emote_wheel.chosen.connect(func(id: String):
+		if player:
+			player.play_emote(id))
 	menus = Menus.new()
 	add_child(menus)
 	menus.start_pressed.connect(_on_start_pressed)
@@ -346,6 +352,13 @@ func resume() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# emote wheel: hold G
+	if event is InputEventKey and event.physical_keycode == KEY_G and not event.echo:
+		if event.pressed and mode == Mode.PLAYING and player and player.can_act() and not menus.is_open() and not backpack.is_open() and not knot_game.is_open():
+			emote_wheel.open()
+		elif not event.pressed:
+			emote_wheel.close(true)
+		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
 			KEY_TAB:
@@ -396,6 +409,9 @@ func _process_inner(delta: float) -> void:
 				print("  [Hitch] %.0f ms at frame %d, chunks +%d, music %s" % [real_ms, _frame, world.pending_count(), music.now_playing()])
 	var cam := _active_camera()
 	_update_focus()
+	# test helper: --emote=id plays (again and again) once the player stands on the ground
+	if _args.has("emote") and player and player.is_physics_processing() and player.is_on_floor() and player.scout.emote_playing() == "" and not player.resting:
+		player.play_emote(_args["emote"])
 
 	if _spawn_pending and world.is_ready_around(Vector2(world.focus.x, world.focus.y)):
 		_spawn_pending = false
@@ -403,6 +419,10 @@ func _process_inner(delta: float) -> void:
 		p.y = world.ground_y(p.x, p.z) + 0.2
 		player.global_position = p
 		player.set_physics_process(true)
+		if _args.has("wheel"):
+			emote_wheel.open()
+			emote_wheel._aim = Vector2(80, -60)
+			emote_wheel._sel = 1
 		if _args.has("pitch"):
 			player.set_look(player.rotation.y + deg_to_rad(float(_args.get("yaw", "0"))), deg_to_rad(float(_args["pitch"])))
 		if _args.has("backpack"):

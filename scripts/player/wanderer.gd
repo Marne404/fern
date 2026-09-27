@@ -69,6 +69,10 @@ var _arm: SpringArm3D
 var _cam_dist := 3.4
 var _facing := 0.0
 var _sprinting := false
+## Emotes: lying down (rest pose), emote camera in first person, time since the emote started
+var _lie := false
+var _emote_cam := false
+var _emote_age := 0.0
 
 
 func _ready() -> void:
@@ -127,6 +131,25 @@ func set_third_person(on: bool) -> void:
 	scout.set_shadow_only(not on)
 
 
+## Plays an emote from the wheel. Sit and lie down are the normal rest (R) in a pose.
+func play_emote(id: String) -> void:
+	if not can_act() or swimming or climbing or not rope.is_empty() or not is_on_floor():
+		return
+	if id == "sit" or id == "lie":
+		if not resting:
+			_toggle_rest()
+		_lie = id == "lie"
+		return
+	if resting:
+		_toggle_rest()
+	scout.play_emote(id)
+	_emote_age = 0.0
+	# first person: step back so you can see yourself
+	if not third_person and Settings.values.get("emote_camera", true):
+		_emote_cam = true
+		set_third_person(true)
+
+
 ## Start of the view ray for interaction: in third person the point on the view ray level with the head
 func view_origin() -> Vector3:
 	if not third_person:
@@ -145,6 +168,15 @@ func _process(delta: float) -> void:
 		return
 	var hv := Vector2(velocity.x, velocity.z)
 	var spd := hv.length() if fly_mode == 0 else 0.0
+	# moving cancels an emote (after a short grace so a tap doesn't kill it instantly)
+	_emote_age += delta
+	if scout.emote_playing() != "" and spd > 0.8 and _emote_age > 0.3:
+		scout.stop_emote()
+	if _emote_cam and scout.emote_playing() == "":
+		_emote_cam = false
+		set_third_person(false)
+	if not resting:
+		_lie = false
 	var prev := _facing
 	if not third_person or not rope.is_empty() or climbing:
 		_facing = _yaw
@@ -161,7 +193,7 @@ func _process(delta: float) -> void:
 	if collapsed_now or sleeping:
 		scout.pose = Scout.Pose.LIE
 	elif resting:
-		scout.pose = Scout.Pose.SIT
+		scout.pose = Scout.Pose.LIE if _lie else Scout.Pose.SIT
 	elif swimming:
 		scout.pose = Scout.Pose.SWIM
 	elif climbing or not rope.is_empty():
@@ -172,7 +204,7 @@ func _process(delta: float) -> void:
 		scout.pose = Scout.Pose.STAND
 	if collapsed_now:
 		scout.mood = Scout.Mood.KNOCKED_OUT
-	elif sleeping:
+	elif sleeping or (resting and _lie):
 		scout.mood = Scout.Mood.ASLEEP
 	elif climbing or not rope.is_empty():
 		scout.mood = Scout.Mood.EFFORT

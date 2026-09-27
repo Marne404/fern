@@ -457,12 +457,35 @@ func _build_settings() -> Control:
 	_check(list, "music", "Music")
 	_slider(list, "music_volume", "Music volume", 0.0, 1.0, 0.05, func(v): return "%d %%" % roundi(v * 100))
 	_section(list, "Controls")
+	_check(list, "emote_camera", "Emote camera (first person steps back while an emote plays)")
+	for i in 8:
+		_emote_slot(list, i)
 	_slider(list, "fov", "Field of view", 55, 100, 1, func(v): return "%d°" % int(v))
 	_slider(list, "mouse_sens", "Mouse sensitivity", 0.2, 3.0, 0.05, func(v): return "%.2f" % v)
 
 	var back := _button("Back", func(): back(), true)
 	outer.add_child(back)
 	return root
+
+
+## One slot of the emote wheel (G)
+func _emote_slot(list: VBoxContainer, i: int) -> void:
+	var row := _row(list, "Emote wheel slot %d" % (i + 1))
+	var ob := OptionButton.new()
+	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var ids: Array = Scout.EMOTES.keys()
+	for id in ids:
+		ob.add_item(Scout.EMOTES[id][0])
+	var cur: Array = Settings.values.get("emote_wheel", [])
+	if cur.size() != 8:
+		cur = Scout.DEFAULT_WHEEL.duplicate()
+	ob.select(ids.find(cur[i]))
+	ob.item_selected.connect(func(k: int):
+		var w: Array = Settings.values.get("emote_wheel", [])
+		w = w.duplicate() if w.size() == 8 else Scout.DEFAULT_WHEEL.duplicate()
+		w[i] = ids[k]
+		Settings.set_value("emote_wheel", w, false))
+	row.add_child(ob)
 
 
 func _section(list: VBoxContainer, text: String) -> void:

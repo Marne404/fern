@@ -128,7 +128,7 @@ func _ready() -> void:
 	_hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_hint.offset_left = 26
 	_hint.offset_top = -44
-	_hint.text = "WASD walk · Shift run · Space jump · E pick up/use · Tab backpack · R rest · V third person · Esc pause · F6/F7 debug flight"
+	_hint.text = "WASD walk · Shift run · Space jump · E pick up/use · Tab backpack · R rest · G emotes · V third person · Esc pause · F6/F7 debug flight"
 	_hint.modulate.a = 0.0
 	add_child(_hint)
 

@@ -160,6 +160,34 @@ third person and in the shadow (and later to other players).
 **UI:** PEAK-style wheel (see UI plan): hand-drawn ring, icons per emote (drawn with Godot 2D shapes), name label
 in the center.
 
+**Details**
+
+| Emote | Body | Face | Length |
+|---|---|---|---|
+| Wave | right arm high, forearm swings | cheery eyes, open smile | 2.2 s |
+| Point | right arm straight ahead, lean in | determined brows | 2 s |
+| Thumbs up | right fist forward and up, nod | happy eyes, grin | 1.8 s |
+| Cheer | both arms up, two hops | happy, wide open mouth | 2 s |
+| Laugh | bounce, head back, hands on belly | happy eyes, laughing mouth | 2.4 s |
+| Shrug | arms out, elbows bent, shoulders up, head tilt | brows up, flat mouth | 1.8 s |
+| Facepalm | hand to face, head down | closed eyes, wavy mouth | 2.2 s |
+| Clap | hands meet in front, fast | happy, grin | 2.4 s |
+| Salute | right hand to the brow, chest out | determined, flat mouth | 2 s |
+| Think | hand on chin, head tilted, glance up | one brow up | 3 s |
+| Stretch & yawn | arms up, back arch | closed eyes, big yawn | 2.2 s |
+| Cower | crouch, arms over the head, shiver | wide eyes, scream | 2.2 s |
+| Stomp | alternating stomps, fists down | angry brows, teeth | 2 s |
+| Look around | hand shading the eyes, head sweeps | curious | 3 s |
+| Sit down | sit (= resting) | – | until moving |
+| Lie down | lie (= resting) | closed eyes | until moving |
+
+- `Scout.play_emote(id)` / `stop_emote()`; emotes blend through the same springs; moving cancels them
+  (sit/lie are the existing rest).
+- `EmoteWheel` (hold **G**): 8 slots, mouse movement picks a slot (no cursor needed), release plays;
+  1–8 while open. Slot icons are renders of the scout doing the emote (`assets/emotes/*.png`, made by the studio).
+- Settings: wheel slots (`emote_wheel`, 8 ids) edited in the scout editor; "Emote camera" (first person steps
+  back to third person while an emote plays).
+
 **Tests:** each emote rendered in the studio (sheet), in-game: open wheel, select, play, cancel by moving.
 
 ---

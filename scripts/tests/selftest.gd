@@ -139,6 +139,7 @@ func run() -> void:
 		check("Chest releases items", spawned == (kiste["items"] as Array).size(), "%d items" % spawned)
 
 	await _test_all_items(p)
+	await _test_emotes(p)
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -213,3 +214,40 @@ func _test_all_items(p: Wanderer) -> void:
 	check("Walking stick eases climbs", p.body.climb_factor < 1.0, "%.2f" % p.body.climb_factor)
 	for c in main.dropped.get_children():
 		c.free()
+
+
+func _test_emotes(p: Wanderer) -> void:
+	# back onto the dry trail
+	var gen: WorldGen = main.gen
+	var z: float = main.start_z - 20.0
+	var x := gen.path_x(z)
+	p.velocity = Vector3.ZERO
+	p.global_position = main.world.world_to_local(Vector3(x, gen.height(x, z) + 0.3, z))
+	for i in 120:
+		await frames(1)
+		if p.is_on_floor() and not p.in_water and i > 10:
+			break
+	var third_before := p.third_person
+	p.play_emote("cheer")
+	await frames(10)
+	check("Emote plays", p.scout.emote_playing() == "cheer")
+	p.autopilot = func() -> Vector3: return -p.global_basis.z
+	for i in 60:
+		await get_tree().process_frame
+	p.autopilot = Callable()
+	check("Walking cancels the emote", p.scout.emote_playing() == "")
+	check("Emote camera returns to the previous view", p.third_person == third_before)
+	p.velocity = Vector3.ZERO
+	for i in 20:
+		await frames(1)
+	p.play_emote("sit")
+	for i in 3:
+		await get_tree().process_frame
+	check("Sit emote rests", p.resting and p.scout.pose == Scout.Pose.SIT, "resting %s, pose %d, floor %s" % [p.resting, p.scout.pose, p.is_on_floor()])
+	p.play_emote("wave")
+	await get_tree().process_frame
+	check("Another emote stands up again", not p.resting)
+	var wheel: EmoteWheel = main.emote_wheel
+	wheel.open()
+	check("Emote wheel opens with 8 slots", wheel.is_open() and wheel._ids.size() == 8 and wheel._icons.all(func(t): return t != null))
+	wheel.close(false)

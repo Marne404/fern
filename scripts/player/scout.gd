@@ -27,6 +27,15 @@ const FACE_NAMES := ["Happy", "Bright-eyed", "Chill", "Cheeky", "Determined"]
 const EXTRA_NAMES := ["Nothing", "Round glasses", "Eye patch", "Neckerchief", "Glasses & neckerchief"]
 const DEFAULT_LOOK := {"skin": 0, "outfit": 0, "pants": 0, "sash": 7, "scarf": 0, "hat": 1, "hat_color": 10, "pack": 1, "face": 0, "extra": 3}
 
+## Emotes: id -> [name, seconds] (0 = held until you move; sit/lie are resting poses)
+const EMOTES := {
+	"wave": ["Wave", 2.2], "point": ["Point", 2.0], "thumbs": ["Thumbs up", 1.8], "cheer": ["Cheer", 2.0],
+	"laugh": ["Laugh", 2.4], "shrug": ["Shrug", 1.8], "facepalm": ["Facepalm", 2.2], "clap": ["Clap", 2.4],
+	"salute": ["Salute", 2.0], "think": ["Think", 3.0], "yawn": ["Stretch & yawn", 2.2], "cower": ["Cower", 2.2],
+	"stomp": ["Stomp", 2.0], "look": ["Look around", 3.0], "sit": ["Sit down", 0.0], "lie": ["Lie down", 0.0],
+}
+const DEFAULT_WHEEL := ["wave", "point", "thumbs", "cheer", "laugh", "shrug", "facepalm", "sit"]
+
 enum Pose { STAND, CROUCH, SIT, LIE, SWIM, CLIMB }
 enum Mood { NORMAL, TIRED, KNOCKED_OUT, ASLEEP, JOY, EFFORT, SCARED, COLD }
 
@@ -98,6 +107,8 @@ var _look_timer := 1.5
 var _pupil := Vector2.ZERO
 var _face_state := ""
 var _prop_angle := 0.0
+var _emote := ""
+var _emote_t := 0.0
 
 
 func _init(look_in: Dictionary = {}, for_export := false) -> void:
@@ -138,6 +149,30 @@ func set_shadow_only(on: bool) -> void:
 
 func wave(duration := 2.2) -> void:
 	_wave_t = duration
+
+
+## Plays an emote (body movement + face); sit/lie are handled by the owner as resting poses
+func play_emote(id: String) -> void:
+	if not EMOTES.has(id):
+		return
+	_emote = id
+	_emote_t = 0.0
+	if id == "wave":
+		_wave_t = EMOTES[id][1]
+	elif id == "yawn":
+		fidget("stretch")
+
+
+func stop_emote() -> void:
+	_emote = ""
+	_wave_t = 0.0
+	if _fidget == "stretch":
+		_fidget = ""
+
+
+## Id of the emote that is playing ("" if none)
+func emote_playing() -> String:
+	return _emote
 
 
 ## Plays an idle gesture right away ("stretch", "look", "straps", "scratch", "tap"; empty = random)
@@ -857,7 +892,7 @@ func animate(delta: float) -> void:
 	var land := maxf(_spring("land", 0.0, delta, 120.0, 11.0), 0.0)
 
 	# idle fidgets
-	if moving and a < 0.05 and not waving and _wave_t <= 0.0 and mood in [Mood.NORMAL, Mood.COLD]:
+	if moving and a < 0.05 and not waving and _wave_t <= 0.0 and _emote == "" and mood in [Mood.NORMAL, Mood.COLD]:
 		_idle_t += delta
 		_next_fidget -= delta
 		if _next_fidget <= 0.0 and _fidget == "":
@@ -976,6 +1011,18 @@ func animate(delta: float) -> void:
 					chest_rot.z += sin(_t * 40.0) * 0.012
 					head_rot.x -= 0.12
 
+	# emotes override arms, legs, head and face (blended in and out)
+	if _emote != "":
+		_emote_t += delta
+		var dur: float = EMOTES[_emote][1]
+		if dur > 0.0 and _emote_t > dur:
+			_emote = ""
+		elif standing and on_floor and _emote not in ["wave", "yawn", "sit", "lie"]:
+			var off := _emote_pose(_emote, _emote_t, dur, arm, leg, face)
+			rig_pos += off["rig"]
+			hip_rot += off["hip"]
+			chest_rot += off["chest"]
+			head_rot += off["head"]
 	var waving_now := (waving or _wave_t > 0.0) and standing and on_floor
 	if waving_now:
 		arm[1] = [0.3, 2.7, 0.2]
@@ -1024,6 +1071,93 @@ func animate(delta: float) -> void:
 		_prop_angle += delta * (3.0 + speed * 6.0 + (25.0 if not on_floor else 0.0))
 		_propeller.rotation.y = _prop_angle
 	_update_face(delta, face)
+
+
+## Pose of an emote at time t: changes arm/leg/face in place, returns offsets for rig, hips, chest, head
+func _emote_pose(e: String, t: float, dur: float, arm: Array, leg: Array, face: Dictionary) -> Dictionary:
+	var k := smoothstep(0.0, 0.25, t) * (1.0 - smoothstep(dur - 0.3, dur, t))
+	var off := {"rig": Vector3.ZERO, "hip": Vector3.ZERO, "chest": Vector3.ZERO, "head": Vector3.ZERO}
+	var to := func(i: int, target: Array) -> void:
+		arm[i] = [lerpf(arm[i][0], target[0], k), lerpf(arm[i][1], target[1], k), lerpf(arm[i][2], target[2], k)]
+	var set_face := func(d: Dictionary) -> void:
+		if k > 0.3:
+			for key in d:
+				face[key] = d[key]
+	match e:
+		"point":
+			to.call(1, [1.5, 0.15, 0.05])
+			off["chest"] = Vector3(-0.1, -0.15, 0) * k
+			off["head"] = Vector3(-0.05, -0.1, 0) * k
+			set_face.call({"brow_a": 0.5, "mouth": "flat", "eyes": "sclera"})
+		"thumbs":
+			to.call(1, [1.1, 0.35, 1.5])
+			off["head"] = Vector3(sin(t * 7.0) * 0.12 * (1.0 - smoothstep(0.6, 1.2, t)), 0, 0.12) * k
+			set_face.call({"eyes": "happy", "mouth": "open", "open": 0.5, "brow_r": 0.4})
+		"cheer":
+			to.call(0, [2.9, -0.4 + sin(t * 9.0) * 0.1, 0.2])
+			to.call(1, [2.9, 0.4 - sin(t * 9.0) * 0.1, 0.2])
+			off["rig"] = Vector3(0, maxf(sin(t * TAU / 0.55), 0.0) * 0.14 * (1.0 - smoothstep(1.1, 1.3, t)), 0) * k
+			off["head"] = Vector3(0.15, 0, 0) * k
+			set_face.call({"eyes": "happy", "mouth": "open", "open": 1.0, "brow_r": 0.8})
+		"laugh":
+			to.call(0, [0.6, 0.45, 1.9])
+			to.call(1, [0.6, -0.45, 1.9])
+			var sh := absf(sin(t * 14.0))
+			off["chest"] = Vector3(0.12 + sh * 0.05, 0, 0) * k
+			off["head"] = Vector3(0.25 + sh * 0.06, 0, sin(t * 3.0) * 0.08) * k
+			off["rig"] = Vector3(0, sh * 0.02, 0) * k
+			set_face.call({"eyes": "happy", "mouth": "open", "open": 0.55 + sh * 0.45, "brow_r": 0.7})
+		"shrug":
+			to.call(0, [0.35, -0.55, 1.4])
+			to.call(1, [0.35, 0.55, 1.4])
+			off["head"] = Vector3(0, 0, 0.22) * k
+			off["rig"] = Vector3(0, 0.02, 0) * k
+			set_face.call({"brow_r": 0.9, "brow_a": -0.3, "mouth": "flat", "eyes": "sclera"})
+		"facepalm":
+			to.call(1, [2.05, -0.35, 2.3])
+			off["head"] = Vector3(-0.28, 0.1, 0) * k
+			off["chest"] = Vector3(-0.08, 0, 0) * k
+			set_face.call({"eyes": "closed", "mouth": "wavy", "brow_a": -0.6})
+		"clap":
+			var c := 0.5 + 0.5 * sin(t * 15.0)
+			to.call(0, [1.2, 0.12 + c * 0.25, 0.9])
+			to.call(1, [1.2, -0.12 - c * 0.25, 0.9])
+			set_face.call({"eyes": "happy", "mouth": "open", "open": 0.6, "brow_r": 0.5})
+		"salute":
+			to.call(1, [2.2, 0.75, 2.5])
+			off["chest"] = Vector3(0.1, 0, 0) * k
+			off["head"] = Vector3(0.06, 0, 0) * k
+			set_face.call({"brow_a": 0.6, "mouth": "flat", "eyes": "sclera"})
+		"think":
+			to.call(1, [1.25, -0.25, 2.2])
+			to.call(0, [0.6, 0.5, 1.8])
+			off["head"] = Vector3(0.15, 0.1, -0.2) * k
+			_pupil = Vector2(0.4, 0.6)
+			set_face.call({"brow_r": 0.4, "brow_a": -0.3, "mouth": "flat", "eyes": "sclera"})
+		"cower":
+			to.call(0, [2.6, -0.3, 1.8])
+			to.call(1, [2.6, 0.3, 1.8])
+			leg[0] = [lerpf(leg[0][0], 1.0, k), lerpf(leg[0][1], -1.5, k)]
+			leg[1] = [lerpf(leg[1][0], 1.0, k), lerpf(leg[1][1], -1.5, k)]
+			off["rig"] = Vector3(0, -0.2, 0) * k
+			off["chest"] = Vector3(-0.2, 0, sin(t * 40.0) * 0.02) * k
+			off["head"] = Vector3(-0.1, 0, 0) * k
+			set_face.call({"eyes": "wide", "mouth": "open", "open": 0.8, "brow_r": 1.0, "brow_a": -0.7})
+		"stomp":
+			for i in 2:
+				var st := maxf(sin(t * 8.0 + i * PI), 0.0)
+				leg[i] = [lerpf(leg[i][0], st * 0.55, k), lerpf(leg[i][1], -st * 1.1, k)]
+			to.call(0, [-0.2, -0.25, 0.1])
+			to.call(1, [-0.2, 0.25, 0.1])
+			off["rig"] = Vector3(0, absf(sin(t * 8.0)) * 0.03, 0) * k
+			off["chest"] = Vector3(-0.08, 0, 0) * k
+			set_face.call({"brow_a": 1.0, "mouth": "teeth", "eyes": "sclera"})
+		"look":
+			to.call(1, [2.3, 0.6, 2.4])
+			off["head"] = Vector3(0.1, sin(t * 1.8) * 0.9, 0) * k
+			_pupil = Vector2(sin(t * 1.8), 0.1)
+			set_face.call({"brow_r": 0.5, "eyes": "sclera"})
+	return off
 
 
 func _fidget_k() -> float:

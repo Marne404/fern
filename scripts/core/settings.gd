@@ -71,6 +71,8 @@ var values := {
 	"music_volume": 0.7,
 	"scout": {},                # look of your scout (see Scout.DEFAULT_LOOK)
 	"third_person": false,
+	"emote_wheel": [],          # 8 emote ids for the wheel (empty = Scout.DEFAULT_WHEEL)
+	"emote_camera": true,       # first person: show the emote from behind while it plays
 }
 
 ## On scene reload: generate this world and start hiking right away
