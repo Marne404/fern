@@ -149,6 +149,8 @@ func set_shadow_only(on: bool) -> void:
 	_shadow_only = on
 	for m in _meshes:
 		if m.get_meta("role", "") in NO_SHADOW:
+			# they cast no shadow anyway: in first person they would float in front of the camera
+			m.set_layer_mask_value(1, not on)
 			continue
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if on else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	_face_state = ""
@@ -761,46 +763,49 @@ func _bake() -> void:
 		# face features stay separate (they switch on and off and move)
 		if skip.has(node) or node.get_parent() == _face.get("mouth"):
 			continue
-		var parts: Array[MeshInstance3D] = []
+		# shadow casters and shadowless parts (cheeks, glasses) are merged separately: a shadowless part must
+		# not take the shadow away from the whole head, and in first person only the casters stay (as shadow)
+		var groups := {true: [], false: []}
 		for c in node.get_children():
 			if c is MeshInstance3D and not skip.has(c) and not (c.get_meta("role", "") in NO_BAKE):
-				parts.append(c)
-		if parts.size() < 2:
-			continue
-		var verts := PackedVector3Array()
-		var norms := PackedVector3Array()
-		var idx := PackedInt32Array()
-		var roles := PackedStringArray()
-		var shadow := true
-		for mi in parts:
-			var arr := mi.mesh.surface_get_arrays(0)
-			var xf := mi.transform
-			var base := verts.size()
-			for v in arr[Mesh.ARRAY_VERTEX]:
-				verts.append(xf * v)
-			for n in arr[Mesh.ARRAY_NORMAL]:
-				norms.append((xf.basis * n).normalized())
-			for i in arr[Mesh.ARRAY_INDEX]:
-				idx.append(base + i)
-			var role: String = mi.get_meta("role")
-			if role in NO_SHADOW:
-				shadow = false
-			for i in (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
-				roles.append(role)
-			_meshes.erase(mi)
-			node.remove_child(mi)
-			mi.free()
-		var merged := MeshInstance3D.new()
-		merged.name = "Merged"
-		merged.mesh = ArrayMesh.new()
-		merged.material_override = _baked_mat
-		# a merged group made only of shadowless parts (glasses) keeps casting no shadow
-		merged.set_meta("role", "merged" if shadow else "glass")
-		if not shadow:
-			merged.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		node.add_child(merged)
-		_meshes.append(merged)
-		_baked.append([merged, verts, norms, idx, roles])
+				groups[not (c.get_meta("role", "") in NO_SHADOW)].append(c)
+		for casts: bool in [true, false]:
+			var parts: Array = groups[casts]
+			if parts.size() >= 2:
+				_merge_parts(node, parts, casts)
+
+
+func _merge_parts(node: Node3D, parts: Array, casts: bool) -> void:
+	var verts := PackedVector3Array()
+	var norms := PackedVector3Array()
+	var idx := PackedInt32Array()
+	var roles := PackedStringArray()
+	for mi: MeshInstance3D in parts:
+		var arr := mi.mesh.surface_get_arrays(0)
+		var xf := mi.transform
+		var base := verts.size()
+		for v in arr[Mesh.ARRAY_VERTEX]:
+			verts.append(xf * v)
+		for n in arr[Mesh.ARRAY_NORMAL]:
+			norms.append((xf.basis * n).normalized())
+		for i in arr[Mesh.ARRAY_INDEX]:
+			idx.append(base + i)
+		var role: String = mi.get_meta("role")
+		for i in (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size():
+			roles.append(role)
+		_meshes.erase(mi)
+		node.remove_child(mi)
+		mi.free()
+	var merged := MeshInstance3D.new()
+	merged.name = "Merged" if casts else "MergedNoShadow"
+	merged.mesh = ArrayMesh.new()
+	merged.material_override = _baked_mat
+	merged.set_meta("role", "merged" if casts else "glass")
+	if not casts:
+		merged.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	node.add_child(merged)
+	_meshes.append(merged)
+	_baked.append([merged, verts, norms, idx, roles])
 
 
 func _recolor() -> void:
