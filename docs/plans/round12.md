@@ -489,3 +489,6 @@ bog cotton, low racing clouds; wild and wide.
 - 4.3 result: wheat rows fill their patches completely (new rows key `full`), stubble fields with hay bales
   (squashed tinted rocks), poppy/cornflower edges and meadows, hedged lanes, lone trees; golden ground so the
   fields read to the horizon; swallows, drifting seeds, light heat haze, strong gusts that wave the wheat.
+- 4.4 result: pink and deep-pink cherry groves, huge hero cherries, white-cherry patches, pond gardens with
+  mossy stones and cherries by the water (ponds 1.0 → lilies and reeds come by themselves), a few red maples as
+  accents, pink evening light; petal gusts and dragonflies.

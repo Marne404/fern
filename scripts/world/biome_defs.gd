@@ -16,7 +16,7 @@ extends RefCounted
 
 const NAMES := ["Autumn Meadow", "Forest Trail", "Desert Valley", "Blossom Grove", "Spring Meadow", "Red Maple Wood", "Mountain Pines", "Deadwood Bog",
 	"Sunset Coast", "Cliff Lands", "Glowing Forest", "Lake Country", "Lavender Hills", "Birch Wood", "Heather Highlands",
-	"Giants' Old Forest", "Mushroom Wood", "Wheat Fields"]
+	"Giants' Old Forest", "Mushroom Wood", "Wheat Fields", "Cherry Valley"]
 
 const GRASS := ["Grass_Common_Tall", "Grass_Common_Short", "Grass_Wispy_Tall", "Grass_Wispy_Short"]
 const SHORT_GRASS := ["Grass_Common_Short", "Grass_Wispy_Short"]
@@ -43,7 +43,7 @@ const WILDFLOWERS := ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flo
 
 static func all() -> Array[Dictionary]:
 	return [meadow(), forest(), desert(), blossom(), spring(), maple(), alpine(), bog(), coast(), cliffs(), glow(), lakes(),
-		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood(), wheat_fields()]
+		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood(), wheat_fields(), cherry_valley()]
 
 
 # ================================================================ Style building blocks
@@ -1393,5 +1393,64 @@ static func wheat_fields() -> Dictionary:
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 50.0, "chance": 0.3, "dist": [8.0, 60.0],
 				"scale": [0.9, 1.8], "sink": 0.2, "radius": 2.5, "collide": "rock"},
 			pebble_layer(rock_style(Color(0.8, 0.76, 0.68), 0.0, false, {"top_light": 0.3}), 14.0),
+		],
+	}
+
+
+# ================================================================ 19 Cherry Valley
+
+static func cherry_valley() -> Dictionary:
+	var bark := {"tint": Color(0.9, 0.78, 0.76), "brightness": 0.9}
+	var sakura := tree_style(Color(0.9, 0.52, 0.74), Color(1.0, 0.86, 0.95), bark, 6.0, {"translucency": 1.1})
+	var deep := tree_style(Color(0.86, 0.36, 0.62), Color(1.0, 0.72, 0.88), bark, 6.0, {"translucency": 1.1})
+	var white := tree_style(Color(0.9, 0.8, 0.88), Color(1.0, 0.98, 0.99), bark, 6.0, {"translucency": 1.1})
+	var maple := tree_style(Color(0.7, 0.14, 0.08), Color(1.0, 0.42, 0.2), {"tint": Color(0.9, 0.85, 0.82)}, 7.0, {"translucency": 1.0})
+	var bush := {"leaves": leaves(Color(0.22, 0.48, 0.12), Color(0.56, 0.82, 0.26), {"sphere_normals": 0.85}), "stiffness": 6.0}
+	var mossy := rock_style(Color(0.7, 0.72, 0.72), 0.8, false, {"moss_color": Color(0.46, 0.66, 0.2)})
+	var meadow := cluster_layer(WILDFLOWERS + ["Flower_6"], 3.0, [2.5, 50.0], 12, 2.8, [0.45, 0.75])
+	meadow["tints"] = [Color(1.0, 0.72, 0.86), Color(1.0, 1.0, 0.96), Color(0.8, 0.62, 1.0), Color(1.0, 0.9, 0.5)]
+	return {
+		"name": NAMES[18],
+		# cherry grove · pond garden · white cherries · open meadow
+		"patches": [{"name": "cherry grove", "share": 0.4}, {"name": "pond garden", "share": 0.3},
+			{"name": "white cherry", "share": 0.15}, {"name": "open meadow", "share": 0.15}],
+		"blades": blades(0.4, Color(0.12, 0.32, 0.08), Color(0.56, 0.84, 0.28), Color(0.9, 0.78, 0.86)),
+		"terrain": terrain({"gullies": 0.2, "hummocks": 0.6, "brooks": 0.8, "litter": 0.75, "litter_color": Color(1.0, 0.74, 0.86),
+			"far_height": 40.0, "obstacles": ["river", "fallen_tree", "stile"], "ponds": 1.0, "pond_size": Vector2(12.0, 26.0),
+			"water_shallow": Color(0.46, 0.84, 0.84), "water_deep": Color(0.12, 0.38, 0.55),
+			"valley_width": 22.0, "valley_ramp": 80.0, "valley_height": 16.0, "undulation": 1.2,
+			"grass_dark": Color(0.3, 0.54, 0.14), "grass_light": Color(0.52, 0.74, 0.24),
+			"region_dark": Color(0.6, 0.6, 0.34), "region_light": Color(0.76, 0.72, 0.46),
+			"path_color": Color(0.84, 0.76, 0.6), "crack": 0.3}),
+		"atmosphere": atmosphere({"fx": {"petal_gust": 1.0, "dragonflies": 1.0}, "grade_shadow": Color(0.5, 0.42, 0.8),
+			"grade_high": Color(1.0, 0.86, 0.86), "grade_warm": 0.15, "deer": true, "shafts": 0.5, "rainbow": 0.4, "falls": 0.6,
+			"clock": 0.8, "mist_amount": 1.2, "temperature": 18.0, "sun_dir": Vector3(0.55, -0.42, 0.7),
+			"sun_color": Color(1.0, 0.88, 0.84), "sun_energy": 1.7, "ambient_energy": 0.56, "ambient_color": Color(0.82, 0.7, 0.86),
+			"fog_color": Color(0.96, 0.86, 0.92), "fog_density": 0.0024, "fog_sun_scatter": 0.4, "saturation": 1.08,
+			"zenith_color": Color(0.36, 0.56, 0.94), "horizon_color": Color(0.98, 0.86, 0.92), "cloud_coverage": 0.48,
+			"particles": "petals", "particle_color": Color(1.0, 0.76, 0.9), "butterflies": 12,
+			"mountain_color": Color(0.62, 0.6, 0.76), "mountain_shadow": Color(0.52, 0.5, 0.72), "mountain_snow": 0.45}),
+		"layers": [
+			grass_layer([Color(0.48, 0.78, 0.2), Color(0.4, 0.7, 0.16), Color(0.6, 0.84, 0.28)],
+				[Color(0.62, 0.84, 0.3), Color(0.96, 0.8, 0.9)], 2000.0, Vector2(0.4, 0.75)),
+			{"kind": "tree", "models": CHERRIES, "styles": [sakura, sakura, deep], "spacing": 18.0, "chance": 0.75, "dist": [7.0, 400.0],
+				"grove": [0.02, -0.05], "scale": [0.55, 0.8], "radius": 5.0, "collide": "trunk", "trunk": 0.3, "thin": {2: 0.2, 3: 0.12}},
+			hero_tree(["CherryBlossom_2", "CherryBlossom_4"], sakura, Vector2(1.25, 1.5)),
+			{"kind": "tree", "models": TWISTED, "styles": [maple], "spacing": 70.0, "chance": 0.4, "dist": [9.0, 200.0],
+				"scale": [0.4, 0.55], "radius": 4.0, "collide": "trunk", "trunk": 0.4},
+			{"kind": "rock", "models": ROCKS + ["Rock_Medium_4"], "styles": [mossy], "spacing": 30.0, "chance": 0.35, "dist": [6.0, 50.0],
+				"scale": [0.8, 1.8], "sink": 0.2, "radius": 3.0, "collide": "rock"},
+			{"kind": "detail", "models": ["Bush_Common_Flowers", "Bush_Large_Flowers"], "styles": [bush], "density": 1.4, "dist": [4.0, 35.0],
+				"scale": [0.7, 1.1], "shadows": true, "vis": 120.0, "near": true, "tilt": 0.3},
+			meadow,
+			cluster_layer(["Clover_1", "Clover_2"], 0.8, [2.5, 25.0], 8, 1.5, [0.6, 1.0]),
+			# pond garden: mossy stones and flowering bushes around the water, cherries leaning over it
+			{"kind": "rock", "models": ["Rock_Medium_4", "Rock_Medium_2", "Rock_Big_1"], "styles": [mossy], "spacing": 12.0, "chance": 0.5,
+				"dist": [5.0, 60.0], "patch": [1], "scale": [0.45, 0.9], "sink": 0.2, "radius": 2.5, "collide": "rock"},
+			{"kind": "tree", "models": CHERRIES, "styles": [sakura, white], "spacing": 12.0, "chance": 0.7, "dist": [6.0, 120.0], "patch": [1],
+				"scale": [0.5, 0.7], "radius": 4.0, "collide": "trunk", "trunk": 0.3},
+			{"kind": "tree", "models": CHERRIES, "styles": [white], "spacing": 13.0, "chance": 0.9, "dist": [6.0, 200.0], "patch": [2],
+				"scale": [0.5, 0.72], "radius": 4.0, "collide": "trunk", "trunk": 0.3},
+			pebble_layer(rock_style(Color(0.78, 0.76, 0.76), 0.0, false, {"top_light": 0.3}), 16.0),
 		],
 	}
