@@ -482,3 +482,7 @@ bog cotton, low racing clouds; wild and wide.
 - Atmosphere: blue-teal sky, clock 0.8, fx: spores 0.4, wisps 0.15; day fireflies via particles "fireflies".
 - 4.1 result: giant pines at 25–35 m with normal pines below, mossy big rocks, fern seas in the morning light,
   shelf fungi, a clearing patch with flowers; grass kept low and sparse (dark forest floor) so ferns carry it.
+- 4.2 result: giant caps (RedCap/Common at 5–9×, with collision) in red, cream and violet, violet and teal
+  twisted trees, glowing small mushrooms and shelves, fairy rings, glowing plants; violet-pink sky; spores and
+  wisps at night. The mote shader got a `near_fade` so a wisp next to the camera no longer fills the screen.
+  The kit's mushroom texture is orange, so "red" stays a warm red-orange.

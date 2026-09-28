@@ -16,7 +16,7 @@ extends RefCounted
 
 const NAMES := ["Autumn Meadow", "Forest Trail", "Desert Valley", "Blossom Grove", "Spring Meadow", "Red Maple Wood", "Mountain Pines", "Deadwood Bog",
 	"Sunset Coast", "Cliff Lands", "Glowing Forest", "Lake Country", "Lavender Hills", "Birch Wood", "Heather Highlands",
-	"Giants' Old Forest"]
+	"Giants' Old Forest", "Mushroom Wood"]
 
 const GRASS := ["Grass_Common_Tall", "Grass_Common_Short", "Grass_Wispy_Tall", "Grass_Wispy_Short"]
 const SHORT_GRASS := ["Grass_Common_Short", "Grass_Wispy_Short"]
@@ -43,7 +43,7 @@ const WILDFLOWERS := ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flo
 
 static func all() -> Array[Dictionary]:
 	return [meadow(), forest(), desert(), blossom(), spring(), maple(), alpine(), bog(), coast(), cliffs(), glow(), lakes(),
-		lavender(), birch_wood(), highlands(), old_forest()]
+		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood()]
 
 
 # ================================================================ Style building blocks
@@ -1265,5 +1265,71 @@ static func old_forest() -> Dictionary:
 			{"kind": "detail", "models": ["Bush_Large_Flowers", "Bush_Large"], "styles": [{"leaves": leaves(Color(0.14, 0.38, 0.08), Color(0.5, 0.78, 0.2), {"sphere_normals": 0.85}), "stiffness": 6.0}],
 				"density": 1.0, "dist": [5.0, 40.0], "patch": [3], "scale": [0.7, 1.1], "shadows": true, "vis": 120.0, "near": true, "tilt": 0.3},
 			pebble_layer(rock_style(Color(0.66, 0.68, 0.62), 0.3, false, {"top_light": 0.3}), 16.0),
+		],
+	}
+
+
+# ================================================================ 17 Mushroom Wood
+
+static func mushroom_wood() -> Dictionary:
+	var violet := tree_style(Color(0.34, 0.2, 0.52), Color(0.84, 0.6, 0.95), {"tint": Color(0.8, 0.72, 0.85)}, 7.0, {"translucency": 1.1})
+	var teal := tree_style(Color(0.1, 0.4, 0.42), Color(0.5, 0.92, 0.8), {"tint": Color(0.8, 0.72, 0.85)}, 7.0, {"translucency": 1.1})
+	var giant_red := {"mushroom_tint": Color(1.55, 0.42, 0.4), "mushroom_glow": Color(0.4, 0.06, 0.05)}
+	var giant_cream := {"mushroom_tint": Color(1.2, 1.05, 0.9), "mushroom_glow": Color(0.3, 0.2, 0.1)}
+	var giant_violet := {"mushroom_tint": Color(0.85, 0.62, 1.1), "mushroom_glow": Color(0.35, 0.15, 0.5)}
+	var small_glow := {"mushroom_tint": Color(0.7, 0.9, 1.1), "mushroom_glow": Color(0.15, 0.45, 0.55)}
+	var rock := rock_style(Color(0.52, 0.48, 0.6), 0.7, false, {"moss_color": Color(0.4, 0.6, 0.35)})
+	var ring := {"kind": "cluster", "models": ["Mushroom_Common", "Mushroom_RedCap"], "styles": [giant_violet], "density": 1.2,
+		"dist": [5.0, 45.0], "count": 20, "radius": 3.0, "ring": true, "scale": [1.0, 1.8], "shadows": false, "vis": 80.0, "near": true, "tilt": 0.8,
+		"patch": [2]}
+	var glow_plants := cluster_layer(["Plant_4", "Plant_2", "Plant_6"], 2.0, [2.5, 45.0], 4, 1.8, [0.6, 1.0], false, {"plant": {"glow": 0.4}})
+	glow_plants["patch"] = [2, 3]
+	return {
+		"name": NAMES[16],
+		"under_bush": {"dark": Color(0.3, 0.2, 0.42), "light": Color(0.7, 0.55, 0.85)},
+		# giant caps · twisted wood · fairy-ring meadow · glowing pond
+		"patches": [{"name": "giant caps", "share": 0.4}, {"name": "twisted wood", "share": 0.3},
+			{"name": "ring meadow", "share": 0.15}, {"name": "glow pond", "share": 0.15}],
+		"blades": blades(0.4, Color(0.14, 0.2, 0.1), Color(0.46, 0.62, 0.3), Color(0.66, 0.52, 0.72)),
+		"terrain": terrain({"gullies": 0.3, "hummocks": 0.8, "brooks": 0.5, "litter": 0.55, "litter_color": Color(0.62, 0.36, 0.5),
+			"far_height": 45.0, "obstacles": ["fallen_tree", "mud", "river"], "ponds": 0.5, "pond_size": Vector2(10.0, 20.0),
+			"water_shallow": Color(0.3, 0.6, 0.72), "water_deep": Color(0.1, 0.18, 0.4),
+			"valley_width": 16.0, "valley_height": 12.0, "undulation": 1.4,
+			"grass_dark": Color(0.26, 0.36, 0.2), "grass_light": Color(0.42, 0.52, 0.28),
+			"region_dark": Color(0.36, 0.3, 0.4), "region_light": Color(0.5, 0.42, 0.52),
+			"path_color": Color(0.64, 0.52, 0.46), "slope_color": Color(0.4, 0.38, 0.44), "crack": 0.3}),
+		"atmosphere": atmosphere({"fx": {"spores": 0.8, "wisps": 0.3}, "grade_shadow": Color(0.42, 0.3, 0.72), "grade_high": Color(1.0, 0.86, 0.8),
+			"grade_warm": 0.1, "grade_contrast": 0.28, "shafts": 0.6, "rain": 1.0, "clock": 0.7, "mist_amount": 1.2,
+			"temperature": 14.0, "sun_dir": Vector3(0.45, -0.4, 0.8), "sun_color": Color(1.0, 0.82, 0.78), "sun_energy": 1.55,
+			"ambient_energy": 0.6, "ambient_color": Color(0.66, 0.56, 0.8), "fog_color": Color(0.8, 0.72, 0.88),
+			"fog_density": 0.0038, "fog_sun_scatter": 0.45, "volumetric": 0.008, "saturation": 1.08,
+			"zenith_color": Color(0.32, 0.36, 0.72), "horizon_color": Color(0.98, 0.78, 0.82), "cloud_coverage": 0.5,
+			"cirrus_amount": 0.6, "cloud_shadow": Color(0.5, 0.42, 0.66), "sun_glow": 0.7,
+			"particles": "motes", "particle_color": Color(1.0, 0.85, 1.0), "butterflies": 3, "birds": false,
+			"mountain_color": Color(0.46, 0.4, 0.6), "mountain_shadow": Color(0.34, 0.3, 0.5), "mountain_snow": 0.1}),
+		"layers": [
+			grass_layer([Color(0.46, 0.64, 0.26), Color(0.4, 0.56, 0.24), Color(0.56, 0.68, 0.32)],
+				[Color(0.66, 0.5, 0.72), Color(0.56, 0.44, 0.66)], 1600.0, Vector2(0.4, 0.75)),
+			# giant mushrooms stand like trees (with collision)
+			{"kind": "rock", "models": ["Mushroom_RedCap", "Mushroom_RedCap", "Mushroom_Common"], "styles": [giant_red, giant_cream, giant_violet],
+				"spacing": 15.0, "chance": 0.6, "dist": [6.0, 200.0], "scale": [5.0, 9.0], "sink": 0.0, "radius": 5.0, "collide": "rock",
+				"thin": {1: 0.3, 2: 0.3}},
+			{"kind": "tree", "models": TWISTED, "styles": [violet, teal], "spacing": 16.0, "chance": 0.6, "dist": [7.0, 400.0],
+				"scale": [0.45, 0.65], "radius": 5.0, "collide": "trunk", "trunk": 0.45, "thin": {0: 0.4, 2: 0.2}},
+			{"kind": "rock", "models": ROCKS + ["Rock_Medium_4"], "styles": [rock], "spacing": 34.0, "chance": 0.3, "dist": [6.0, 50.0],
+				"scale": [0.9, 2.0], "sink": 0.2, "radius": 3.0, "collide": "rock"},
+			cluster_layer(["Mushroom_Common", "Mushroom_RedCap", "Mushroom_Laetiporus"], 2.4, [2.2, 30.0], 5, 1.0, [0.6, 1.4], false, small_glow),
+			{"kind": "detail", "models": ["Mushroom_Oyster"], "styles": [small_glow], "density": 0.0, "on_trunks": 0.5,
+				"scale": [0.4, 0.7], "shadows": false, "vis": 70.0, "near": true},
+			ring,
+			glow_plants,
+			cluster_layer(["Fern_2"], 1.5, [3.0, 40.0], 3, 2.0, [0.9, 1.3], true, {"plant": {"texture_tint": Color(0.85, 0.75, 1.15)}}),
+			{"kind": "cluster", "models": WILDFLOWERS, "styles": [{}], "density": 1.4, "dist": [2.5, 40.0], "count": 8, "radius": 2.0,
+				"scale": [0.45, 0.7], "tints": [Color(0.85, 0.55, 1.0), Color(1.0, 0.7, 0.85), Color(0.55, 0.8, 1.0)], "vis": 70.0, "near": true, "tilt": 0.8},
+			{"kind": "tree", "models": TWISTED, "styles": [violet, violet, teal], "spacing": 11.0, "chance": 0.8, "dist": [7.0, 400.0], "patch": [1],
+				"scale": [0.45, 0.7], "radius": 5.0, "collide": "trunk", "trunk": 0.45},
+			{"kind": "rock", "models": ["Mushroom_RedCap", "Mushroom_Common"], "styles": [giant_violet, giant_cream], "spacing": 10.0, "chance": 0.55,
+				"dist": [6.0, 80.0], "patch": [3], "scale": [2.5, 5.0], "sink": 0.0, "radius": 3.0, "collide": "rock"},
+			pebble_layer(rock_style(Color(0.62, 0.58, 0.66), 0.2, false, {"top_light": 0.3}), 14.0),
 		],
 	}

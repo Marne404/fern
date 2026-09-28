@@ -657,7 +657,7 @@ func _process_inner(delta: float) -> void:
 	if mode != Mode.MENU:
 		music.set_biome(biome)
 	if biome != _last_biome:
-		if mode == Mode.PLAYING and _last_biome != -1 and biome in [7, 10]:
+		if mode == Mode.PLAYING and _last_biome != -1 and biome in [7, 10, 16]:
 			music.stinger("seltsam")
 		butterflies.spawn(int(gen.biomes[biome]["atmosphere"]["butterflies"]))
 		if mode == Mode.PLAYING and _last_biome != -1:

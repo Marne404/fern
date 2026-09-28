@@ -474,6 +474,7 @@ func _build(name: String) -> GPUParticles3D:
 			wm.shader = preload("res://shaders/mote.gdshader")
 			wm.set_shader_parameter("tint", Color(0.45, 1.0, 0.85))
 			wm.set_shader_parameter("intensity", 7.0)
+			wm.set_shader_parameter("near_fade", 6.0)
 			var wq := QuadMesh.new()
 			wq.material = wm
 			p.draw_pass_1 = wq

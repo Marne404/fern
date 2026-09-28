@@ -80,6 +80,7 @@ const BIOMES := [
 	["White Moss", "Whispering Pines", "Hollow Vale", "Light Ambient 1", "Ambient 3", "Ambient 7", "Light Ambient 5"],   # Birch Wood
 	["Silent Reach", "Frozen Hollow", "Beyond Mist", "Ambient 8", "Light Ambient 3", "Canyon Echoes", "Night Ambient 3"],   # Heather Highlands
 	["Whispering Pines", "White Moss", "Beyond Mist", "Ambient 7", "Light Ambient 1", "Hollow Vale", "Night Ambient 1"],   # Giants' Old Forest
+	["Moonshadow", "Dreamspire", "Moonlight", "Night Ambient 2", "Sapphire Glade", "Light Ambient 4", "Beyond Mist (quiet)"],   # Mushroom Wood
 ]
 
 ## Situations that override the biome playlist
