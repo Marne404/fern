@@ -258,8 +258,9 @@ func _make_terrain(data: Dictionary) -> MeshInstance3D:
 	arrays[Mesh.ARRAY_COLOR] = data["colors"]
 	arrays[Mesh.ARRAY_CUSTOM0] = data["custom0"]
 	arrays[Mesh.ARRAY_CUSTOM1] = data["custom1"]
+	arrays[Mesh.ARRAY_CUSTOM2] = data["custom2"]
 	arrays[Mesh.ARRAY_INDEX] = data["indices"]
-	var fmt := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) | (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT)
+	var fmt := (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT) | (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM1_SHIFT) | (Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM2_SHIFT)
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, fmt)
 	var pi: Dictionary = data["path_image"]

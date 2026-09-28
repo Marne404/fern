@@ -120,12 +120,14 @@ func _build_terrain() -> Dictionary:
 	var colors := PackedColorArray()
 	var custom0 := PackedFloat32Array()
 	var custom1 := PackedFloat32Array()
+	var custom2 := PackedFloat32Array()
 	var count := n * n + 4 * n
 	verts.resize(count)
 	normals.resize(count)
 	colors.resize(count)
 	custom0.resize(count * 4)
 	custom1.resize(count * 4)
+	custom2.resize(count * 4)
 	for j in n:
 		var z := corner.y + j * spacing
 		var r: Dictionary = rows[roundi(z * 2.0)]
@@ -135,6 +137,8 @@ func _build_terrain() -> Dictionary:
 		var path_col: Color = (ta["path_color"] as Color).lerp(tb["path_color"], t)
 		var crack := lerpf(ta["crack"], tb["crack"], t)
 		var ripple := lerpf(ta["ripple"], tb["ripple"], t)
+		var litter := lerpf(ta["litter"], tb["litter"], t)
+		var litter_col: Color = (ta["litter_color"] as Color).lerp(tb["litter_color"], t)
 		for i in n:
 			var x := corner.x + i * spacing
 			var hb := (j + 1) * m + i + 1
@@ -156,6 +160,14 @@ func _build_terrain() -> Dictionary:
 			custom0[v * 4 + 2] = path_col.b
 			custom0[v * 4 + 3] = crack
 			custom1[v * 4] = ripple
+			# height above the nearest water (wet shore band) and whether it is the sea (swash)
+			var wa := gen.water_in_row(x, r, 1.4)
+			custom1[v * 4 + 1] = clampf(heights[hb] - wa, -1.0, 4.0) if wa > -INF else 4.0
+			custom1[v * 4 + 2] = 1.0 if wa > -INF and r["coast"] > 0.01 and wa == r["sea"] else 0.0
+			custom2[v * 4] = litter_col.r
+			custom2[v * 4 + 1] = litter_col.g
+			custom2[v * 4 + 2] = litter_col.b
+			custom2[v * 4 + 3] = litter
 	# skirt along the edges against gaps between LOD levels
 	var edges := [[0, 1, 0], [n * (n - 1), 1, 0], [0, n, 1], [n - 1, n, 1]]
 	var v2 := n * n
@@ -172,6 +184,7 @@ func _build_terrain() -> Dictionary:
 			for c in 4:
 				custom0[v2 * 4 + c] = custom0[src * 4 + c]
 				custom1[v2 * 4 + c] = custom1[src * 4 + c]
+				custom2[v2 * 4 + c] = custom2[src * 4 + c]
 			v2 += 1
 		for k in n - 1:
 			var a := start + k * step
@@ -189,7 +202,7 @@ func _build_terrain() -> Dictionary:
 			idx[q + 3] = a + 1; idx[q + 4] = a + n + 1; idx[q + 5] = a + n
 			q += 6
 	idx.append_array(skirt_idx)
-	return {"verts": verts, "normals": normals, "colors": colors, "custom0": custom0, "custom1": custom1, "indices": idx}
+	return {"verts": verts, "normals": normals, "colors": colors, "custom0": custom0, "custom1": custom1, "custom2": custom2, "indices": idx}
 
 
 ## Path mask: 1 m (near) or 4 m (far) per texel, 65 or 17 texels wide

@@ -75,6 +75,7 @@ static func terrain(values: Dictionary) -> Dictionary:
 		"snow": 0.0, "snow_color": Color(0.93, 0.96, 1.0),
 		"terraces": 0.0,
 		"far_height": 50.0, "dunes": 0.0,
+		"litter": 0.0, "litter_color": Color(0.6, 0.45, 0.25),
 		"obstacles": ["river", "fallen_tree", "cliff"],
 	}
 	t.merge(values, true)
@@ -149,7 +150,7 @@ static func meadow() -> Dictionary:
 	return {
 		"name": NAMES[0],
 		"blades": blades(0.5, Color(0.16, 0.32, 0.05), Color(0.55, 0.82, 0.18), Color(0.98, 0.6, 0.16)),
-		"terrain": terrain({"far_height": 60.0, "ponds": 0.3, "terraces": 7.0, "valley_height": 20.0}),
+		"terrain": terrain({"litter": 0.55, "litter_color": Color(0.92, 0.5, 0.16), "far_height": 60.0, "ponds": 0.3, "terraces": 7.0, "valley_height": 20.0}),
 		"atmosphere": atmosphere({"mountain_color": Color(0.52, 0.56, 0.44), "mountain_snow": 0.2, "particles": "leaves", "particle_color": Color(1.0, 0.5, 0.12), "butterflies": 10, "gusts": 0.85}),
 		"layers": [
 			grass_layer([Color(0.42, 0.74, 0.1), Color(0.34, 0.64, 0.08), Color(0.55, 0.8, 0.14), Color(0.48, 0.72, 0.12)],
@@ -189,7 +190,7 @@ static func forest() -> Dictionary:
 	return {
 		"name": NAMES[1],
 		"blades": blades(0.4, Color(0.1, 0.28, 0.05), Color(0.5, 0.8, 0.18), Color(0.78, 0.8, 0.25)),
-		"terrain": terrain({"far_height": 55.0, "obstacles": ["fallen_tree", "fallen_tree", "river"], "ponds": 0.3, "path_width": 2.8, "valley_width": 12.0, "valley_ramp": 70.0, "valley_height": 12.0, "undulation": 1.4,
+		"terrain": terrain({"litter": 0.6, "litter_color": Color(0.55, 0.38, 0.2), "far_height": 55.0, "obstacles": ["fallen_tree", "fallen_tree", "river"], "ponds": 0.3, "path_width": 2.8, "valley_width": 12.0, "valley_ramp": 70.0, "valley_height": 12.0, "undulation": 1.4,
 			"grass_dark": Color(0.3, 0.54, 0.1), "grass_light": Color(0.55, 0.74, 0.18),
 			"region_dark": Color(0.55, 0.62, 0.18), "region_light": Color(0.7, 0.72, 0.28),
 			"path_color": Color(0.78, 0.68, 0.42), "slope_color": Color(0.42, 0.52, 0.2), "crack": 0.9}),
@@ -236,7 +237,7 @@ static func desert() -> Dictionary:
 	return {
 		"name": NAMES[2],
 		"blades": blades(0.0, Color(0.5, 0.4, 0.2), Color(0.9, 0.75, 0.35), Color(0.9, 0.6, 0.25)),
-		"terrain": terrain({"far_height": 8.0, "dunes": 1.0, "obstacles": ["fallen_tree", "cliff"], "terraces": 0.0, "path_width": 2.2, "path_depth": 0.05, "valley_width": 30.0, "valley_ramp": 70.0, "valley_height": 4.0,
+		"terrain": terrain({"litter": 0.0, "litter_color": Color(0.6, 0.5, 0.3), "far_height": 8.0, "dunes": 1.0, "obstacles": ["fallen_tree", "cliff"], "terraces": 0.0, "path_width": 2.2, "path_depth": 0.05, "valley_width": 30.0, "valley_ramp": 70.0, "valley_height": 4.0,
 			"undulation": 1.6, "grass_dark": Color(0.86, 0.68, 0.36), "grass_light": Color(0.95, 0.8, 0.46),
 			"region_dark": Color(0.84, 0.66, 0.34), "region_light": Color(0.92, 0.76, 0.44),
 			"path_color": Color(0.84, 0.68, 0.38), "slope_color": Color(0.86, 0.66, 0.36), "crack": 0.7, "ripple": 1.0}),
@@ -272,7 +273,7 @@ static func blossom() -> Dictionary:
 	return {
 		"name": NAMES[3],
 		"blades": blades(0.45, Color(0.15, 0.35, 0.08), Color(0.6, 0.88, 0.28), Color(0.78, 0.86, 0.5)),
-		"terrain": terrain({"far_height": 45.0, "ponds": 0.45, "terraces": 5.0, "water_shallow": Color(0.5, 0.85, 0.85), "valley_width": 18.0, "valley_height": 12.0, "undulation": 1.0,
+		"terrain": terrain({"litter": 0.6, "litter_color": Color(1.0, 0.72, 0.82), "far_height": 45.0, "ponds": 0.45, "terraces": 5.0, "water_shallow": Color(0.5, 0.85, 0.85), "valley_width": 18.0, "valley_height": 12.0, "undulation": 1.0,
 			"grass_dark": Color(0.36, 0.6, 0.16), "grass_light": Color(0.58, 0.78, 0.26),
 			"region_dark": Color(0.62, 0.62, 0.3), "region_light": Color(0.76, 0.74, 0.4),
 			"path_color": Color(0.82, 0.74, 0.56), "crack": 0.3}),
@@ -313,7 +314,7 @@ static func spring() -> Dictionary:
 	return {
 		"name": NAMES[4],
 		"blades": blades(0.55, Color(0.12, 0.34, 0.05), Color(0.52, 0.86, 0.16), Color(0.85, 0.92, 0.3)),
-		"terrain": terrain({"far_height": 40.0, "valley_width": 34.0, "valley_ramp": 110.0, "valley_height": 22.0, "undulation": 2.4,
+		"terrain": terrain({"litter": 0.25, "litter_color": Color(0.98, 0.96, 0.88), "far_height": 40.0, "valley_width": 34.0, "valley_ramp": 110.0, "valley_height": 22.0, "undulation": 2.4,
 			"grass_dark": Color(0.26, 0.54, 0.1), "grass_light": Color(0.5, 0.76, 0.16),
 			"region_dark": Color(0.42, 0.64, 0.12), "region_light": Color(0.66, 0.8, 0.2),
 			"slope_color": Color(0.4, 0.58, 0.18), "path_color": Color(0.78, 0.68, 0.46), "crack": 0.4,
@@ -359,7 +360,7 @@ static func maple() -> Dictionary:
 	return {
 		"name": NAMES[5],
 		"blades": blades(0.45, Color(0.3, 0.22, 0.06), Color(0.95, 0.55, 0.15), Color(0.9, 0.25, 0.08)),
-		"terrain": terrain({"far_height": 60.0, "valley_width": 13.0, "valley_height": 14.0, "undulation": 1.3,
+		"terrain": terrain({"litter": 0.7, "litter_color": Color(0.9, 0.22, 0.12), "far_height": 60.0, "valley_width": 13.0, "valley_height": 14.0, "undulation": 1.3,
 			"grass_dark": Color(0.62, 0.42, 0.12), "grass_light": Color(0.78, 0.56, 0.18),
 			"region_dark": Color(0.7, 0.28, 0.1), "region_light": Color(0.86, 0.42, 0.14),
 			"path_color": Color(0.72, 0.58, 0.38), "slope_color": Color(0.55, 0.42, 0.24), "crack": 0.6}),
@@ -398,7 +399,7 @@ static func alpine() -> Dictionary:
 	return {
 		"name": NAMES[6],
 		"blades": blades(0.3, Color(0.1, 0.3, 0.08), Color(0.45, 0.75, 0.2), Color(0.7, 0.78, 0.3)),
-		"terrain": terrain({"far_height": 120.0, "obstacles": ["cliff", "cliff", "river"], "valley_width": 16.0, "valley_ramp": 80.0, "valley_height": 58.0, "undulation": 1.6, "roughness": 1.2,
+		"terrain": terrain({"litter": 0.7, "litter_color": Color(0.66, 0.36, 0.2), "far_height": 120.0, "obstacles": ["cliff", "cliff", "river"], "valley_width": 16.0, "valley_ramp": 80.0, "valley_height": 58.0, "undulation": 1.6, "roughness": 1.2,
 			"grass_dark": Color(0.24, 0.48, 0.14), "grass_light": Color(0.44, 0.66, 0.2),
 			"region_dark": Color(0.36, 0.56, 0.18), "region_light": Color(0.56, 0.7, 0.26),
 			"slope_color": Color(0.56, 0.58, 0.6), "path_color": Color(0.7, 0.6, 0.44), "crack": 0.3,
@@ -437,7 +438,7 @@ static func bog() -> Dictionary:
 	return {
 		"name": NAMES[7],
 		"blades": blades(0.6, Color(0.14, 0.2, 0.06), Color(0.48, 0.58, 0.2), Color(0.6, 0.52, 0.22)),
-		"terrain": terrain({"far_height": 18.0, "obstacles": ["fallen_tree", "river"], "ponds": 0.9, "pond_size": Vector2(12.0, 28.0), "water_shallow": Color(0.36, 0.5, 0.36), "water_deep": Color(0.12, 0.2, 0.16), "valley_width": 20.0, "valley_height": 6.0, "undulation": 0.8, "path_depth": 0.1,
+		"terrain": terrain({"litter": 0.5, "litter_color": Color(0.36, 0.28, 0.16), "far_height": 18.0, "obstacles": ["fallen_tree", "river"], "ponds": 0.9, "pond_size": Vector2(12.0, 28.0), "water_shallow": Color(0.36, 0.5, 0.36), "water_deep": Color(0.12, 0.2, 0.16), "valley_width": 20.0, "valley_height": 6.0, "undulation": 0.8, "path_depth": 0.1,
 			"grass_dark": Color(0.26, 0.36, 0.12), "grass_light": Color(0.4, 0.48, 0.18),
 			"region_dark": Color(0.3, 0.3, 0.16), "region_light": Color(0.42, 0.4, 0.22),
 			"slope_color": Color(0.34, 0.36, 0.2), "path_color": Color(0.5, 0.44, 0.3), "crack": 0.2}),
@@ -474,7 +475,7 @@ static func coast() -> Dictionary:
 	return {
 		"name": NAMES[8],
 		"blades": blades(0.55, Color(0.2, 0.34, 0.08), Color(0.72, 0.85, 0.22), Color(1.0, 0.8, 0.35)),
-		"terrain": terrain({"far_height": 45.0, "obstacles": ["fallen_tree"], "coast": 1.0, "terraces": 6.0, "valley_width": 14.0, "valley_ramp": 60.0, "valley_height": 16.0,
+		"terrain": terrain({"litter": 0.0, "litter_color": Color(0.6, 0.5, 0.3), "far_height": 45.0, "obstacles": ["fallen_tree"], "coast": 1.0, "terraces": 6.0, "valley_width": 14.0, "valley_ramp": 60.0, "valley_height": 16.0,
 			"undulation": 1.4, "grass_dark": Color(0.36, 0.5, 0.12), "grass_light": Color(0.62, 0.7, 0.2),
 			"region_dark": Color(0.6, 0.6, 0.2), "region_light": Color(0.76, 0.7, 0.3),
 			"slope_color": Color(0.5, 0.52, 0.66), "path_color": Color(0.78, 0.66, 0.46), "crack": 0.5,
@@ -521,7 +522,7 @@ static func cliffs() -> Dictionary:
 	return {
 		"name": NAMES[9],
 		"blades": blades(0.75, Color(0.14, 0.36, 0.05), Color(0.62, 0.9, 0.2), Color(0.9, 0.95, 0.35)),
-		"terrain": terrain({"far_height": 85.0, "obstacles": ["cliff", "cliff", "river"], "terraces": 9.0, "valley_width": 22.0, "valley_ramp": 85.0, "valley_height": 38.0, "undulation": 1.4,
+		"terrain": terrain({"litter": 0.2, "litter_color": Color(0.7, 0.55, 0.3), "far_height": 85.0, "obstacles": ["cliff", "cliff", "river"], "terraces": 9.0, "valley_width": 22.0, "valley_ramp": 85.0, "valley_height": 38.0, "undulation": 1.4,
 			"grass_dark": Color(0.3, 0.56, 0.1), "grass_light": Color(0.55, 0.78, 0.16),
 			"region_dark": Color(0.45, 0.66, 0.12), "region_light": Color(0.68, 0.82, 0.22),
 			"slope_color": Color(0.54, 0.6, 0.7), "path_color": Color(0.78, 0.7, 0.5), "crack": 0.4, "ponds": 0.4}),
@@ -558,7 +559,7 @@ static func glow() -> Dictionary:
 	return {
 		"name": NAMES[10],
 		"blades": blades(0.5, Color(0.04, 0.16, 0.2), Color(0.25, 0.7, 0.65), Color(0.45, 0.5, 0.95)),
-		"terrain": terrain({"far_height": 50.0, "valley_width": 14.0, "valley_height": 12.0, "undulation": 1.3, "ponds": 0.5,
+		"terrain": terrain({"litter": 0.45, "litter_color": Color(0.3, 0.75, 0.72), "far_height": 50.0, "valley_width": 14.0, "valley_height": 12.0, "undulation": 1.3, "ponds": 0.5,
 			"grass_dark": Color(0.14, 0.34, 0.34), "grass_light": Color(0.3, 0.58, 0.52),
 			"region_dark": Color(0.2, 0.2, 0.38), "region_light": Color(0.3, 0.3, 0.5),
 			"slope_color": Color(0.38, 0.4, 0.55), "path_color": Color(0.66, 0.6, 0.66), "crack": 0.2,
@@ -596,7 +597,7 @@ static func lakes() -> Dictionary:
 	return {
 		"name": NAMES[11],
 		"blades": blades(0.55, Color(0.14, 0.34, 0.08), Color(0.6, 0.85, 0.24), Color(0.8, 0.88, 0.4)),
-		"terrain": terrain({"far_height": 30.0, "obstacles": ["river", "river", "fallen_tree"], "valley_width": 30.0, "valley_ramp": 90.0, "valley_height": 10.0, "undulation": 1.2,
+		"terrain": terrain({"litter": 0.3, "litter_color": Color(0.78, 0.62, 0.3), "far_height": 30.0, "obstacles": ["river", "river", "fallen_tree"], "valley_width": 30.0, "valley_ramp": 90.0, "valley_height": 10.0, "undulation": 1.2,
 			"ponds": 1.0, "pond_size": Vector2(22.0, 42.0),
 			"grass_dark": Color(0.3, 0.52, 0.12), "grass_light": Color(0.52, 0.72, 0.2),
 			"region_dark": Color(0.45, 0.6, 0.18), "region_light": Color(0.62, 0.74, 0.26),

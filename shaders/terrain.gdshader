@@ -1,5 +1,6 @@
 // Painted ground for world chunks.
-// COLOR.rgb = base color (biome, region, slope), CUSTOM0 = path color + cracks, CUSTOM1.x = sand ripples.
+// COLOR.rgb = base color (biome, region, slope), CUSTOM0 = path color + cracks, CUSTOM1.x = sand ripples,
+// CUSTOM1.y = height above the nearest water, CUSTOM1.z = 1 at the sea, CUSTOM2 = litter color + amount.
 // The path mask comes as a small texture per chunk.
 shader_type spatial;
 render_mode specular_disabled, cull_disabled;
@@ -19,12 +20,16 @@ varying vec4 v_path;
 varying float v_ripple;
 varying float v_cloud;
 varying vec3 v_wnormal;
+varying vec2 v_water;
+varying vec4 v_litter;
 
 void vertex() {
 	v_local = VERTEX;
 	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz + vec3(world_origin.x, 0.0, world_origin.y);
 	v_path = CUSTOM0;
 	v_ripple = CUSTOM1.x;
+	v_water = CUSTOM1.yz;
+	v_litter = CUSTOM2;
 	v_cloud = cloud_shadow(v_world.xz, TIME);
 	v_wnormal = NORMAL;
 }
@@ -153,6 +158,47 @@ void fragment() {
 
 	vec3 col = mix(ground, mix(ground, dirt, 0.45) * 0.92, edge_mask * 0.6);
 	col = mix(col, dirt, path_mask);
+
+	float dist = length(VERTEX);
+	// fallen leaves, petals or needles: small shapes in patches, denser at the path edges
+	if (v_litter.a > 0.01 && dist < 45.0) {
+		float patches = smoothstep(0.4, 0.7, n_mid + (n_small - 0.5) * 0.5);
+		// only on fairly flat ground (the xz projection would smear them into streaks on slopes)
+		float level_ground = smoothstep(0.84, 0.94, normalize(v_wnormal).y);
+		float dens = v_litter.a * patches * (0.4 + edge_mask * 0.8 + path_mask * 0.15) * level_ground;
+		float fade = 1.0 - smoothstep(25.0, 45.0, dist);
+		for (int layer = 0; layer < 2; layer++) {
+			float sc = layer == 0 ? 2.3 : 3.7;
+			vec2 lp = p * sc + float(layer) * 17.3;
+			vec2 cell = floor(lp);
+			vec2 h = hash2(cell);
+			if (h.x < dens) {
+				vec2 h2 = hash2(cell + 31.7);
+				vec2 q = fract(lp) - (0.5 + (h2 - 0.5) * 0.4);
+				float a = h.y * 6.2832;
+				q = mat2(vec2(cos(a), sin(a)), vec2(-sin(a), cos(a))) * q;
+				float len = mix(0.2, 0.34, h2.x);
+				float d = length(q / vec2(len, len * mix(0.32, 0.55, h2.y)));
+				float leaf = 1.0 - smoothstep(0.8, 1.0, d);
+				vec3 lc = v_litter.rgb * vec3(1.0 + (h2.y - 0.5) * 0.35, 1.0 + (h.y - 0.5) * 0.3, 1.0) * mix(0.72, 1.12, h2.x);
+				lc *= 1.0 - (1.0 - smoothstep(0.0, 0.035, abs(q.y))) * 0.25 * step(abs(q.x), len * 0.8);
+				col = mix(col, lc, leaf * fade * 0.92);
+			}
+		}
+	}
+
+	// wet ground at the waterline; at the sea it breathes with the swash and has a foam line
+	float above = v_water.x;
+	if (above < 1.6) {
+		float sea = v_water.y;
+		float swash = sea * (sin(TIME * 0.5 + dot(p, vec2(0.021, 0.047)) + n_mid * 3.0) * 0.5 + 0.5) * 0.45;
+		// the water surface covers the first few decimeters, so the band reaches ~1 m up
+		float reach = mix(1.0, 0.6, sea) + swash + (n_small - 0.5) * 0.3;
+		float wet = 1.0 - smoothstep(reach - 0.3, reach + 0.05, above);
+		col = mix(col, col * vec3(0.5, 0.5, 0.56), wet * 0.9);
+		float foam = sea * smoothstep(0.75, 0.9, normalize(v_wnormal).y) * (1.0 - smoothstep(0.0, 0.05, abs(above - reach + 0.1))) * smoothstep(0.35, 0.6, n_fine + 0.2);
+		col = mix(col, vec3(0.95, 0.97, 0.96), foam * 0.6);
+	}
 	ALBEDO = col;
 	ROUGHNESS = 1.0;
 }

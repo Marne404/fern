@@ -277,6 +277,26 @@ sunbeams, pollen clouds in meadows, ripples where things touch water, footprints
 bending around the scout, birds landing, fireflies at dusk in more biomes, rainbows after showers, cloud
 shadows speed with gusts, more terrain variety (terraces, boulder fields, meadows with hillocks, erosion gullies).
 
+### 6a – wet shores and forest-floor litter (terrain shader)
+- **Wet band:** every vertex gets its height above the nearest water (pond, river, pool, sea) in CUSTOM1.y and a
+  sea flag in CUSTOM1.z. The shader darkens the ground in a band above the waterline with a noisy edge; at the sea
+  the band breathes with a slow swash (sin over time and position) and has a thin, bright foam line at its front.
+- **Litter:** new terrain keys `litter` (amount) and `litter_color` per biome, sent in CUSTOM2 (rgb + amount).
+  The shader paints small leaf/needle shapes (two jittered cell layers, random rotation, size, brightness and hue)
+  in noisy patches, denser at the path edges and lightly on the path; fades out at 25–45 m (no shimmer).
+  Autumn Meadow orange, Forest brown, Blossom pink petals, Red Maple red, Mountain Pines rust needles, Bog dark
+  brown, Glowing Forest teal, Lake Country light, Spring Meadow white petals; none in Desert and at the coast.
+- **Test:** screenshots of a pond shore, the coast, Red Maple and Blossom paths; FPS before/after on High.
+
+### 6b – footprints and dust puffs
+- Decal pool (48) with a generated sole texture; a print per step on soft ground (sand, snow, path dirt, wet
+  shore), fading after 25 s. Dust puffs (tiny particles, biome dust color) when landing and while sprinting on
+  dry ground; snow puffs white. Setting "Footprints" in Graphics (on from Medium).
+
+### 6c – water rings
+- Rings around the wading/swimming scout (water shader, player_pos global) and occasional rings of rising fish /
+  water striders on still ponds.
+
 ## 7. New biomes and obstacles
 
 Candidates: Lavender fields (Provence, purple rows), Birch wood with ferns, Rainy highlands (mist, heather),
