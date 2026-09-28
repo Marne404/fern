@@ -864,6 +864,13 @@ func _setup_offscreen() -> void:
 	_shot_vp.add_child(film_layer)
 	_shot_cam.make_current()
 	get_viewport().disable_3d = true
+	_shot_vp.use_taa = get_viewport().use_taa
+	_shot_vp.screen_space_aa = get_viewport().screen_space_aa
+	# --ui with --size: the interface is rendered into the screenshot too (any resolution, no window needed)
+	if _args.has("ui"):
+		for c in get_children():
+			if c is CanvasLayer and c != film_layer:
+				c.reparent(_shot_vp, false)
 
 
 func _update_shot() -> void:

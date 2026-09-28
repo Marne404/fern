@@ -57,10 +57,11 @@ func world_position() -> Vector3:
 func _place(snap: bool, delta: float) -> void:
 	var gen := world.gen
 	var sway := sin(_time * 0.11) * 1.3
-	var px := gen.path_x(z_world) + sway
+	# looking a little to the left of the trail keeps the scout right of center, clear of the menu card
+	var px := gen.path_x(z_world) - 0.6 + sway * 0.6
 	var pos := Vector3(px, gen.height(px, z_world) + 1.9 + sin(_time * 0.07) * 0.3, z_world)
 	var az := z_world - 14.0
-	var ax := gen.path_x(az) + sin(_time * 0.05 + 1.0) * 5.0
+	var ax := gen.path_x(az) - 3.4 + sin(_time * 0.05 + 1.0) * 1.8
 	var tgt := Vector3(ax, gen.height(ax, az) + 2.4, az)
 	if snap:
 		_target = tgt
