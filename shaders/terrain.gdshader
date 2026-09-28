@@ -166,7 +166,8 @@ void fragment() {
 		float patches = smoothstep(0.4, 0.7, n_mid + (n_small - 0.5) * 0.5);
 		// only on fairly flat ground (the xz projection would smear them into streaks on slopes)
 		float level_ground = smoothstep(0.84, 0.94, normalize(v_wnormal).y);
-		float dens = v_litter.a * patches * (0.4 + edge_mask * 0.8 + path_mask * 0.15) * level_ground;
+		// the trail itself is walked on: only a few leaves there, many at its edges
+		float dens = v_litter.a * patches * (0.4 + edge_mask * 0.8) * (1.0 - path_mask * 0.85) * level_ground;
 		float fade = 1.0 - smoothstep(25.0, 45.0, dist);
 		for (int layer = 0; layer < 2; layer++) {
 			float sc = layer == 0 ? 2.3 : 3.7;

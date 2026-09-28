@@ -5,12 +5,15 @@ render_mode cull_disabled, specular_disabled;
 instance uniform vec3 wing_color : source_color = vec3(1.0, 0.55, 0.1);
 instance uniform float phase = 0.0;
 instance uniform float flap_speed = 16.0;
+instance uniform float rest = 0.0;       // 1 = sitting on a flower: wings up, slowly opening and closing
 
 varying float v_side;
 
 void vertex() {
 	float side = sign(VERTEX.x);
 	float flap = (sin(TIME * flap_speed + phase) * 0.5 + 0.5) * 1.25 - 0.15;
+	float sit = 1.35 - (sin(TIME * 1.3 + phase) * 0.5 + 0.5) * 0.9;
+	flap = mix(flap, sit, rest);
 	float a = flap * side;
 	float c = cos(a), s = sin(a);
 	VERTEX = vec3(VERTEX.x * c, abs(VERTEX.x) * s, VERTEX.z);

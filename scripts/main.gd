@@ -563,6 +563,8 @@ func _process_inner(delta: float) -> void:
 	streaks.camera = cam
 	streaks.enabled = Settings.values["wind_fx"]
 	butterflies.camera = cam
+	# butterflies and bees hide at night and in the rain
+	butterflies.activity = (1.0 - float(atmosphere.shown.get("night", 0.0))) * (1.0 - clampf(atmosphere.weather.rain * 3.0, 0.0, 1.0))
 	birds.camera = cam
 	birds.enabled = atmosphere.current.get("birds", true)
 	grass.update(cam.global_position)

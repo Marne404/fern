@@ -142,6 +142,35 @@ func canopy_near(local_pos: Vector3, radius: float) -> Array:
 
 
 var _canopy := {}
+var _flowers := {}
+
+
+## Flower tops near a point (local): [top position, kind] with kind 1 = lavender, 0 = other flowers
+func flowers_near(local_pos: Vector3, radius: float) -> Array:
+	var out := []
+	var wp := Vector2(local_pos.x + origin.x, local_pos.z + origin.y)
+	var c0 := _coord_of(wp - Vector2(radius, radius))
+	var c1 := _coord_of(wp + Vector2(radius, radius))
+	for cz in range(c0.y, c1.y + 1):
+		for cx in range(c0.x, c1.x + 1):
+			var arr: PackedFloat32Array = _flowers.get(Vector2i(cx, cz), PackedFloat32Array())
+			for i in range(0, arr.size(), 4):
+				if Vector2(arr[i], arr[i + 2]).distance_squared_to(wp) < radius * radius:
+					out.append([Vector3(arr[i] - origin.x, arr[i + 1], arr[i + 2] - origin.y), int(arr[i + 3])])
+	return out
+
+
+func _flower_points(items: Array) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	for t in items:
+		var model: String = t[2]
+		if not _crown_shape.has(model):
+			var aabb := lib.raw_mesh(model).get_aabb()
+			_crown_shape[model] = Vector2(maxf(maxf(-aabb.position.x, aabb.end.x), maxf(-aabb.position.z, aabb.end.z)), aabb.end.y)
+		var p: Vector3 = t[0]
+		var top: float = (_crown_shape[model] as Vector2).y * float(t[1])
+		out.append_array([p.x, p.y + top * 0.92, p.z, 1.0 if model == "Proc_Lavender" else 0.0])
+	return out
 var _crown_shape := {}
 
 
@@ -231,6 +260,7 @@ func _plan() -> void:
 		_rock_disks.erase(c)
 		_crowns.erase(c)
 		_canopy.erase(c)
+		_flowers.erase(c)
 
 
 func _start_job(c: Vector2i, lod: int) -> void:
@@ -290,6 +320,7 @@ func _install(data: Dictionary) -> void:
 	_rock_disks[c] = data.get("rock_disks", PackedVector3Array())
 	_crowns[c] = data.get("crowns", PackedFloat32Array())
 	_canopy[c] = _canopy_points(data.get("canopy", []))
+	_flowers[c] = _flower_points(data.get("flowers", []))
 	chunk_ready.emit(c, node, data["lod"])
 
 

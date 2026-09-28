@@ -26,6 +26,7 @@ var rocks: Array = []                    # [key, Transform3D local]
 var blockers: Array[Vector3] = []        # x, z (local), radius
 var clearings: Array[Vector3] = []       # find spots: x, z (local), radius
 var rock_disks: Array[Vector3] = []      # footprints of large rocks: x, z (local), radius – nothing grows there
+var flowers: Array = []                 # near chunks: flower spots [world position, scale, model] (butterflies, bees)
 var canopy: Array = []                  # near chunks: every tree as [world position, scale (x, y), model] (light shafts)
 var crowns := PackedFloat32Array()       # colorful tree crowns that drop leaves/blossoms: x, y, z (world), radius, r, g, b
 
@@ -61,6 +62,7 @@ func build() -> Dictionary:
 	result["rock_disks"] = disks
 	result["crowns"] = crowns
 	result["canopy"] = canopy
+	result["flowers"] = flowers
 	if lod == 0:
 		result["collision"] = _collision_heights()
 	return result
@@ -500,6 +502,8 @@ func _scatter_rows(b: int, li: int, layer: Dictionary) -> void:
 					var model: String = models[rng.randi() % models.size()]
 					var xf := _ground_xf(lx, lz, rng.randf_range(sc[0], sc[1]), 0.4, 0.0)
 					_add(layer_key(b, li, 0, model), xf, Color(0, 0, 0, rng.randf()))
+					if lod == 0 and rng.randf() < 0.12:
+						flowers.append([Vector3(x, xf.origin.y, corner.y + lz), xf.basis.get_scale().y, model])
 		z += step
 
 
@@ -597,6 +601,8 @@ func _place_cluster(b: int, li: int, layer: Dictionary, lx: float, lz: float) ->
 		var model: String = models[rng.randi() % models.size()]
 		var xf := _ground_xf(px, pz, rng.randf_range(sc[0], sc[1]), layer.get("tilt", 0.8), 0.0)
 		_add(layer_key(b, li, 0, model), xf, tint if tint.a > 0.0 else Color(0, 0, 0, rng.randf()))
+		if k == 0 and lod == 0 and (model.begins_with("Flower") or model.begins_with("Proc_Heather")):
+			flowers.append([Vector3(corner.x + xf.origin.x, xf.origin.y, corner.y + xf.origin.z), xf.basis.get_scale().y, model])
 
 
 ## Trees and rocks: at most one object per grid cell, cells in world coordinates

@@ -121,6 +121,31 @@ static func rain_loop() -> AudioStreamWAV:
 	return w
 
 
+## A bee's buzz: a soft, wobbling hum (sawtooth through a low-pass), loops
+static func buzz_loop() -> AudioStreamWAV:
+	if _cache.has("buzz"):
+		return _cache["buzz"]
+	var n := int(RATE * 1.0)
+	var samples := PackedFloat32Array()
+	samples.resize(n)
+	var ph := 0.0
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / RATE
+		# pitch wobbles with whole cycles inside the loop (1 s) so it loops seamlessly
+		var f := 225.0 + sin(t * TAU * 3.0) * 12.0 + sin(t * TAU * 7.0) * 5.0
+		ph = fmod(ph + f / RATE, 1.0)
+		var saw := ph * 2.0 - 1.0
+		lp += (saw - lp) * 0.18
+		var amp := 0.75 + 0.25 * sin(t * TAU * 5.0)
+		samples[i] = lp * amp * 0.8
+	var w := _wav(samples)
+	w.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	w.loop_end = n
+	_cache["buzz"] = w
+	return w
+
+
 static func _make(which: String) -> AudioStreamWAV:
 	var samples := PackedFloat32Array()
 	match which:

@@ -1,14 +1,47 @@
 class_name Butterflies
 extends Node3D
-## A few butterflies fluttering around near the camera.
+## Butterflies around the camera: they flutter from flower to flower, land, fold their wings and rest,
+## and take off again (or when you come close). They hide at night and in the rain.
+## Bees buzz around lavender rows and flower clusters.
 
 const COLORS := [Color(1.0, 0.55, 0.1), Color(1.0, 0.85, 0.2), Color(0.35, 0.6, 1.0), Color(1.0, 0.98, 0.94), Color(0.95, 0.35, 0.2)]
+const BEES := 22
 
 var camera: Camera3D
 var world: ChunkManager
+## 0..1: 0 at night or in the rain (they hide), 1 on a sunny day
+var activity := 1.0
 var _items: Array[Dictionary] = []
 var _rng := RandomNumberGenerator.new()
 var _time := 0.0
+var _flower_timer := 0.0
+var _flowers: Array = []
+var _bees: MultiMeshInstance3D
+var _bee_state: Array[Dictionary] = []
+var _buzz: AudioStreamPlayer3D
+
+
+func _ready() -> void:
+	_rng.randomize()
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = _bee_mesh()
+	mm.instance_count = BEES
+	mm.visible_instance_count = 0
+	_bees = MultiMeshInstance3D.new()
+	_bees.multimesh = mm
+	_bees.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_bees.custom_aabb = AABB(Vector3(-1e5, -1e5, -1e5), Vector3(2e5, 2e5, 2e5))
+	add_child(_bees)
+	for i in BEES:
+		_bee_state.append({"flower": Vector3.INF, "next": 0.0, "seed": _rng.randf() * 100.0, "pos": Vector3.ZERO})
+	_buzz = AudioStreamPlayer3D.new()
+	_buzz.stream = Sfx.buzz_loop()
+	_buzz.unit_size = 1.2
+	_buzz.max_distance = 9.0
+	_buzz.volume_db = -14.0
+	add_child(_buzz)
 
 
 func spawn(count: int) -> void:
@@ -29,9 +62,10 @@ func spawn(count: int) -> void:
 		mi.set_instance_shader_parameter("phase", _rng.randf() * TAU)
 		mi.set_instance_shader_parameter("flap_speed", _rng.randf_range(13.0, 19.0))
 		mi.scale = Vector3.ONE * _rng.randf_range(0.09, 0.14)
+		mi.visible = false
 		add_child(mi)
-		_items.append({"node": mi, "home": Vector3.INF, "seed": _rng.randf() * 100.0,
-			"speed": _rng.randf_range(0.5, 0.9), "radius": _rng.randf_range(1.5, 4.0)})
+		_items.append({"node": mi, "pos": Vector3.INF, "target": Vector3.INF, "rest": 0.0, "rest_t": 0.0,
+			"seed": _rng.randf() * 100.0, "speed": _rng.randf_range(0.9, 1.5), "yaw": _rng.randf() * TAU, "wander": false})
 
 
 func _wing_mesh() -> ArrayMesh:
@@ -47,30 +81,193 @@ func _wing_mesh() -> ArrayMesh:
 	return st.commit()
 
 
+## A tiny bee: striped body (yellow/black) as an opaque surface, two glassy wings as a second one
+func _bee_mesh() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var rings := 7
+	var segs := 8
+	var pts := []
+	for r in rings + 1:
+		var t := float(r) / rings
+		var z := lerpf(-0.5, 0.5, t)
+		var rad := sin(t * PI) * 0.26 + 0.02
+		var row := []
+		for s in segs:
+			var a := TAU * s / segs
+			row.append(Vector3(cos(a) * rad, sin(a) * rad * 0.9, z))
+		pts.append(row)
+	for r in rings:
+		var t := (r + 0.5) / rings
+		var col := Color("2a2118") if t < 0.22 else (Color("f2b632") if int(t * 7.0) % 2 == 0 else Color("2a2118"))
+		for s in segs:
+			var s2 := (s + 1) % segs
+			for v: Vector3 in [pts[r][s], pts[r + 1][s2], pts[r + 1][s], pts[r][s], pts[r][s2], pts[r + 1][s2]]:
+				st.set_color(col)
+				st.set_normal(Vector3(v.x, v.y, 0).normalized())
+				st.add_vertex(v)
+	var mesh := st.commit()
+	var body := StandardMaterial3D.new()
+	body.vertex_color_use_as_albedo = true
+	body.vertex_color_is_srgb = true
+	body.roughness = 0.85
+	mesh.surface_set_material(0, body)
+	var sw := SurfaceTool.new()
+	sw.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for side in [-1.0, 1.0]:
+		var base := Vector3(0.05 * side, 0.22, -0.08)
+		var quad := [base, base + Vector3(0.5 * side, 0.26, -0.08), base + Vector3(0.48 * side, 0.22, 0.24), base + Vector3(0.03 * side, 0.02, 0.16)]
+		for k in [0, 1, 2, 0, 2, 3]:
+			sw.set_normal(Vector3.UP)
+			sw.add_vertex(quad[k])
+	sw.commit(mesh)
+	var wings := ShaderMaterial.new()
+	wings.shader = preload("res://shaders/bee.gdshader")
+	mesh.surface_set_material(1, wings)
+	return mesh
+
+
 func _process(delta: float) -> void:
 	if camera == null or world == null:
 		return
 	_time += delta
+	var cam := camera.global_position
+	_flower_timer -= delta
+	if _flower_timer <= 0.0:
+		_flower_timer = 1.0
+		_flowers = world.flowers_near(cam, 30.0)
+	_update_butterflies(cam, delta)
+	_update_bees(cam, delta)
+
+
+func _pick_flower(near: Vector3, max_d: float, lavender_ok := true) -> Vector3:
+	var best := Vector3.INF
+	for i in 8:
+		if _flowers.is_empty():
+			break
+		var f: Array = _flowers[_rng.randi() % _flowers.size()]
+		if not lavender_ok and f[1] == 1 and _rng.randf() < 0.7:
+			continue
+		var p: Vector3 = f[0]
+		if p.distance_to(near) < max_d:
+			return p
+		if best == Vector3.INF or p.distance_to(near) < best.distance_to(near):
+			best = p
+	return best
+
+
+func _update_butterflies(cam: Vector3, delta: float) -> void:
 	var fwd := -camera.global_basis.z
 	fwd.y = 0.0
 	fwd = fwd.normalized()
 	for it in _items:
-		var home: Vector3 = it["home"]
-		if home == Vector3.INF or home.distance_to(camera.global_position) > 28.0 or (home - camera.global_position).dot(fwd) < -4.0:
-			var p := camera.global_position + fwd * _rng.randf_range(4.0, 20.0) + fwd.cross(Vector3.UP) * _rng.randf_range(-9.0, 9.0)
-			it["home"] = p
-			home = p
-		var t: float = _time * it["speed"] + it["seed"]
-		var r: float = it["radius"]
-		var off := Vector3(sin(t * 0.9) * r + sin(t * 2.3) * 0.4, 0.0, cos(t * 0.7) * r + cos(t * 1.9) * 0.4)
-		var pos := home + off
-		pos.y = world.height_local(pos.x, pos.z) + 0.7 + sin(t * 1.7) * 0.35 + sin(t * 5.1) * 0.08
 		var node: MeshInstance3D = it["node"]
-		var prev := node.global_position
+		node.visible = activity > 0.05
+		if not node.visible:
+			it["pos"] = Vector3.INF
+			continue
+		var pos: Vector3 = it["pos"]
+		# too far away or behind you: appear again somewhere ahead
+		if pos == Vector3.INF or pos.distance_to(cam) > 32.0 or (pos - cam).dot(fwd) < -6.0:
+			pos = cam + fwd * _rng.randf_range(5.0, 22.0) + fwd.cross(Vector3.UP) * _rng.randf_range(-10.0, 10.0)
+			pos.y = world.height_local(pos.x, pos.z) + 1.0
+			it["target"] = Vector3.INF
+			it["rest"] = 0.0
+		var target: Vector3 = it["target"]
+		if target == Vector3.INF:
+			target = _pick_flower(pos, 9.0, false)
+			if target == Vector3.INF or target.distance_to(pos) > 12.0:
+				# no flowers near: wander in loops
+				var a := _rng.randf() * TAU
+				target = pos + Vector3(cos(a), 0, sin(a)) * _rng.randf_range(2.0, 5.0)
+				target.y = world.height_local(target.x, target.z) + 0.7
+				it["wander"] = true
+			else:
+				it["wander"] = false
+			it["target"] = target
+		var t: float = _time * it["speed"] + it["seed"]
+		if it["rest"] > 0.0:
+			# sitting on the flower: wings slowly open and close; fly off early if you come close
+			it["rest"] = float(it["rest"]) - delta
+			it["rest_t"] = minf(float(it["rest_t"]) + delta * 3.0, 1.0)
+			if pos.distance_to(cam) < 2.2:
+				it["rest"] = 0.0
+			if it["rest"] <= 0.0:
+				it["target"] = Vector3.INF
+				pos.y += 0.05
+		else:
+			it["rest_t"] = maxf(float(it["rest_t"]) - delta * 4.0, 0.0)
+			var to := target - pos
+			var dist := to.length()
+			if dist < 0.12:
+				if not it["wander"]:
+					it["rest"] = _rng.randf_range(3.0, 9.0)
+					pos = target
+				else:
+					it["target"] = Vector3.INF
+			else:
+				# fluttery flight: towards the target with sideways and up-down wobble, slow near the flower
+				var dir := to / dist
+				var side := dir.cross(Vector3.UP).normalized()
+				var spd := lerpf(0.6, 1.6, clampf(dist / 2.0, 0.0, 1.0))
+				var wob := side * sin(t * 3.1) * 0.9 + Vector3.UP * (sin(t * 4.3) * 0.7 + (0.4 if dist > 1.0 else 0.0))
+				pos += (dir * spd + wob * clampf(dist, 0.0, 1.0)) * delta
+				var ground := world.height_local(pos.x, pos.z)
+				pos.y = clampf(pos.y, ground + 0.25, ground + 2.4)
+				it["yaw"] = lerp_angle(float(it["yaw"]), atan2(-dir.x, -dir.z), 1.0 - exp(-4.0 * delta))
+		it["pos"] = pos
 		node.global_position = pos
-		var vel := pos - prev
-		vel.y = 0.0
-		if vel.length() > 0.01:
-			var s := node.scale
-			node.look_at(pos + vel, Vector3.UP)
-			node.scale = s
+		var s := node.scale
+		node.rotation = Vector3(0, float(it["yaw"]), 0)
+		node.scale = s
+		node.set_instance_shader_parameter("rest", float(it["rest_t"]))
+
+
+func _update_bees(cam: Vector3, delta: float) -> void:
+	var mm := _bees.multimesh
+	var lav := 0
+	for f in _flowers:
+		lav += int(f[1])
+	# many bees in the lavender, a few at flower meadows, none at night or in the rain
+	var want := 0
+	if activity > 0.3:
+		want = BEES if lav > 20 else (6 if _flowers.size() > 12 else 0)
+	mm.visible_instance_count = want
+	var nearest := INF
+	for i in want:
+		var b := _bee_state[i]
+		var fl: Vector3 = b["flower"]
+		if fl == Vector3.INF or fl.distance_to(cam) > 26.0:
+			fl = _pick_flower(cam, 20.0)
+			if fl == Vector3.INF:
+				mm.set_instance_transform(i, Transform3D(Basis().scaled(Vector3.ZERO), cam))
+				continue
+			b["pos"] = fl + Vector3(0, 0.3, 0)
+		b["next"] = float(b["next"]) - delta
+		if b["next"] <= 0.0:
+			# dart to a flower close by
+			var n := _pick_flower(fl, 3.0)
+			if n != Vector3.INF and n.distance_to(fl) < 3.0:
+				fl = n
+			b["next"] = _rng.randf_range(1.2, 4.0)
+		b["flower"] = fl
+		var t := _time + float(b["seed"])
+		var hover := fl + Vector3(sin(t * 2.3) * 0.18 + sin(t * 7.1) * 0.05, 0.14 + sin(t * 3.7) * 0.07, cos(t * 1.9) * 0.18)
+		var p: Vector3 = b["pos"]
+		var np := p.lerp(hover, 1.0 - exp(-5.0 * delta))
+		var vel := np - p
+		b["pos"] = np
+		var yaw := atan2(-vel.x, -vel.z) if vel.length() > 0.0005 else 0.0
+		mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * 0.08), np))
+		mm.set_instance_custom_data(i, Color(float(b["seed"]), 0, 0, 0))
+		var d := np.distance_to(cam)
+		if d < nearest:
+			nearest = d
+			_buzz.global_position = np
+	var vol: float = Settings.values.get("sfx_volume", 0.8)
+	if nearest < 8.0 and vol > 0.01:
+		if not _buzz.playing:
+			_buzz.play()
+		_buzz.volume_db = -16.0 + linear_to_db(vol)
+	elif _buzz.playing:
+		_buzz.stop()
