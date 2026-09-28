@@ -638,7 +638,13 @@ func _scatter_rows(b: int, li: int, layer: Dictionary) -> void:
 						continue
 					var model: String = models[rng.randi() % models.size()]
 					var xf := _ground_xf(lx, lz, rng.randf_range(sc[0], sc[1]), 0.4, 0.0)
-					_add(layer_key(b, li, 0, model), xf, Color(0, 0, 0, rng.randf()))
+					var custom := Color(0, 0, 0, rng.randf())
+					if layer.has("palette"):
+						# grass in rows (wheat): a color per tuft like the grass layers
+						var pal: Array = layer["palette"]
+						custom = (pal[rng.randi() % pal.size()] as Color).lightened(rng.randf_range(-0.05, 0.06)).srgb_to_linear()
+						custom.a = rng.randf()
+					_add(layer_key(b, li, 0, model), xf, custom)
 					if lod == 0 and rng.randf() < 0.12:
 						flowers.append([Vector3(x, xf.origin.y, corner.y + lz), xf.basis.get_scale().y, model])
 		z += step
@@ -837,7 +843,10 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 				var tkey := key + "@far" if (lod != 0 and opt_far_trees) else key
 				# wider, rounder crowns; often a bush at the base of broadleaf trees
 				var tk := TreeKinds.of(model)
-				if not tk.is_empty():
+				if layer.has("squash"):
+					# the layer shapes its trees itself (e.g. narrow cypresses)
+					xf2.basis = xf2.basis.scaled(layer["squash"])
+				elif not tk.is_empty():
 					xf2.basis = xf2.basis.scaled(tk["squash"])
 				if tk.get("twin", false) or tk.get("bush", false):
 					# in the core of a grove: a second tree right next to it – connected canopies

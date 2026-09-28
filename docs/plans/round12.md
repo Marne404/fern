@@ -366,3 +366,18 @@ wide meadows, dragonflies over the water.
   tall broad grass with cattails and marsh flowers, tall airy woods with more light shafts. Dragonflies:
   five iridescent blue-green ones (own body mesh + glassy wings) darting between spots along the shore of the
   nearest pond on your side and hovering in between; small, a detail you find when you walk by the water.
+
+## Step 3.13 – Lavender Hills
+
+Idea: Provence – lavender rows over rolling hills, golden wheat strips between them, cypress-like tall trees,
+olive groves, hedgerows, a warm hazy afternoon light.
+
+- Everywhere: dark slender "cypresses" (TallThick, narrow and dark, stiff) singly and in pairs along the path.
+- Patches: lavender field 40 % (as today) · wheat strip 25 % · olive grove 20 % · hedgerow meadow 15 %.
+  - Wheat strip: golden wheat in rows (rows layer with Grass_Wheat), lavender thinned there.
+  - Olive grove: silvery olive trees (twisted) in a grid, dry grass, stones.
+  - Hedgerow meadow: hedgerows with yellow broom between flowering meadows, poppies.
+- Effect: lavender fields already have bees; here "heat_haze" (light) and a slow "pollen" drift in the sun.
+- Result: golden wheat strips in rows between the lavender (rows layers can now carry a grass palette), olive
+  groves, hedgerow meadows with poppies, narrow dark cypresses (tree layers can set their own `squash`), a
+  light heat shimmer and a few seeds drifting in the sun.

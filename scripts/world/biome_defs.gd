@@ -1021,15 +1021,27 @@ static func lavender() -> Dictionary:
 	var poppies := cluster_layer(["Flower_4_Group", "Flower_4_Single"], 0.9, [2.5, 30.0], 6, 1.6, [0.45, 0.7])
 	poppies["tints"] = [Color(0.92, 0.14, 0.08), Color(0.96, 0.26, 0.1), Color(0.85, 0.1, 0.12)]
 	var broom := {"leaves": leaves(Color(0.55, 0.5, 0.1), Color(1.0, 0.86, 0.2), {"sphere_normals": 0.85}), "stiffness": 6.0}
+	var cypress := tree_style(Color(0.06, 0.2, 0.08), Color(0.24, 0.42, 0.16), {"tint": Color(0.85, 0.75, 0.68)}, 10.0,
+		{"sphere_normals": 0.6, "translucency": 0.4})
+	var wheat := [Color(0.98, 0.84, 0.42), Color(0.94, 0.78, 0.34), Color(1.0, 0.9, 0.52), Color(0.9, 0.72, 0.3)]
+	var hedge := {"leaves": leaves(Color(0.2, 0.34, 0.1), Color(0.56, 0.66, 0.24), {"sphere_normals": 0.8}), "stiffness": 7.0}
+	var hedges := hedge_layer(hedge, 24.0)
+	hedges["patch"] = [3]
+	var meadow := cluster_layer(WILDFLOWERS, 2.2, [2.5, 50.0], 10, 2.6, [0.45, 0.75])
+	meadow["tints"] = [Color(0.95, 0.18, 0.1), Color(1.0, 0.88, 0.25), Color(0.7, 0.5, 1.0), Color(1.0, 1.0, 0.95)]
+	meadow["patch"] = [3]
 	return {
 		"name": NAMES[12],
+		# lavender field as before · wheat strip · olive grove · hedgerow meadow
+		"patches": [{"name": "lavender field", "share": 0.4}, {"name": "wheat strip", "share": 0.25},
+			{"name": "olive grove", "share": 0.2}, {"name": "hedgerow meadow", "share": 0.15}],
 		"blades": blades(0.38, Color(0.26, 0.34, 0.1), Color(0.66, 0.74, 0.3), Color(0.9, 0.82, 0.45)),
 		"terrain": terrain({"scree": 0.2, "gullies": 0.3, "hummocks": 0.5, "brooks": 0.35, "litter": 0.1, "litter_color": Color(0.6, 0.46, 0.8), "far_height": 40.0, "obstacles": ["stile", "stile", "fallen_tree"],
 			"valley_width": 30.0, "valley_ramp": 110.0, "valley_height": 14.0, "undulation": 1.8,
 			"grass_dark": Color(0.42, 0.52, 0.16), "grass_light": Color(0.68, 0.7, 0.3),
 			"region_dark": Color(0.5, 0.46, 0.4), "region_light": Color(0.66, 0.6, 0.36),
 			"slope_color": Color(0.8, 0.74, 0.62), "path_color": Color(0.9, 0.84, 0.68), "crack": 0.6}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.52, 0.42, 0.78), "grade_high": Color(1.0, 0.86, 0.66), "grade_warm": 0.35, "deer": true, "rain": 0.5, "sun_dir": Vector3(0.55, -0.5, 0.65), "sun_color": Color(1.0, 0.9, 0.74), "sun_energy": 1.9,
+		"atmosphere": atmosphere({"fx": {"heat_haze": 0.5, "dandelion": 0.4}, "grade_shadow": Color(0.52, 0.42, 0.78), "grade_high": Color(1.0, 0.86, 0.66), "grade_warm": 0.35, "deer": true, "rain": 0.5, "sun_dir": Vector3(0.55, -0.5, 0.65), "sun_color": Color(1.0, 0.9, 0.74), "sun_energy": 1.9,
 			"ambient_energy": 0.5, "ambient_color": Color(0.85, 0.76, 0.82), "fog_color": Color(0.96, 0.89, 0.9),
 			"fog_density": 0.002, "saturation": 1.1, "zenith_color": Color(0.3, 0.55, 0.92), "horizon_color": Color(0.98, 0.9, 0.88),
 			"cloud_coverage": 0.3, "particles": "motes", "particle_color": Color(1.0, 0.9, 1.0), "butterflies": 14,
@@ -1039,9 +1051,9 @@ static func lavender() -> Dictionary:
 			grass_layer([Color(0.56, 0.66, 0.32), Color(0.5, 0.6, 0.28), Color(0.64, 0.7, 0.38)],
 				[Color(0.76, 0.74, 0.44), Color(0.68, 0.64, 0.36)], 900.0, Vector2(0.3, 0.52)),
 			{"kind": "rows", "models": ["Proc_Lavender"], "styles": [{"plant": {"stiffness": 2.5}}], "row_spacing": 1.9, "step": 1.1,
-				"dist": [4.5, 70.0], "scale": [0.95, 1.3], "shadows": true, "vis": 120.0, "near": true},
+				"dist": [4.5, 70.0], "scale": [0.95, 1.3], "shadows": true, "vis": 120.0, "near": true, "patch": [0, 2]},
 			{"kind": "tree", "models": TWISTED, "styles": [olive], "spacing": 28.0, "chance": 0.55, "dist": [8.0, 300.0],
-				"scale": [0.42, 0.6], "radius": 4.0, "collide": "trunk", "trunk": 0.4},
+				"scale": [0.42, 0.6], "radius": 4.0, "collide": "trunk", "trunk": 0.4, "thin": {1: 0.3}},
 			{"kind": "tree", "models": PINES, "styles": [pine], "spacing": 46.0, "chance": 0.35, "dist": [10.0, 300.0],
 				"scale": [1.3, 1.9], "radius": 2.5, "collide": "trunk", "trunk": 0.3},
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 34.0, "chance": 0.3, "dist": [6.0, 60.0],
@@ -1053,6 +1065,15 @@ static func lavender() -> Dictionary:
 			small_rock_layer(rock),
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			erratic_layer(rock_style(Color(0.88, 0.84, 0.74), 0.3), 160.0),
+			# round 12: cypresses, wheat strips, olive groves, hedgerow meadows
+			{"kind": "tree", "models": TALL, "styles": [cypress], "spacing": 24.0, "chance": 0.55, "dist": [6.0, 300.0],
+				"scale": [0.5, 0.7], "squash": Vector3(0.45, 1.25, 0.45), "radius": 2.0, "collide": "trunk", "trunk": 0.25},
+			{"kind": "rows", "models": ["Grass_Wheat"], "styles": [{}], "row_spacing": 0.9, "step": 0.55, "dist": [4.5, 70.0],
+				"scale": [0.55, 0.75], "palette": wheat, "shadows": false, "vis": 90.0, "near": true, "patch": [1]},
+			{"kind": "tree", "models": TWISTED, "styles": [olive], "spacing": 13.0, "chance": 0.9, "dist": [7.0, 200.0], "patch": [2],
+				"scale": [0.36, 0.5], "radius": 3.5, "collide": "trunk", "trunk": 0.35},
+			hedges,
+			meadow,
 		],
 	}
 
