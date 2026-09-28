@@ -15,10 +15,16 @@ uniform float snow = 0.5;
 uniform vec3 sun_dir = vec3(0.4, 0.6, -0.7);   // towards the sun
 uniform vec3 sun_color : source_color = vec3(1.0, 0.95, 0.85);
 uniform float sea_open = 0.0;      // coast: no ranges on the sea side (+X), an open horizon
+uniform float falls = 0.0;         // waterfalls on the steep flanks (0 = none)
+
+float hash1(float x) {
+	return fract(sin(x * 91.3458) * 47453.5453);
+}
 
 varying vec3 v_pos;
 varying float v_t;
 varying float v_ridge;
+varying float v_a;
 
 float ridge(float a) {
 	float u = a / 6.2831853;
@@ -40,6 +46,7 @@ void vertex() {
 	VERTEX = vec3(cos(a) * rad, h - 40.0 + jag * t * height * 0.08, sin(a) * rad);
 	v_t = t;
 	v_ridge = r;
+	v_a = a;
 	v_pos = VERTEX;
 }
 
@@ -57,5 +64,29 @@ void fragment() {
 	float h = clamp(v_t, 0.0, 1.0);
 	float fade = haze + (1.0 - haze) * (1.0 - smoothstep(0.0, 0.55, h)) * 0.9;
 	col = mix(col, haze_color, clamp(fade, 0.0, 1.0));
+	// waterfalls: thin white ribbons down the flanks of the higher peaks, flowing, with spray at the foot
+	if (falls > 0.0) {
+		float cells = 180.0;
+		float ca = v_a / 6.2831853 * cells;
+		float cell = floor(ca);
+		float hc = hash1(cell + seed * 17.0);
+		if (hc < 0.4 * falls && v_ridge > 0.35) {
+			float cx = 0.35 + hash1(cell * 1.7 + 3.0) * 0.3;
+			float top = mix(0.55, 0.85, hash1(cell + 11.0)) * v_ridge;
+			float bottom = top - mix(0.25, 0.45, hash1(cell + 5.0));
+			float hh = v_t * v_ridge;
+			float wiggle = (texture(noise_tex, vec2(hh * 3.0, cell * 0.13)).r - 0.5) * 0.12;
+			float w = mix(0.11, 0.2, hash1(cell + 7.0)) * mix(0.6, 1.3, smoothstep(top, bottom, hh));
+			float dx = abs(fract(ca) - cx - wiggle);
+			float ribbon = (1.0 - smoothstep(w * 0.5, w, dx)) * (1.0 - smoothstep(top - 0.02, top + 0.01, hh)) * smoothstep(bottom - 0.04, bottom + 0.03, hh);
+			float flow = texture(noise_tex, vec2(fract(ca) * 4.0, hh * 18.0 + TIME * 0.35)).r;
+			vec3 water = mix(vec3(0.8, 0.9, 0.98), vec3(1.0), smoothstep(0.4, 0.7, flow));
+			// painted over the haze (like the snow of a far peak it stays visible), a little softened
+			col = mix(col, mix(water * mix(0.82, 1.05, lit), haze_color, haze * 0.2), ribbon * 0.95);
+			// spray cloud at the foot
+			float mist = exp(-pow((fract(ca) - cx) / (w * 3.5), 2.0)) * exp(-pow((hh - bottom) / 0.05, 2.0));
+			col = mix(col, vec3(0.95, 0.97, 1.0), mist * 0.55);
+		}
+	}
 	ALBEDO = col;
 }

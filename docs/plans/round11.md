@@ -95,6 +95,10 @@ that competes with the scout; motion slow and calm.
 - **Waterfalls on the backdrop mountains:** thin white falls with flowing texture and a mist cloud at the foot,
   placed on steep flanks facing the trail.
 - **Cloud shadows** and sky clouds move with a shared offset whose speed follows the gusts.
+- **Result:** waterfalls painted into the backdrop mountain shader (per angular cell, on higher ridges, flowing
+  texture, spray at the foot, drawn over the haze so they read at 1.5 km), `falls` per biome (Mountain Pines,
+  Highlands 1.0 …). One `cloud_drift` time (accumulated by the game, 0.6 + 1.2 × gust strength) drives the sky
+  clouds and all cloud shadows. Mountains take the sky's mood at night and in the evening.
 
 ## 7. Water details
 

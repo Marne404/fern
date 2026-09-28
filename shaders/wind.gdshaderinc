@@ -28,16 +28,19 @@ float impostor_mesh_keep(vec3 origin_local, float custom_a) {
 	return step(fract(custom_a * 7.13 + 0.37), keep);
 }
 
+// how far the clouds have drifted (seconds of drift; faster in gusts, set by the game)
+global uniform float cloud_drift;
+
 // cloud shadows drifting slowly across the land with the wind (0 = sun, 1 = full shadow)
 float cloud_shadow(vec2 world_xz, float time) {
-	vec2 uv = world_xz * 0.0011 - wind_direction * time * 0.0022;
+	vec2 uv = world_xz * 0.0011 - wind_direction * cloud_drift * 0.0022;
 	float n = textureLod(wind_noise, uv, 0.0).r * 0.75 + textureLod(wind_noise, uv * 2.3 + 0.3, 0.0).r * 0.25;
 	return smoothstep(0.5, 0.62, n) * cloud_shadow_strength;
 }
 
 // cheaper variant (one sample) for very many vertices, e.g. grass blades
 float cloud_shadow_fast(vec2 world_xz, float time) {
-	vec2 uv = world_xz * 0.0011 - wind_direction * time * 0.0022;
+	vec2 uv = world_xz * 0.0011 - wind_direction * cloud_drift * 0.0022;
 	return smoothstep(0.5, 0.62, textureLod(wind_noise, uv, 0.0).r) * cloud_shadow_strength;
 }
 

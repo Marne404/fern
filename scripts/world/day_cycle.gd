@@ -156,6 +156,10 @@ func apply(c: Dictionary) -> Dictionary:
 	out["ambient_energy"] = lerpf(c["ambient_energy"], float(c["ambient_energy"]) * m["amb"], aff)
 	out["ambient_color"] = (c["ambient_color"] as Color).lerp(m["amb_c"], m["amb_w"] * aff)
 	out["fog_color"] = (c["fog_color"] as Color).lerp(m["fog"], m["fog_w"] * aff)
+	# the backdrop mountains take the sky's mood (dark blue at night, warm in the evening)
+	if c.has("mountain_color"):
+		out["mountain_color"] = (c["mountain_color"] as Color).lerp(m["hor"], m["hor_w"] * aff * 0.55)
+		out["mountain_shadow"] = (c["mountain_shadow"] as Color).lerp(m["zen"], m["zen_w"] * aff * 0.6)
 	out["cloud_color"] = Color.WHITE.lerp(m["cloud"], aff)
 	out["cloud_shadow"] = (c["cloud_shadow"] as Color).lerp(m["shade"], clampf(m["zen_w"] + m["hor_w"] * 0.4, 0.0, 1.0) * aff)
 	out["exposure"] = float(c["exposure"]) * lerpf(1.0, m["exp"], aff)

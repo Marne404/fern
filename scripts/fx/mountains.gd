@@ -79,3 +79,4 @@ func apply(atmo: Dictionary, sun_dir_to_sun: Vector3) -> void:
 		mat.set_shader_parameter("height", _layers[i].get_meta("height") * atmo["mountain_scale"])
 		mat.set_shader_parameter("sun_dir", sun_dir_to_sun)
 		mat.set_shader_parameter("sun_color", atmo["sun_color"])
+		mat.set_shader_parameter("falls", float(atmo.get("falls", 0.0)) * (1.0 if near else 0.6))

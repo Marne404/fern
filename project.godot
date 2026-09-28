@@ -101,6 +101,10 @@ rain_amount={
 "type": "float",
 "value": 0.0
 }
+cloud_drift={
+"type": "float",
+"value": 0.0
+}
 sand_storm={
 "type": "float",
 "value": 0.0

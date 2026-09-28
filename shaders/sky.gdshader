@@ -10,6 +10,7 @@ uniform vec3 cloud_color : source_color = vec3(1.0, 1.0, 1.0);
 uniform vec3 cloud_shadow : source_color = vec3(0.62, 0.7, 0.86);
 uniform float cloud_coverage = 0.5;
 uniform float cloud_speed = 0.003;
+uniform float cloud_time = 0.0;     // drift time from the game: runs faster in gusts
 uniform float cirrus_amount = 0.6;
 uniform float sun_size = 1.0;
 uniform float sun_glow = 0.35;
@@ -102,7 +103,7 @@ void sky() {
 		float hh = max(h, 0.0);
 		vec2 plane = d.xz / (hh + 0.09);
 		vec2 plane_c = d.xz / (hh + 0.2);   // cumulus: less distortion at the horizon
-		float t = TIME * cloud_speed;
+		float t = cloud_time * cloud_speed;
 
 		// cirrus: long, thin streaks high up
 		vec2 axis = normalize(vec2(0.8, -0.6));

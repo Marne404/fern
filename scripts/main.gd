@@ -34,6 +34,7 @@ var canopy_shafts: CanopyShafts
 var songbirds: Songbirds
 var deer: Deer
 var _soaked_hint := false
+var _cloud_drift := 0.0
 var gusts: WindGusts
 var leaf_fall: LeafFall
 var desert_fx: DesertFx
@@ -543,6 +544,10 @@ func _process_inner(delta: float) -> void:
 	# Floating origin
 	world.maybe_shift_origin(cam.global_position)
 
+	# clouds and their shadows drift with the wind, faster when the gusts blow
+	_cloud_drift += delta * (0.6 + 1.2 * WindGusts.current_strength)
+	RenderingServer.global_shader_parameter_set("cloud_drift", _cloud_drift)
+	atmosphere.sky_mat.set_shader_parameter("cloud_time", _cloud_drift)
 	var wpos := world.local_to_world(cam.global_position)
 	# the clock runs while you hike (not in the menu, not while paused)
 	if mode == Mode.PLAYING and not get_tree().paused:
