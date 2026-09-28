@@ -564,7 +564,13 @@ func _scatter_layer(b: int, li: int, layer: Dictionary) -> void:
 				continue
 		if _wet(lx, lz, 0.05) or _in_clearing(lx, lz) or _below_sea(lx, lz, r) or _in_rock(lx, lz):
 			continue
-		if kind != "path_stones" and surface_normal(lx, lz).y < 0.62:
+		if layer.has("slope"):
+			# scree: only on the steeper flanks, in the tongues of loose stones
+			var sl := 1.0 - surface_normal(lx, lz).y
+			var band: Array = layer["slope"]
+			if sl < band[0] or sl > band[1] or gen.paint(x * 1.7 + 40.0, z * 0.6) < 0.45:
+				continue
+		elif kind != "path_stones" and surface_normal(lx, lz).y < 0.62:
 			continue
 		match kind:
 			"grass":

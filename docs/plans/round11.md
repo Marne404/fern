@@ -120,6 +120,10 @@ that competes with the scout; motion slow and calm.
 - **Erosion gullies:** small channels running down the valley sides.
 - **Hummocky meadows:** small hillocks in meadow biomes (off the path).
 - **Erratic boulders:** large lone mossy boulders in meadows and highlands.
+- **Result:** terrain keys `scree`, `gullies`, `hummocks` per biome. Gullies: ridged noise lines on the valley
+  sides carved up to ~2.5 m (more on higher hills), a moist darker green in them. Hummocks: small positive bumps
+  (≤ 1.1 m) off the trail in meadows. Scree: gray stone tongues on 10–40° flanks (ground color) plus loose stones
+  of the scree layer. Erratic boulders: big mossy rocks every 90–160 m in meadows, highlands and lavender hills.
 
 ## 9. Mood
 

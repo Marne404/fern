@@ -35,6 +35,8 @@ var _grove := FastNoiseLite.new()
 var _far := FastNoiseLite.new()
 var _dune := FastNoiseLite.new()
 var _mesa := FastNoiseLite.new()
+var _gully := FastNoiseLite.new()
+var _humm := FastNoiseLite.new()
 
 var _segment_biome := PackedInt32Array()
 var _segment_start := PackedFloat32Array()
@@ -73,6 +75,8 @@ func _init(p_seed: int) -> void:
 	_setup_noise(_far, 18, 0.0021, 2)
 	_setup_noise(_dune, 19, 0.011, 2)
 	_setup_noise(_mesa, 20, 0.0048, 2)
+	_setup_noise(_gully, 21, 0.018, 2)
+	_setup_noise(_humm, 22, 0.16, 1)
 	_build_biome_table()
 
 
@@ -305,6 +309,9 @@ func row(z: float, with_ponds := true) -> Dictionary:
 		"und": lerpf(lerpf(a["undulation"], b["undulation"], t), 0.05, gorge),
 		"depth": lerpf(a["path_depth"], b["path_depth"], t),
 		"rough": lerpf(a["roughness"], b["roughness"], t),
+		"scree": lerpf(a["scree"], b["scree"], t),
+		"gully": lerpf(a["gullies"], b["gullies"], t),
+		"humm": lerpf(a["hummocks"], b["hummocks"], t),
 		"terr": lerpf(a["terraces"], b["terraces"], t),
 		"coast": lerpf(a.get("coast", 0.0), b.get("coast", 0.0), t),
 		"sea": coast_info(z).x,
@@ -390,6 +397,15 @@ func _height_core(x: float, r: Dictionary) -> float:
 			var stepped: float = (floor(q) + smoothstep(0.6, 0.85, f)) * step_h
 			hr = lerpf(hr, stepped, pm * clampf(terr / 6.0, 0.0, 1.0) * smoothstep(0.02, 0.2, rise))
 	h += hr
+	# erosion gullies: narrow channels that run down the valley sides (ridged noise lines on the slopes)
+	var gl: float = r["gully"]
+	if gl > 0.0 and rise > 0.02:
+		h -= gully_line(wx, wz) * rise * gl * (1.0 + hill * 1.6)
+	# hummocky meadows: small hillocks off the trail
+	var hm: float = r["humm"]
+	if hm > 0.0:
+		var bump := maxf(_humm.get_noise_2d(x, z), 0.0)
+		h += bump * bump * 1.1 * hm * (1.0 - rise) * smoothstep(r["half_w"] + 2.0, r["half_w"] + 6.0, d) * (1.0 - r["dunes"])
 	# rugged edges in rocky biomes
 	var rough: float = r["rough"]
 	if rough > 0.0:
@@ -918,6 +934,12 @@ func height(x: float, z: float) -> float:
 	return height_in_row(x, row(z))
 
 
+## 0..1: how deep in an erosion gully a point lies (before strength and slope)
+func gully_line(wx: float, wz: float) -> float:
+	var g := 1.0 - absf(_gully.get_noise_2d(wx, wz))
+	return smoothstep(0.88, 0.985, g)
+
+
 func region(x: float, z: float) -> float:
 	return _region.get_noise_2d(x, z) * 0.5 + 0.5
 
@@ -945,6 +967,20 @@ func _ground_color_for(tr: Dictionary, x: float, z: float, slope: float, rel_h: 
 		col = col.lerp(rc, reg)
 	var s := smoothstep(0.3, 0.6, slope + (n - 0.5) * 0.25)
 	col = col.lerp(tr["slope_color"], s)
+	# scree: loose gray stones on the steeper flanks of mountain biomes, in tongues
+	var scree: float = tr["scree"]
+	if scree > 0.0:
+		var tongue := smoothstep(0.35, 0.65, paint(x * 1.7 + 40.0, z * 0.6))
+		var sc := smoothstep(0.2, 0.38, slope + (n - 0.5) * 0.15) * (1.0 - smoothstep(0.62, 0.8, slope)) * tongue * scree
+		var speck := 0.9 + 0.2 * paint(x * 9.0, z * 9.0)
+		col = col.lerp(Color(0.6, 0.59, 0.57).srgb_to_linear() * speck, sc * 0.85)
+	# gullies stay moist: a little darker and greener
+	var gl: float = tr["gullies"]
+	if gl > 0.0 and slope > 0.05:
+		var wx := x + _warp.get_noise_2d(x, z) * 45.0
+		var wz := z + _warp.get_noise_2d(x + 517.0, z - 211.0) * 45.0
+		var line := gully_line(wx, wz) * gl
+		col = col.lerp(col * Color(0.72, 0.86, 0.68), line * 0.8)
 	var snow: float = tr["snow"]
 	if snow > 0.0:
 		var sn := smoothstep(snow, snow + 7.0, rel_h + (n - 0.5) * 8.0) * (1.0 - smoothstep(0.55, 0.85, slope))
