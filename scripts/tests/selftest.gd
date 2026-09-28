@@ -369,6 +369,49 @@ func _test_weather() -> void:
 	for i in 3000:
 		d.advance(0.1, 0.0)
 	check("No rain in the desert", d.rain < 0.01 and d.state == Weather.FAIR)
+	# snow instead of rain in the mountains: white ground, no rainbow, dry-ish
+	var sn := Weather.new()
+	sn.reset()
+	sn.next_shower = 0.0
+	var max_cover := 0.0
+	var max_rb2 := 0.0
+	for i in 6000:
+		sn.advance(0.1, 1.0, 0.0, 1.0)
+		max_cover = maxf(max_cover, sn.snow_cover)
+		max_rb2 = maxf(max_rb2, sn.rainbow)
+	check("Snowfall covers the ground", max_cover > 0.5, "%.2f" % max_cover)
+	check("No rainbow after snow", max_rb2 < 0.05, "%.2f" % max_rb2)
+	# a fog day comes, stays and lifts again
+	var fg := Weather.new()
+	fg.reset()
+	fg.next_shower = 99999.0
+	fg.next_fog = 0.0
+	var max_fog := 0.0
+	var lifted := false
+	for i in 12000:
+		fg.advance(0.1, 1.0, 1.0)
+		max_fog = maxf(max_fog, fg.fog)
+		if max_fog > 0.9 and fg.state == Weather.FAIR and fg.fog < 0.05:
+			lifted = true
+			break
+	check("A fog day rises and lifts", max_fog > 0.9 and lifted, "fog %.2f" % max_fog)
+	var shown := fg.apply({"fog_color": Color(0.8, 0.9, 0.95), "fog_density": 0.002, "sun_energy": 1.8, "sun_glow": 0.3,
+		"horizon_color": Color(0.8, 0.9, 1.0), "zenith_color": Color(0.2, 0.5, 0.9), "ambient_energy": 0.5, "cloud_coverage": 0.5,
+		"cirrus_amount": 0.5, "cloud_shadow": Color(0.6, 0.7, 0.8), "ambient_color": Color(0.6, 0.7, 0.6)})
+	check("Fog day state is applied", shown.has("overcast"))
+	# heat lightning flickers only when there is some
+	var hl := Weather.new()
+	var flashes := 0
+	for i in 3000:
+		hl.advance_flash(0.05, 1.0)
+		if hl.flash > 0.5:
+			flashes += 1
+	var none := Weather.new()
+	var none_flash := 0.0
+	for i in 3000:
+		none.advance_flash(0.05, 0.0)
+		none_flash = maxf(none_flash, none.flash)
+	check("Heat lightning flickers on warm evenings", flashes > 0 and none_flash == 0.0, "%d frames" % flashes)
 
 
 ## A brook: carved bed under water, banks above it, water found by water_level

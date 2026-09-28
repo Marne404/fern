@@ -93,6 +93,10 @@ daylight={
 "type": "float",
 "value": 1.0
 }
+snow_cover={
+"type": "float",
+"value": 0.0
+}
 sun_vector={
 "type": "vec3",
 "value": Vector3(0.4, 0.6, -0.7)

@@ -82,6 +82,8 @@ void fragment() {
 	col *= 0.9 + 0.2 * fract(v_shade * 17.31);
 	col *= (0.9 + 0.2 * v_tone) / bake_tone;
 	col *= 1.0 - wetness * 0.13;
+	// snow on the crowns, like on the near trees
+	col = mix(col, vec3(0.92, 0.95, 1.0), smoothstep(0.25, 0.75, n_local.y) * clamp(snow_cover * 1.3, 0.0, 1.0) * 0.8 * (1.0 - v_bark));
 	// trunks of real trees sit in the crown's shade and ambient occlusion, a flat billboard gets neither
 	col *= mix(1.0, 0.58, v_bark);
 	ALBEDO = col;

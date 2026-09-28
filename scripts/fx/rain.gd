@@ -11,6 +11,9 @@ var _splashes: MultiMeshInstance3D
 var _splash_age := PackedFloat32Array()
 var _sound: AudioStreamPlayer
 var _intensity := 0.0
+var snow_particles: GPUParticles3D
+var _snow_mat: ShaderMaterial
+var _shelters: Array = []   # rain stops at shelter roofs: particle collision boxes, added by the shelters
 
 
 func _ready() -> void:
@@ -78,15 +81,65 @@ func _ready() -> void:
 		_splash_age[i] = randf() * 0.3
 		mm.set_instance_color(i, Color(1, 1, 1, 0))
 
+	# snow: slow, swirling flakes of different sizes
+	snow_particles = GPUParticles3D.new()
+	snow_particles.amount = 2200
+	snow_particles.lifetime = 7.0
+	snow_particles.local_coords = false
+	snow_particles.visibility_aabb = AABB(Vector3(-30, -30, -30), Vector3(60, 60, 60))
+	snow_particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var sp := ParticleProcessMaterial.new()
+	sp.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	sp.emission_box_extents = Vector3(16, 3, 16)
+	sp.emission_shape_offset = Vector3(0, 7, 0)
+	sp.direction = Vector3.DOWN
+	sp.spread = 15.0
+	sp.initial_velocity_min = 0.9
+	sp.initial_velocity_max = 1.5
+	sp.gravity = Vector3(0, -0.25, 0)
+	sp.turbulence_enabled = true
+	sp.turbulence_noise_scale = 3.5
+	sp.turbulence_noise_strength = 1.4
+	sp.turbulence_influence_min = 0.08
+	sp.turbulence_influence_max = 0.2
+	sp.scale_min = 0.03
+	sp.scale_max = 0.075
+	sp.collision_mode = ParticleProcessMaterial.COLLISION_HIDE_ON_CONTACT
+	var gs := Gradient.new()
+	gs.set_color(0, Color(1, 1, 1, 0))
+	gs.set_color(1, Color(1, 1, 1, 0))
+	gs.add_point(0.08, Color(1, 1, 1, 1))
+	gs.add_point(0.9, Color(1, 1, 1, 1))
+	var gts := GradientTexture1D.new()
+	gts.gradient = gs
+	sp.color_ramp = gts
+	snow_particles.process_material = sp
+	_snow_mat = ShaderMaterial.new()
+	_snow_mat.shader = preload("res://shaders/snowflake.gdshader")
+	var flake := QuadMesh.new()
+	flake.material = _snow_mat
+	snow_particles.draw_pass_1 = flake
+	snow_particles.emitting = false
+	add_child(snow_particles)
+	(particles.process_material as ParticleProcessMaterial).collision_mode = ParticleProcessMaterial.COLLISION_HIDE_ON_CONTACT
+
 	_sound = AudioStreamPlayer.new()
 	_sound.stream = Sfx.rain_loop()
 	_sound.volume_db = -80.0
 	add_child(_sound)
 
 
-## rain 0..1, brightness of the light (streaks are not white at night), camera position, wind direction
-func update(rain: float, light: float, cam_pos: Vector3, cam_fwd: Vector3, wind: Vector2, delta: float) -> void:
+## rain 0..1, brightness of the light (streaks are not white at night), camera position, wind direction,
+## snow 0..1 (falls as flakes instead)
+func update(rain: float, light: float, cam_pos: Vector3, cam_fwd: Vector3, wind: Vector2, delta: float, snow := 0.0) -> void:
 	_intensity = rain
+	var snowing: bool = snow > 0.02 and Settings.values.get("particles", true)
+	snow_particles.emitting = snowing
+	if snowing:
+		snow_particles.amount_ratio = clampf(snow, 0.05, 1.0)
+		snow_particles.global_position = cam_pos + Vector3(cam_fwd.x, 0, cam_fwd.z).normalized() * 5.0 + Vector3(wind.x, 0, wind.y) * 1.5
+		(snow_particles.process_material as ParticleProcessMaterial).direction = (Vector3.DOWN * 3.0 + Vector3(wind.x, 0, wind.y)).normalized()
+		_snow_mat.set_shader_parameter("light", light)
 	var on: bool = rain > 0.02 and Settings.values.get("particles", true)
 	particles.emitting = on
 	if on:

@@ -14,7 +14,7 @@ var _mats := {}
 
 const TYPES := [
 	["picknick", 18], ["rucksack", 14], ["bank", 16], ["quelle", 12], ["kiste", 12],
-	["beeren", 14], ["fund", 4], ["schild", 10],
+	["beeren", 14], ["fund", 4], ["schild", 10], ["unterstand", 6],
 ]
 const PLACES := ["Somewhere", "Nowhere", "Further", "Past the Horizon", "Almost There", "A Bit More",
 	"Grandma", "Kiosk", "North Pole", "To the Sea", "Mountain Lake", "Lunch Break", "Back? Nope."]
@@ -50,13 +50,23 @@ static func plan(gen: WorldGen, k: int) -> Dictionary:
 	var r := gen.row(z)
 	var side := -1.0 if rng.randf() < 0.5 else 1.0
 	var off: float = r["half_w"] + rng.randf_range(2.2, 4.0)
+	# rainy biomes have more shelters (decided after the other rolls, so other worlds keep their find spots)
+	var rainy: float = gen.biomes[gen.dominant_biome(z)]["atmosphere"].get("rain", 1.0)
+	if type in ["kiste", "fund"] and rainy >= 1.1 and hash([gen.seed_value, k, 17]) % 3 == 0:
+		type = "unterstand"
 	if type == "schild":
 		off = r["half_w"] + 1.2
+	elif type == "unterstand":
+		off = r["half_w"] + 3.2
 	var x: float = r["px"] + side * off / r["inv_len"]
 	if gen.water_level(x, z) > -INF:
 		return {}
 	var biome := gen.dominant_biome(z)
-	return {"k": k, "type": type, "x": x, "z": z, "side": side, "yaw": rng.randf() * TAU,
+	# the shelter's open side faces the path
+	var yaw := rng.randf() * TAU
+	if type == "unterstand":
+		yaw = atan2(-side, 0.0)
+	return {"k": k, "type": type, "x": x, "z": z, "side": side, "yaw": yaw,
 		"items": _loot(type, biome, rng), "seed": rng.randi()}
 
 
@@ -308,12 +318,58 @@ func _build(p: Dictionary, corner: Vector2) -> Node3D:
 			spots = [Vector3(0.7, 0.2, 0.2)]
 		"schild":
 			_signpost(root, p)
+		"unterstand":
+			_shelter(root)
 	for i in items.size():
 		var uid := _uid(p, i)
 		if taken.has(uid) or i >= spots.size():
 			continue
 		_spawn(root, ItemDefs.make(items[i], uid), spots[i])
 	return root
+
+
+## Rain shelter: walls and roof collide, under the roof you stay dry (group "shelter"), rain stops at the roof
+func _shelter(root: Node3D) -> void:
+	var body := StaticBody3D.new()
+	root.add_child(body)
+	_model(body, StructureModels.shelter(), Vector3.ZERO)
+	var boxes := [
+		[Vector3(0.2, 2.0, 0.2), Vector3(-1.28, 1.0, -0.88)], [Vector3(0.2, 2.0, 0.2), Vector3(1.28, 1.0, -0.88)],
+		[Vector3(0.2, 2.0, 0.2), Vector3(-1.28, 1.0, 0.88)], [Vector3(0.2, 2.0, 0.2), Vector3(1.28, 1.0, 0.88)],
+		[Vector3(2.6, 1.6, 0.12), Vector3(0, 0.85, -0.9)], [Vector3(2.4, 0.5, 0.4), Vector3(0, 0.25, -0.62)],
+		[Vector3(3.3, 0.3, 2.8), Vector3(0, 2.45, 0)],
+	]
+	for bx in boxes:
+		var cs := CollisionShape3D.new()
+		var sh := BoxShape3D.new()
+		sh.size = bx[0]
+		cs.shape = sh
+		cs.position = bx[1]
+		body.add_child(cs)
+	# rain and snow particles stop at the roof
+	var roof := GPUParticlesCollisionBox3D.new()
+	roof.size = Vector3(3.4, 0.9, 2.8)
+	roof.position = Vector3(0, 2.3, 0)
+	root.add_child(roof)
+	# a warm lantern glow at night
+	var lamp := OmniLight3D.new()
+	lamp.position = Vector3(0.6, 2.2, 0)
+	lamp.light_color = Color(1.0, 0.78, 0.45)
+	lamp.light_energy = 0.9
+	lamp.omni_range = 4.5
+	lamp.distance_fade_enabled = true
+	lamp.distance_fade_begin = 40.0
+	lamp.distance_fade_length = 15.0
+	root.add_child(lamp)
+	var dry := Node3D.new()
+	dry.add_to_group("shelter")
+	root.add_child(dry)
+	Songbirds.mark(root, Vector3(-1.5, 2.8, 0.0))
+	_interactable(root, Vector3(0, 0.6, -0.4), Vector3(2.4, 1.2, 1.0), "Wait out the rain", func(w: Wanderer):
+		if not w.resting:
+			w.resting = true
+			w.body.rest = minf(w.body.rest + 5.0, 100.0)
+			w.message.emit("Dry and cozy. The rain drums on the roof."))
 
 
 func _spawn(root: Node3D, item: Dictionary, local_pos: Vector3) -> WorldItem:

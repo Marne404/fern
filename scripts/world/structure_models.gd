@@ -420,3 +420,64 @@ static func altar(sand: bool) -> ArrayMesh:
 		b.add(Mesh3.blob(Vector3(0.9, 0.04, 0.5), 2.2, 5, 12), Color("6f9a3a"), T(Vector3(0, 0.3, 0)))
 		for i in 3:
 			b.add(Mesh3.blob(Vector3(0.03, 0.03, 0.03), 2.0, 4, 6), [Color("f59ac0"), Color("f2c53d"), Color("ffffff")][i], T(Vector3(-0.3 + i * 0.3, 0.35, 0.1))))
+
+
+# ================================================================ shelter
+
+## A small wooden rain shelter: four log posts, a back wall of boards, a pitched roof of wooden shingles with
+## moss in the joints, a bench along the back and a lantern under the ridge. 2.8 × 2.0 m, ridge at 2.7 m;
+## the open side faces +z.
+static func shelter() -> ArrayMesh:
+	return _cached("shelter", func(b: ItemModels.B):
+		var wood := Color("8c5d36")
+		var light_wood := Color("b07a48")
+		var w := 2.8
+		var d := 2.0
+		var eave := 2.05
+		var ridge := 2.7
+		# posts: slightly tapered logs with a stone footing
+		for px in [-w * 0.5 + 0.12, w * 0.5 - 0.12]:
+			for pz in [-d * 0.5 + 0.12, d * 0.5 - 0.12]:
+				b.add(Mesh3.lathe([Vector2(0, 0), Vector2(0.1, 0), Vector2(0.09, eave), Vector2(0, eave + 0.02)], 10), wood, T(Vector3(px, 0, pz)))
+				b.add(Mesh3.blob(Vector3(0.2, 0.09, 0.2), 2.4, 6, 10), Color("8d8f8a"), T(Vector3(px, 0.02, pz)))
+		# beams under the roof edges and a ridge beam
+		for pz in [-d * 0.5 + 0.12, d * 0.5 - 0.12]:
+			b.add(ItemModels.box(Vector3(w + 0.2, 0.14, 0.14), 6.0), wood, T(Vector3(0, eave, pz)))
+		b.add(ItemModels.box(Vector3(w + 0.5, 0.14, 0.14), 6.0), wood, T(Vector3(0, ridge, 0)))
+		# back wall: vertical boards with a gap to the roof
+		var n := 11
+		for i in n:
+			var x := -w * 0.5 + 0.13 + (i + 0.5) * (w - 0.26) / n
+			_board(b, Vector3((w - 0.26) / n - 0.015, 1.55, 0.04), T(Vector3(x, 0.85, -d * 0.5 + 0.1)), wood.lerp(light_wood, float(i % 3) * 0.3), false)
+		b.add(ItemModels.box(Vector3(w - 0.2, 0.1, 0.1), 6.0), wood, T(Vector3(0, 1.66, -d * 0.5 + 0.1)))
+		# roof: two slopes of overlapping shingle rows (with moss in the joints)
+		var slope_len := sqrt((d * 0.5 + 0.35) * (d * 0.5 + 0.35) + (ridge - eave + 0.1) * (ridge - eave + 0.1))
+		var ang := atan2(ridge - eave + 0.1, d * 0.5 + 0.35)
+		for side in [-1.0, 1.0]:
+			var rows := 6
+			for r in rows:
+				var t := (r + 0.5) / rows
+				var pz: float = side * (d * 0.5 + 0.35) * (1.0 - t)
+				var py := eave - 0.05 + (ridge - eave + 0.1) * t + 0.08
+				var shade := Color("6e4a2c").lerp(Color("9a6a40"), float((r * 7 + int(side + 1.0)) % 4) / 4.0)
+				b.add(ItemModels.box(Vector3(w + 0.55, 0.05, slope_len / rows + 0.08), 6.0), shade,
+					T(Vector3(0, py, pz), Vector3(side * ang, 0, 0)))
+				# single shingles standing out a little, and moss
+				for k in 9:
+					var sx := -w * 0.5 - 0.2 + (k + 0.3 + fmod(r * 0.37, 1.0) * 0.4) * (w + 0.4) / 9.0
+					b.add(ItemModels.box(Vector3(0.26, 0.03, 0.2), 4.0), shade.lightened(0.08 * float((k + r) % 3)),
+						T(Vector3(sx, py + 0.035, pz + side * 0.05), Vector3(side * ang, 0, 0)))
+				b.add(ItemModels.box(Vector3(w + 0.5, 0.02, 0.05), 3.0), Color("6f8a3a"), T(Vector3(0, py + 0.02, pz - side * (slope_len / rows) * 0.45), Vector3(side * ang, 0, 0)))
+		# bench along the back wall
+		for i in 2:
+			_board(b, Vector3(w - 0.45, 0.05, 0.16), T(Vector3(0, 0.46, -d * 0.5 + 0.32 + i * 0.17)), light_wood)
+		for bx in [-w * 0.5 + 0.35, 0.0, w * 0.5 - 0.35]:
+			b.add(ItemModels.box(Vector3(0.08, 0.44, 0.3), 6.0), wood, T(Vector3(bx, 0.22, -d * 0.5 + 0.4)))
+		# lantern hanging from the ridge beam: a little iron frame around a warm glass
+		b.add(ItemModels.tube([Vector3(0.6, ridge - 0.07, 0), Vector3(0.6, ridge - 0.4, 0)], 0.008, 4), IRON)
+		b.add(Mesh3.lathe([Vector2(0, 0), Vector2(0.07, 0), Vector2(0.075, 0.16), Vector2(0.04, 0.2), Vector2(0, 0.22)], 8), Color("ffcf7a"),
+			T(Vector3(0.6, ridge - 0.64, 0)), ItemModels.GLOSS)
+		for k in 4:
+			var a := k * TAU / 4.0
+			b.add(ItemModels.tube([Vector3(0.6 + cos(a) * 0.08, ridge - 0.64, sin(a) * 0.08), Vector3(0.6 + cos(a) * 0.08, ridge - 0.46, sin(a) * 0.08)], 0.008, 4), IRON)
+		b.add(Mesh3.lathe([Vector2(0, 0), Vector2(0.1, 0), Vector2(0, 0.08)], 8), IRON, T(Vector3(0.6, ridge - 0.46, 0))))

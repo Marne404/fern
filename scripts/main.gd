@@ -137,6 +137,16 @@ func _ready() -> void:
 			zz -= 40.0
 		get_tree().quit()
 		return
+	if _args.has("findspots"):
+		# test helper: --findspots=type lists the first find spots of that type
+		var n_found := 0
+		for k in range(0, 600):
+			var fp := PoiManager.plan(gen, k)
+			if not fp.is_empty() and fp["type"] == _args["findspots"]:
+				n_found += 1
+				if n_found <= 8:
+					print("Find spot %s k=%d z=%.0f x=%.0f (%s)" % [fp["type"], k, fp["z"], fp["x"], gen.biomes[gen.dominant_biome(fp["z"])]["name"]])
+		print("Find spots of that type in 100 km: %d" % n_found)
 	if _args.has("biomes"):
 		for k in 30:
 			print("Segment %d: %s from %.0f m" % [k, gen.biomes[gen._segment_biome[k]]["name"], gen._segment_start[k]])
@@ -578,9 +588,19 @@ func _process_inner(delta: float) -> void:
 	# the clock runs while you hike (not in the menu, not while paused)
 	if mode == Mode.PLAYING and not get_tree().paused:
 		atmosphere.day.advance(delta)
-		if atmosphere.weather.advance(delta, float(atmosphere.current.get("rain", 1.0))):
-			hud.show_message("It's starting to rain.")
+		var cur := atmosphere.current
+		if atmosphere.weather.advance(delta, float(cur.get("rain", 1.0)), float(cur.get("fog_days", 0.3)), float(cur.get("snowfall", 0.0))):
+			hud.show_message("It's starting to snow." if atmosphere.weather.snow_share > 0.6 else "It's starting to rain.")
 			_soaked_hint = false
+		# heat lightning: warm, mostly clear evenings and nights
+		var hr := atmosphere.day.hour
+		var evening := smoothstep(19.0, 20.3, hr) + (1.0 - smoothstep(1.5, 3.0, hr)) if hr > 12.0 or hr < 3.0 else 0.0
+		var warm := smoothstep(15.0, 20.0, float(atmosphere.shown.get("temperature", 16.0)))
+		atmosphere.weather.advance_flash(delta, float(cur.get("heat_lightning", 0.0)) * clampf(evening, 0.0, 1.0) * warm * (1.0 - atmosphere.weather.clouds) * (1.0 - atmosphere.weather.fog))
+	var wf := atmosphere.weather
+	atmosphere.sky_mat.set_shader_parameter("flash", Vector4(wf.flash_dir.x, wf.flash_dir.y, wf.flash, 0.0))
+	if wf.flash > 0.01:
+		atmosphere.env.ambient_light_energy = float(atmosphere.shown.get("ambient_energy", 0.5)) + wf.flash * 0.12
 		_rain_on_player(delta)
 	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
@@ -589,6 +609,25 @@ func _process_inner(delta: float) -> void:
 		for pair in _args["skyset"].split(","):
 			var kv3: PackedStringArray = pair.split(":")
 			atmosphere.debug_sky[kv3[0]] = float(kv3[1])
+	if _args.has("weatherstate") and _frame == 20:
+		# test helper: --weatherstate=fog|snow|rain|flash starts that weather at once
+		var ws := atmosphere.weather
+		match _args["weatherstate"]:
+			"fog":
+				ws._enter(Weather.FOG)
+				ws._dur = 9999.0
+				ws.fog = 1.0
+			"snow", "rain":
+				ws._enter(Weather.RAIN)
+				ws._dur = 9999.0
+				ws._strength = 1.0
+				ws.rain = 1.0
+				ws.clouds = 1.0
+				ws.snow_share = 1.0 if _args["weatherstate"] == "snow" else 0.0
+				ws.snow_cover = 1.0 if _args["weatherstate"] == "snow" else 0.0
+	if _args.has("weatherstate") and _args["weatherstate"] == "flash":
+		atmosphere.weather.flash = 1.0
+		atmosphere.weather.flash_dir = Vector2(0.3, -1).normalized()
 	if _args.has("shoot"):
 		atmosphere.sky_mat.set_shader_parameter("shooting_seed", float(_args["shoot"]))
 	if _args.has("tm"):
@@ -608,7 +647,8 @@ func _process_inner(delta: float) -> void:
 	canopy_shafts.update(beams, -(sh.get("sun_dir", Vector3(0, -1, 0)) as Vector3), sh.get("sun_color", Color.WHITE), cam.global_position, delta)
 	var wd: Vector2 = ProjectSettings.get_setting("shader_globals/wind_direction")["value"]
 	rain_fx.update(float(atmosphere.shown.get("rain", 0.0)) if atmosphere.underwater < 0.01 else 0.0,
-		1.0 - float(atmosphere.shown.get("night", 0.0)) * 0.8, cam.global_position, fwd, wd.normalized(), delta)
+		1.0 - float(atmosphere.shown.get("night", 0.0)) * 0.8, cam.global_position, fwd, wd.normalized(), delta,
+		float(atmosphere.shown.get("snow", 0.0)) if atmosphere.underwater < 0.01 else 0.0)
 	gusts.strength = atmosphere.current.get("gusts", 0.5)
 	leaf_fall.update(cam, delta)
 	desert_fx.update(cam, delta, atmosphere.current.get("dust", 0.0))
@@ -928,8 +968,16 @@ func _rain_on_player(delta: float) -> void:
 	var w := atmosphere.weather
 	if not player or not w.is_raining() or player.swimming:
 		return
+	# under a shelter's roof you stay dry (and slowly dry off)
+	for sh: Node3D in get_tree().get_nodes_in_group("shelter"):
+		var lp := sh.global_transform.affine_inverse() * player.global_position
+		if absf(lp.x) < 1.4 and absf(lp.z) < 1.05 and lp.y < 2.3 and lp.y > -0.5:
+			player.body.wet = maxf(player.body.wet - delta * 0.004, 0.0)
+			return
 	var covered := player._wears("regenjacke") or player._wears("poncho")
-	player.body.wet = minf(player.body.wet + w.rain * delta * (0.004 if covered else 0.03), 1.0)
+	# snow soaks you much more slowly than rain
+	var soak := w.rain * lerpf(1.0, 0.25, w.snow_share)
+	player.body.wet = minf(player.body.wet + soak * delta * (0.004 if covered else 0.03), 1.0)
 	if not _soaked_hint and player.body.wet > 0.35:
 		_soaked_hint = true
 		hud.show_message("You're getting soaked. A rain jacket would help." if not covered else "Good thing you brought rain gear.")

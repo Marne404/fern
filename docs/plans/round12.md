@@ -544,3 +544,26 @@ Test: renders at 15:30 in Wheat Fields (towers), 7:30 in Golden Birch Slopes (ma
   hour, hidden by overcast. Cost: nothing measurable. Helpers `--skyset=key:value,…` and `--shoot=-1`.
 - Wheat was the next big cost (Grass_Wheat has ~1190 triangles): rows now 1.2 × 0.75 m with bigger tufts and a
   65–70 m view range, stubble sparser, the autumn stubble grass lighter. Wheat Fields 66 → 37 ms (High).
+
+## Step 6 – More weather (plan)
+
+- **Fog days** (new weather state FOG, biome key `fog_days`, bog/lakes/highlands/old forest often, desert never):
+  over ~40 s a soft white fog rises and stays 4–8 minutes: dense valley mist all day, far hills fade to
+  silhouettes, the sun a pale disc, colors muted; dew makes the ground a little damp; then it lifts.
+- **Snowfall** (biome key `snowfall` = share of the precipitation that falls as snow: Mountain Pines 1,
+  Rock Gorge 0.6, Heather Highlands 0.4 as sleet): slow, swirling flakes instead of streaks, silent; the ground,
+  rocks and the tops of the tree crowns turn white (`snow_cover` global, builds up while it snows, melts over
+  a few minutes afterwards); no rainbow after snow.
+- **Heat lightning** (biome key `heat_lightning`: Desert, Wheat Fields, Lavender, Coast, …): on warm, mostly
+  clear evenings and nights, silent flashes light up distant clouds low on the horizon (sky shader `flash`,
+  double flickers every 4–15 s, random direction), with a faint glow on the land.
+- **Rain shelters** (new find spot "unterstand"): a small wooden shelter with a shingle roof, a bench and a
+  lantern beside the path, more often in rainy biomes; under the roof you stay dry (and dry off), rain
+  particles stop at the roof; "Wait out the rain" sits you down.
+- Result: fog days (state FOG, 4–8 min; white valley fog, pale sun, muted colors, dew), snowfall where the
+  biome says so (flakes with their own shader, a white blanket on the ground with drifts and a trodden path,
+  snow on rock tops, crown tops, impostors and grass tips; no rainbow; soaks you 4× slower), heat lightning
+  on warm clear evenings (double flickers inside distant clouds, a faint lift of the land's light), rain
+  shelters (26 in the first 100 km of seed 1; shingle roof with moss, bench, lantern; stay dry under the
+  roof; rain particles stop at the roof via a particle collision box). Selftests for snow, fog and heat
+  lightning. Debug `--weatherstate=fog|snow|rain|flash`, `--findspots=type`.

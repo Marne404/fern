@@ -163,6 +163,8 @@ void fragment() {
 	col *= mix(mix(0.55, 0.9, v_short), 1.0, smoothstep(0.0, 0.35, t));
 	// flower head at the tip
 	col = mix(col, v_flower_col, v_flower * smoothstep(0.82, 0.92, t));
+	// snow: the blades are bent under a white dusting
+	col = mix(col, vec3(0.9, 0.93, 1.0), clamp(snow_cover * 1.3, 0.0, 1.0) * mix(0.35, 0.8, t));
 	ALBEDO = col;
 	ROUGHNESS = 1.0;
 	BACKLIGHT = vec3(0.0);

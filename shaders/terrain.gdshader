@@ -201,6 +201,16 @@ void fragment() {
 		float foam = sea * smoothstep(0.75, 0.9, normalize(v_wnormal).y) * (1.0 - smoothstep(0.0, 0.05, abs(above - reach + 0.1))) * smoothstep(0.35, 0.6, n_fine + 0.2);
 		col = mix(col, vec3(0.95, 0.97, 0.96), foam * 0.6);
 	}
+	// snow: a white blanket on the level ground, thinner on steep flanks and on the trodden path, drifting
+	// in soft patches; a faint blue in its hollows
+	if (snow_cover > 0.001) {
+		float up_n = normalize(v_wnormal).y;
+		float drift = texture(paint_noise, p * 0.06 + 0.13).r * 0.6 + n_small * 0.4;
+		float cover = smoothstep(0.62, 0.9, up_n) * smoothstep(0.0, 1.0, snow_cover * 1.6 - (1.0 - drift) * 0.7);
+		cover *= 1.0 - path_mask * 0.45 * (0.6 + 0.4 * n_fine);
+		vec3 snow_col = mix(vec3(0.78, 0.84, 0.95), vec3(0.97, 0.98, 1.0), smoothstep(0.3, 0.8, drift));
+		col = mix(col, snow_col, clamp(cover, 0.0, 1.0));
+	}
 	// after rain: dark, glossy soil and puddles in the hollows of the path that mirror the sky
 	float rough = 1.0;
 	float spec = 0.0;

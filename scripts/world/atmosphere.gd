@@ -247,6 +247,7 @@ func _apply() -> void:
 	RenderingServer.global_shader_parameter_set("sun_light", c["sun_color"])
 	RenderingServer.global_shader_parameter_set("wetness", float(c.get("wet", 0.0)))
 	RenderingServer.global_shader_parameter_set("rain_amount", float(c.get("rain", 0.0)))
+	RenderingServer.global_shader_parameter_set("snow_cover", float(c.get("snow_cover", 0.0)))
 	env.ambient_light_energy = c["ambient_energy"]
 	env.ambient_light_color = c["ambient_color"]
 	_apply_fog()

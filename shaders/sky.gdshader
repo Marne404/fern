@@ -27,6 +27,7 @@ uniform float sky_bands = 0.0;      // pastel strata along the horizon (golden h
 uniform float aurora = 0.0;         // northern lights (night)
 uniform float shooting_stars = 0.0; // how often a shooting star crosses the night sky
 uniform float shooting_seed = 0.0;  // debug: shifts the shooting stars' timing
+uniform vec4 flash = vec4(0.0, -1.0, 0.0, 0.0);  // heat lightning: xz direction, brightness
 
 float hash21(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -287,6 +288,13 @@ void sky() {
 		col = mix(col, mix(horizon_color * 0.94, sea_color, smoothstep(0.0, -0.25, h)), sea_amount);
 	}
 
+	// heat lightning: a silent glow inside the distant clouds low above the horizon
+	if (flash.z > 0.001 && h > -0.02) {
+		float along = dot(normalize(d.xz + 0.0001), normalize(flash.xy));
+		float region = smoothstep(0.75, 0.97, along) * smoothstep(-0.02, 0.03, h) * (1.0 - smoothstep(0.08, 0.3, h));
+		float billow = texture(cloud_cells, vec2(atan(d.x, d.z) * 1.7, h * 6.0) + flash.xy * 3.0).r;
+		col += vec3(0.95, 0.85, 1.0) * region * (0.35 + billow * 0.9) * flash.z * 0.9;
+	}
 	if (rainbow > 0.0 && h > 0.0) {
 		// strong rainbows (after a shower) are wider, brighter and reach higher
 		float rb = clamp(rainbow, 0.0, 1.5);

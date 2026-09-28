@@ -148,6 +148,11 @@ void fragment() {
 	col *= 0.9 + 0.2 * n;
 	// wet leaves: a little darker and richer
 	col = mix(col, adjust_saturation(col, 1.15) * 0.86, wetness);
+	// snow on the tops of the crowns and bushes (upward-facing leaves)
+	if (snow_cover > 0.001 && mode != 3) {
+		float wup = (INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).y;
+		col = mix(col, vec3(0.92, 0.95, 1.0), smoothstep(0.25, 0.75, wup) * clamp(snow_cover * 1.3, 0.0, 1.0) * 0.8);
+	}
 	ALBEDO = bake_mask > 0.5 ? vec3(0.0) : adjust_saturation(col, saturation);
 	if (glow > 0.0 && bake_mask < 0.5) {
 		// brightest in the pale parts of the leaf, breathing slowly
