@@ -695,25 +695,36 @@ static func alpine() -> Dictionary:
 # ================================================================ 8 Deadwood Bog
 
 static func bog() -> Dictionary:
-	var dead := {"bark": {"tint": Color(0.7, 0.68, 0.64), "brightness": 0.9, "desaturate": 0.6, "ao_strength": 0.6}, "stiffness": 14.0}
+	var dead := {"bark": {"tint": Color(0.78, 0.76, 0.72), "brightness": 1.55, "desaturate": 0.75, "ao_strength": 0.5}, "stiffness": 14.0}
 	var twisted := tree_style(Color(0.16, 0.32, 0.1), Color(0.42, 0.56, 0.2), {"tint": Color(0.8, 0.78, 0.74)}, 7.0, {"translucency": 0.6})
 	var rock := rock_style(Color(0.52, 0.56, 0.5), 0.7)
+	var silver := {"bark": {"tint": Color(0.86, 0.86, 0.84), "brightness": 2.1, "desaturate": 0.9, "ao_strength": 0.4}, "stiffness": 14.0}
+	var carr := birch_style(Color(0.46, 0.54, 0.12), Color(0.82, 0.86, 0.36), {"translucency": 0.9})
+	var sedge := [Color(0.5, 0.52, 0.2), Color(0.58, 0.56, 0.24), Color(0.44, 0.48, 0.18), Color(0.66, 0.6, 0.3)]
+	var fern_island := cluster_layer(["Fern_2"], 9.0, [2.5, 45.0], 5, 2.6, [0.42, 0.62], true)
+	fern_island["patch"] = [2]
+	var fern_plants := cluster_layer(["Plant_2", "Plant_2_Big"], 1.0, [2.5, 40.0], 3, 1.4, [0.6, 1.0], true)
+	fern_plants["patch"] = [2]
 	return {
 		"name": NAMES[7],
+		"under_bush": {"dark": Color(0.22, 0.3, 0.1), "light": Color(0.52, 0.58, 0.22)},
+		# open bog as before · drowned forest · fern island · birch carr
+		"patches": [{"name": "open bog", "share": 0.4}, {"name": "drowned forest", "share": 0.25},
+			{"name": "fern island", "share": 0.2}, {"name": "birch carr", "share": 0.15}],
 		"blades": blades(0.6, Color(0.14, 0.2, 0.06), Color(0.48, 0.58, 0.2), Color(0.6, 0.52, 0.22)),
 		"terrain": terrain({"scree": 0, "gullies": 0.2, "hummocks": 0.8, "brooks": 0.0, "litter": 0.5, "litter_color": Color(0.36, 0.28, 0.16), "far_height": 18.0, "obstacles": ["fallen_tree", "river", "mud", "mud"], "ponds": 0.9, "pond_size": Vector2(12.0, 28.0), "water_shallow": Color(0.36, 0.5, 0.36), "water_deep": Color(0.12, 0.2, 0.16), "valley_width": 20.0, "valley_height": 6.0, "undulation": 0.8, "path_depth": 0.1,
 			"grass_dark": Color(0.26, 0.36, 0.12), "grass_light": Color(0.4, 0.48, 0.18),
 			"region_dark": Color(0.3, 0.3, 0.16), "region_light": Color(0.42, 0.4, 0.22),
 			"slope_color": Color(0.34, 0.36, 0.2), "path_color": Color(0.5, 0.44, 0.3), "crack": 0.2}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.3, 0.45, 0.45), "grade_high": Color(0.9, 0.92, 0.78), "grade_warm": -0.25, "grade_contrast": 0.18, "shafts": 0.4, "rain": 1.3, "mist_amount": 1.3, "temperature": 10.0, "mountain_color": Color(0.45, 0.5, 0.48), "mountain_shadow": Color(0.45, 0.5, 0.52), "mountain_snow": 0.0, "mountain_scale": 0.6, "birds": false, "sun_dir": Vector3(0.3, -0.35, 0.85), "sun_color": Color(0.95, 0.9, 0.78), "sun_energy": 1.3,
+		"atmosphere": atmosphere({"fx": {"wisps": 1.0}, "grade_shadow": Color(0.3, 0.45, 0.45), "grade_high": Color(0.9, 0.92, 0.78), "grade_warm": -0.25, "grade_contrast": 0.18, "shafts": 0.4, "rain": 1.3, "mist_amount": 1.3, "temperature": 10.0, "mountain_color": Color(0.45, 0.5, 0.48), "mountain_shadow": Color(0.45, 0.5, 0.52), "mountain_snow": 0.0, "mountain_scale": 0.6, "birds": false, "sun_dir": Vector3(0.3, -0.35, 0.85), "sun_color": Color(0.95, 0.9, 0.78), "sun_energy": 1.3,
 			"ambient_energy": 0.6, "ambient_color": Color(0.6, 0.66, 0.6), "fog_color": Color(0.7, 0.76, 0.72),
 			"fog_density": 0.009, "fog_sun_scatter": 0.3, "volumetric": 0.012, "saturation": 0.95,
 			"zenith_color": Color(0.45, 0.6, 0.72), "horizon_color": Color(0.78, 0.84, 0.82), "cloud_coverage": 0.38,
 			"cirrus_amount": 0.2, "cloud_shadow": Color(0.6, 0.64, 0.7), "particles": "motes",
 			"particle_color": Color(0.8, 1.0, 0.5), "butterflies": 0}),
 		"layers": [
-			grass_layer([Color(0.4, 0.55, 0.16), Color(0.5, 0.6, 0.2), Color(0.35, 0.48, 0.14)],
-				[Color(0.62, 0.55, 0.25), Color(0.45, 0.4, 0.18)], 2300.0, Vector2(0.5, 0.95)),
+			thinned(grass_layer([Color(0.4, 0.55, 0.16), Color(0.5, 0.6, 0.2), Color(0.35, 0.48, 0.14)],
+				[Color(0.62, 0.55, 0.25), Color(0.45, 0.4, 0.18)], 2300.0, Vector2(0.5, 0.95)), {2: 0.3}),
 			{"kind": "tree", "models": DEAD, "styles": [dead], "spacing": 12.0, "chance": 0.5, "dist": [5.0, 300.0],
 				"scale": [0.8, 1.3], "radius": 3.5, "collide": "trunk", "trunk": 0.3},
 			{"kind": "tree", "models": TWISTED, "styles": [twisted], "spacing": 30.0, "chance": 0.5, "dist": [10.0, 400.0],
@@ -724,6 +735,19 @@ static func bog() -> Dictionary:
 			cluster_layer(["Mushroom_Common", "Mushroom_Laetiporus"], 1.0, [2.0, 12.0], 4, 0.8, [0.9, 1.6]),
 			cluster_layer(["Plant_1_Big", "Plant_1"], 0.6, [2.5, 20.0], 2, 1.2, [0.6, 1.0], true),
 			pebble_layer(rock_style(Color(0.6, 0.62, 0.58), 0.3, false, {"top_light": 0.2}), 12.0),
+			# round 12: drowned forest, fern islands, birch carr, sedge
+			{"kind": "tree", "models": DEAD, "styles": [silver], "spacing": 7.0, "chance": 0.7, "dist": [5.0, 300.0], "patch": [1],
+				"scale": [0.75, 1.25], "radius": 3.0, "collide": "trunk", "trunk": 0.3},
+			{"kind": "rock", "models": ["Rock_Medium_4", "Rock_Medium_2"], "styles": [rock_style(Color(0.5, 0.54, 0.48), 0.9)], "spacing": 16.0,
+				"chance": 0.45, "dist": [5.0, 50.0], "patch": [1], "scale": [0.5, 1.1], "sink": 0.3, "radius": 2.5, "collide": "rock"},
+			fern_island,
+			fern_plants,
+			{"kind": "tree", "models": BIRCHES, "styles": [carr], "spacing": 8.0, "chance": 0.65, "dist": [5.0, 300.0], "patch": [3],
+				"scale": [0.5, 0.75], "radius": 2.0, "collide": "trunk", "trunk": 0.18},
+			{"kind": "grass", "models": ["Grass_Wide_Tall", "Grass_Wide_Short"], "density": 70.0, "dist": [3.0, 60.0],
+				"scale": [0.45, 0.8], "palette": sedge, "region_palette": sedge, "near": true, "thin": {2: 0.2}},
+			oyster_layer(0.3),
+			cluster_layer(["Mushroom_RedCap"], 0.35, [2.5, 20.0], 3, 0.7, [0.3, 0.5]),
 		],
 	}
 

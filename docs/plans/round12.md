@@ -283,3 +283,19 @@ gentians and edelweiss, cold clear air.
 - Result: giant groves and lone giant pines, granite outcrops and rock fields, alpine meadows with blue/white/
   yellow flowers and edelweiss (Flower_6) between the scree. Ice-crystal glitter on clear cold mornings
   (`hour` and `overcast` are now part of the shown atmosphere for effects).
+
+## Step 3.8 – Deadwood Bog
+
+Idea: a misty moor with silver deadwood, drowned forests and fern islands; at dusk will-o'-wisps float over
+the water – eerie, but gentle and beautiful, never scary.
+
+- Everywhere: shelf fungi on the dead trunks, tufts of broad sedge grass (Grass_Wide, olive), fly agarics.
+- Patches: open bog 40 % (as today) · drowned forest 25 % · fern island 20 % · birch carr 15 %.
+  - Drowned forest: dense silver-gray dead trees (spacing 7 m), mossy stones, sedge.
+  - Fern island: carpets of Fern_2 and blue-green Plant_2, twisted trees.
+  - Birch carr: pale birches with thin yellow-green crowns in the wet ground.
+- Effect "wisps": will-o'-wisps – a few soft blue-green lights floating low, drifting slowly and pulsing;
+  from dusk to dawn, and faintly on foggy days.
+- Result: drowned forests of silver deadwood, fern islands (grass thinned so the ferns show), pale birch carr,
+  a little olive sedge (at 260/1000 m² it had buried everything, now 70), shelf fungi on the dead trunks.
+  Will-o'-wisps: 26 soft teal lights floating low from dusk to dawn (and faintly on grey days).
