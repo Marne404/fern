@@ -759,15 +759,24 @@ static func coast() -> Dictionary:
 	var pine := tree_style(Color(0.12, 0.3, 0.12), Color(0.5, 0.62, 0.22), {"tint": Color(0.95, 0.82, 0.75)}, 8.0, {"sphere_normals": 0.55})
 	var cliff := rock_style(Color(0.52, 0.58, 0.72), 0.45, true, {"moss_color": Color(0.55, 0.62, 0.2), "top_light": 0.5})
 	var stack := rock_style(Color(0.4, 0.46, 0.62), 0.3, true, {"moss_color": Color(0.5, 0.58, 0.2), "top_light": 0.6, "triplanar_scale": 0.05})
+	var windswept := tree_style(Color(0.26, 0.44, 0.1), Color(0.82, 0.82, 0.3), {"tint": Color(0.95, 0.82, 0.75)}, 7.0, {"translucency": 1.0})
+	var gorse := {"leaves": leaves(Color(0.2, 0.36, 0.08), Color(0.52, 0.66, 0.16), {"sphere_normals": 0.8}), "stiffness": 7.0}
+	var marram := [Color(0.82, 0.78, 0.46), Color(0.74, 0.72, 0.4), Color(0.88, 0.84, 0.56), Color(0.66, 0.7, 0.34)]
+	var thrift := {"kind": "cluster", "models": ["Flower_6", "Flower_6_2", "Flower_6"], "styles": [{}], "density": 4.0, "dist": [2.5, 60.0],
+		"count": 16, "radius": 3.0, "scale": [0.8, 1.2], "tints": [Color(1.0, 0.55, 0.78), Color(1.0, 0.7, 0.86), Color(0.95, 0.45, 0.7)],
+		"vis": 60.0, "near": true, "tilt": 0.9, "patch": [3]}
 	return {
 		"name": NAMES[8],
+		# cliff meadow as before · windswept belt · dune grass · thrift slope
+		"patches": [{"name": "cliff meadow", "share": 0.4}, {"name": "windswept", "share": 0.25},
+			{"name": "dune grass", "share": 0.2}, {"name": "thrift slope", "share": 0.15}],
 		"blades": blades(0.55, Color(0.2, 0.34, 0.08), Color(0.72, 0.85, 0.22), Color(1.0, 0.8, 0.35)),
 		"terrain": terrain({"brooks": 0.0, "litter": 0.0, "litter_color": Color(0.6, 0.5, 0.3), "far_height": 45.0, "obstacles": ["fallen_tree"], "coast": 1.0, "terraces": 6.0, "valley_width": 14.0, "valley_ramp": 60.0, "valley_height": 16.0,
 			"undulation": 1.4, "grass_dark": Color(0.36, 0.5, 0.12), "grass_light": Color(0.62, 0.7, 0.2),
 			"region_dark": Color(0.6, 0.6, 0.2), "region_light": Color(0.76, 0.7, 0.3),
 			"slope_color": Color(0.5, 0.52, 0.66), "path_color": Color(0.78, 0.66, 0.46), "crack": 0.5,
 			"water_shallow": Color(0.3, 0.7, 0.72), "water_deep": Color(0.06, 0.24, 0.42)}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.42, 0.4, 0.75), "grade_high": Color(1.0, 0.78, 0.55), "grade_warm": 0.5, "rain": 0.8, "clock": 0.35, "mist_amount": 0.5, "sun_dir": Vector3(-0.5, -0.17, 0.85), "sun_color": Color(1.0, 0.7, 0.42), "sun_energy": 1.7,
+		"atmosphere": atmosphere({"fx": {"gulls": 1.0}, "grade_shadow": Color(0.42, 0.4, 0.75), "grade_high": Color(1.0, 0.78, 0.55), "grade_warm": 0.5, "rain": 0.8, "clock": 0.35, "mist_amount": 0.5, "sun_dir": Vector3(-0.5, -0.17, 0.85), "sun_color": Color(1.0, 0.7, 0.42), "sun_energy": 1.7,
 			"ambient_energy": 0.55, "ambient_color": Color(0.75, 0.58, 0.7), "fog_color": Color(1.0, 0.78, 0.6),
 			"fog_density": 0.0032, "fog_sun_scatter": 0.6, "saturation": 1.14, "exposure": 0.95,
 			"zenith_color": Color(0.3, 0.38, 0.72), "horizon_color": Color(1.0, 0.76, 0.5), "cloud_coverage": 0.5,
@@ -778,7 +787,7 @@ static func coast() -> Dictionary:
 			grass_layer([Color(0.55, 0.78, 0.18), Color(0.7, 0.82, 0.22), Color(0.48, 0.72, 0.15)],
 				[Color(0.95, 0.78, 0.3), Color(0.85, 0.7, 0.25)], 2400.0, Vector2(0.45, 0.85)),
 			{"kind": "tree", "models": COMMON, "styles": [green], "spacing": 14.0, "chance": 0.6, "dist": [7.0, 400.0], "side": -1.0,
-				"grove": [0.025, -0.1], "scale": [1.2, 1.9], "radius": 3.0, "collide": "trunk", "trunk": 0.3},
+				"grove": [0.025, -0.1], "scale": [1.2, 1.9], "radius": 3.0, "collide": "trunk", "trunk": 0.3, "thin": {2: 0.25, 3: 0.5}},
 			{"kind": "tree", "models": PINES, "styles": [pine], "spacing": 22.0, "chance": 0.4, "dist": [9.0, 30.0], "side": 1.0,
 				"scale": [1.2, 1.8], "radius": 3.0, "collide": "trunk", "trunk": 0.35},
 			# sea stacks in the ocean
@@ -795,6 +804,16 @@ static func coast() -> Dictionary:
 			cluster_layer(["Bush_Common_Flowers"], 0.6, [4.0, 30.0], 2, 2.0, [1.0, 1.6], true,
 				{"leaves": leaves(Color(0.25, 0.45, 0.1), Color(0.65, 0.8, 0.25), {"sphere_normals": 0.85}), "stiffness": 6.0}),
 			pebble_layer(rock_style(Color(0.72, 0.72, 0.76), 0.0, false, {"top_light": 0.3}), 20.0),
+			# round 12: bigger sea stacks, gorse, windswept belts, marram dunes, sea thrift
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [stack], "spacing": 55.0, "chance": 0.45, "dist": [80.0, 300.0], "side": 1.0,
+				"scale": [2.0, 5.0], "squash": Vector3(1.0, 2.0, 1.0), "sink": 0.05, "radius": 12.0},
+			{"kind": "detail", "models": HEDGE + ["Bush_Large_Flowers"], "styles": [gorse], "density": 1.4, "dist": [5.0, 45.0], "side": -1.0,
+				"scale": [0.8, 1.2], "shadows": true, "vis": 120.0, "near": true, "tilt": 0.3},
+			{"kind": "tree", "models": TALL + ["Pine_2", "Pine_4"], "styles": [windswept], "spacing": 9.0, "chance": 0.75, "dist": [7.0, 200.0],
+				"side": -1.0, "patch": [1], "scale": [0.6, 0.85], "lean": [0.1, 0.22], "radius": 3.5, "collide": "trunk", "trunk": 0.3},
+			{"kind": "grass", "models": ["Grass_Wide_Tall", "Grass_Wide_Short", "Grass_Wispy_Tall"], "density": 700.0, "dist": [3.0, 70.0],
+				"scale": [0.5, 0.85], "palette": marram, "region_palette": marram, "near": true, "patch": [2]},
+			thrift,
 		],
 	}
 

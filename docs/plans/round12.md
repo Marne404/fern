@@ -299,3 +299,21 @@ the water – eerie, but gentle and beautiful, never scary.
 - Result: drowned forests of silver deadwood, fern islands (grass thinned so the ferns show), pale birch carr,
   a little olive sedge (at 260/1000 m² it had buried everything, now 70), shelf fungi on the dead trunks.
   Will-o'-wisps: 26 soft teal lights floating low from dusk to dawn (and faintly on grey days).
+
+## Step 3.9 – Sunset Coast
+
+Idea: a golden-hour coast – windswept trees leaning inland, dune grass on the cliff tops, pink sea thrift
+and yellow gorse, sea birds over the water, a warm glittering sea.
+
+- Everywhere: gorse (yellow flowering long bushes) on the land side, Rock_Big sea stacks mixed in with the
+  old ones (bigger, more varied silhouettes).
+- Patches: cliff meadow 40 % (as today) · windswept pines 25 % · dune grass 20 % · thrift slope 15 %.
+  - Windswept: TallThick and pines leaning away from the sea (tilted inland), in a dense belt.
+  - Dune grass: broad pale marram grass (Grass_Wide) in waves, few trees.
+  - Thrift slope: pink sea-thrift cushions (Flower_6, pink tints) and clover.
+- Effect "sea_sparkle": handled by the sea shader already; here "gulls" – a few sea birds gliding and
+  circling over the water side (sprites with slow wingbeats), by day.
+- Result: windswept belts lean inland (new layer key `lean`: tilt range, per tree from a position hash),
+  golden marram dunes, sea-thrift cushions, gorse on the land side, bigger Rock_Big sea stacks. Gulls: six
+  bent-winged birds circling over the sea side, following you slowly; grey undersides (white vanished
+  against the bright evening sky).

@@ -826,6 +826,11 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 					rocks.append([model, xf])
 			else:
 				var xf2 := _ground_xf(lx, lz, s, 0.0, 0.03)
+				if layer.has("lean"):
+					# windswept: the tree leans away from the sea (towards −x), a little different each
+					var ln: Array = layer["lean"]
+					var tilt := lerpf(ln[0], ln[1], _hash01(x, z))
+					xf2.basis = Basis(Vector3(0, 0, 1), tilt) * xf2.basis
 				var tkey := key + "@far" if (lod != 0 and opt_far_trees) else key
 				# wider, rounder crowns; often a bush at the base of broadleaf trees
 				var tk := TreeKinds.of(model)

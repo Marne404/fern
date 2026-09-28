@@ -8,6 +8,10 @@ var _fx := {}          # name → {"node": GPUParticles3D, "level": strength now
 var _haze: MeshInstance3D
 var _haze_mat: ShaderMaterial
 var _haze_level := 0.0
+var _gulls: Node3D
+var _gull_level := 0.0
+var _gull_center := Vector3.ZERO
+var _gull_data: Array = []       # per gull: [radius, height, speed, angle]
 
 
 ## fx: blended strengths of the current biomes; shown: the atmosphere after time of day and weather
@@ -21,6 +25,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	var heat := float(fx.get("heat_haze", 0.0)) * smoothstep(0.35, 0.75, sun_up) * (1.0 - night) \
 		* (1.0 - clampf(rain * 5.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)))
 	_update_haze(heat, delta)
+	_update_gulls(float(fx.get("gulls", 0.0)) * (1.0 - night) * (1.0 - clampf(rain * 3.0, 0.0, 1.0)), cam, delta)
 	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
 	# how hard the wind blows right now (1 = calm, up to ~2.6 in a strong gust)
 	var gust := clampf((WindGusts.current_strength - 1.0) / 1.2, 0.0, 1.0)
@@ -82,10 +87,75 @@ func _update_haze(w: float, delta: float) -> void:
 	_haze_mat.set_shader_parameter("amount", _haze_level)
 
 
+## Sea gulls circling over the water side (the sea lies towards +x), gliding with a wingbeat now and then
+func _update_gulls(w: float, cam: Camera3D, delta: float) -> void:
+	_gull_level = move_toward(_gull_level, w, delta * 0.3)
+	if _gulls == null:
+		if _gull_level <= 0.01:
+			return
+		_gulls = Node3D.new()
+		_gulls.top_level = true
+		add_child(_gulls)
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for side in [-1.0, 1.0]:
+			# long, bent gull wings: inner arm up, outer hand slightly down
+			st.add_vertex(Vector3(0.0, 0.0, -0.2))
+			st.add_vertex(Vector3(side * 0.55, 0.12, 0.05))
+			st.add_vertex(Vector3(0.0, 0.0, 0.2))
+			st.add_vertex(Vector3(side * 0.55, 0.12, 0.05))
+			st.add_vertex(Vector3(side * 1.2, 0.0, 0.3))
+			st.add_vertex(Vector3(side * 0.5, 0.12, -0.12))
+		st.add_vertex(Vector3(0.0, 0.03, -0.55))
+		st.add_vertex(Vector3(0.1, 0.0, 0.45))
+		st.add_vertex(Vector3(-0.1, 0.0, 0.45))
+		st.generate_normals()
+		var mesh := st.commit()
+		var mat := ShaderMaterial.new()
+		mat.shader = preload("res://shaders/bird.gdshader")
+		# seen from below against the bright sky: a soft grey underside reads better than white
+		mat.set_shader_parameter("color", Color(0.72, 0.74, 0.8))
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 5
+		for i in 6:
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			mi.material_override = mat
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.scale = Vector3.ONE * rng.randf_range(0.55, 0.75)
+			mi.set_instance_shader_parameter("phase", rng.randf() * TAU)
+			_gulls.add_child(mi)
+			_gull_data.append([rng.randf_range(7.0, 18.0), rng.randf_range(-4.0, 6.0), rng.randf_range(0.18, 0.3) * (1.0 if i % 3 else -1.0), rng.randf() * TAU])
+		_gull_center = Vector3(INF, INF, INF)
+	_gulls.visible = _gull_level > 0.01
+	if not _gulls.visible:
+		return
+	# the circle drifts along with you, out over the sea and ahead
+	var fwd := -cam.global_basis.z
+	fwd = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	var target := cam.global_position + Vector3(30.0, 18.0, 0.0) + fwd * 20.0
+	if not _gull_center.is_finite() or _gull_center.distance_to(target) > 200.0:
+		_gull_center = target
+	_gull_center = _gull_center.lerp(target, 1.0 - exp(-delta * 0.15))
+	var n := _gulls.get_child_count()
+	var shown := int(round(_gull_level * n))
+	for i in n:
+		var g: Array = _gull_data[i]
+		g[3] = float(g[3]) + float(g[2]) * delta
+		var a := float(g[3])
+		var r := float(g[0])
+		var p := _gull_center + Vector3(cos(a) * r, float(g[1]) + sin(a * 2.0) * 1.5, sin(a) * r)
+		var tangent := Vector3(-sin(a), 0.0, cos(a)) * signf(float(g[2]))
+		var mi := _gulls.get_child(i) as MeshInstance3D
+		mi.visible = i < shown
+		mi.global_transform = Transform3D(Basis.looking_at(tangent, Vector3.UP).rotated(tangent, -0.3 * signf(float(g[2]))), p).scaled_local(Vector3.ONE * 1.25)
+
+
 ## After an origin shift the particles are in the wrong place – restart them.
 func restart() -> void:
 	for n in _fx:
 		(_fx[n]["node"] as GPUParticles3D).restart()
+	_gull_center = Vector3(INF, INF, INF)
 
 
 func _build(name: String) -> GPUParticles3D:
