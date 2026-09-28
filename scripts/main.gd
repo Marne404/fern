@@ -31,6 +31,7 @@ var particles: AmbientParticles
 var night_flies: AmbientParticles
 var rain_fx: RainFx
 var canopy_shafts: CanopyShafts
+var songbirds: Songbirds
 var _soaked_hint := false
 var gusts: WindGusts
 var leaf_fall: LeafFall
@@ -190,6 +191,9 @@ func _ready() -> void:
 	canopy_shafts = CanopyShafts.new()
 	canopy_shafts.world = world
 	add_child(canopy_shafts)
+	songbirds = Songbirds.new()
+	songbirds.world = world
+	add_child(songbirds)
 	birds = Birds.new()
 	birds.world = world
 	mountains = Mountains.new()
@@ -563,6 +567,9 @@ func _process_inner(delta: float) -> void:
 	streaks.camera = cam
 	streaks.enabled = Settings.values["wind_fx"]
 	butterflies.camera = cam
+	songbirds.camera = cam
+	songbirds.allowed = atmosphere.current.get("birds", true)
+	songbirds.activity = (1.0 - float(atmosphere.shown.get("night", 0.0))) * (1.0 - clampf(atmosphere.weather.rain * 3.0, 0.0, 1.0))
 	# butterflies and bees hide at night and in the rain
 	butterflies.activity = (1.0 - float(atmosphere.shown.get("night", 0.0))) * (1.0 - clampf(atmosphere.weather.rain * 3.0, 0.0, 1.0))
 	birds.camera = cam
@@ -727,6 +734,7 @@ func _on_origin_shifted(shift: Vector3) -> void:
 		c.global_position -= shift
 	footprints.shift(shift)
 	canopy_shafts.shift(shift)
+	songbirds.shift(shift)
 	particles.restart()
 	leaf_fall.restart()
 	desert_fx.shift(shift)

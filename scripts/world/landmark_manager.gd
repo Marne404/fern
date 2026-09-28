@@ -217,6 +217,8 @@ func _build(p: Dictionary, corner: Vector2, lod: int) -> Node3D:
 				var b := Basis(Vector3.UP, -ang2) * Basis(Vector3.FORWARD, rng.randf_range(-0.12, 0.12))
 				var sp := Vector3(sx, ground.call(sx, sz) + sh_h * 0.5 - 0.4, sz)
 				_piece(root, StructureModels.standing_stone(sh_h, i + int(p["seed"]) % 5, sand), Transform3D(b, sp), null, bs, lod)
+				if lod == 0:
+					Songbirds.mark(root, sp + Vector3(0, sh_h * 0.5 + 0.02, 0))
 				# every third pair carries a lintel (trilithon)
 				if i % 3 == 1 and i + 1 < n:
 					var ang3 := (i + 0.5) * TAU / n

@@ -199,6 +199,8 @@ func _build(p: Dictionary, corner: Vector2) -> Node3D:
 			var body := StaticBody3D.new()
 			root.add_child(body)
 			_model(body, StructureModels.bench(), Vector3.ZERO)
+			Songbirds.mark(root, Vector3(0.55, 0.92, -0.28))
+			Songbirds.mark(root, Vector3(-0.6, 0.92, -0.28))
 			var cs := CollisionShape3D.new()
 			var shape := BoxShape3D.new()
 			shape.size = Vector3(1.6, 0.5, 0.45)
@@ -347,6 +349,7 @@ func _signpost(root: Node3D, p: Dictionary) -> void:
 	rng.seed = p["seed"]
 	root.rotation.y = 0.0
 	_model(root, StructureModels.signpost_post(), Vector3.ZERO)
+	Songbirds.mark(root, Vector3(0, 2.2, 0))
 	var names := PLACES.duplicate()
 	for i in 2:
 		var arm := Node3D.new()

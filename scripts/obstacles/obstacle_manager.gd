@@ -1031,6 +1031,8 @@ func _build_stile(o: Dictionary, root: Node3D) -> void:
 		var p := _ground(o, c + across * ts[i])
 		var stile_post := absf(ts[i]) < 1.0
 		_post(root, p, 1.75 if stile_post else 1.3)
+		if i % 2 == 0:
+			Songbirds.mark(root, p + Vector3(0, (1.75 if stile_post else 1.3) - 0.14, 0))
 		if prev != Vector3.INF:
 			for h: float in [0.5, 0.95]:
 				var a := prev + Vector3(0, h, 0)

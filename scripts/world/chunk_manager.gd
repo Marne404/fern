@@ -97,6 +97,20 @@ func is_ready_around(world_xz: Vector2, radius := 16.0) -> bool:
 
 
 ## Rock footprints touching a rectangle (world xz)
+## Rocks near a point: Vector3(x, z local, radius)
+func rock_disks_near(local_pos: Vector3, radius: float) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var wp := Vector2(local_pos.x + origin.x, local_pos.z + origin.y)
+	var c0 := _coord_of(wp - Vector2(radius, radius))
+	var c1 := _coord_of(wp + Vector2(radius, radius))
+	for cz in range(c0.y, c1.y + 1):
+		for cx in range(c0.x, c1.x + 1):
+			for d in (_rock_disks.get(Vector2i(cx, cz), PackedVector3Array()) as PackedVector3Array):
+				if Vector2(d.x, d.y).distance_squared_to(wp) < radius * radius:
+					out.append(Vector3(d.x - origin.x, d.y - origin.y, d.z))
+	return out
+
+
 func rock_disks_in(rect: Rect2) -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	var c := _coord_of(rect.get_center())

@@ -146,6 +146,28 @@ static func buzz_loop() -> AudioStreamWAV:
 	return w
 
 
+## A positional sound (birds, splashes) that frees itself
+static func play_at(parent: Node, which: String, pos: Vector3, volume_db := -6.0, pitch := 1.0) -> void:
+	var vol: float = 0.8
+	var settings := parent.get_node_or_null("/root/Settings")
+	if settings:
+		vol = settings.values.get("sfx_volume", 0.8)
+	if vol <= 0.01:
+		return
+	if not _cache.has(which):
+		_cache[which] = _make(which)
+	var p := AudioStreamPlayer3D.new()
+	p.stream = _cache[which]
+	p.volume_db = volume_db + linear_to_db(vol)
+	p.pitch_scale = pitch
+	p.unit_size = 4.0
+	p.max_distance = 45.0
+	parent.add_child(p)
+	p.global_position = pos
+	p.play()
+	p.finished.connect(p.queue_free)
+
+
 static func _make(which: String) -> AudioStreamWAV:
 	var samples := PackedFloat32Array()
 	match which:
@@ -174,6 +196,37 @@ static func _make(which: String) -> AudioStreamWAV:
 						var x := TAU * f * h * t
 						s += (sin(x) + 0.35 * sin(2.0 * x) + 0.2 * sin(3.0 * x)) * (1.0 if h == 1.0 else 0.45)
 					samples.append(s * 0.22 * env)
+		"chirp_0", "chirp_1", "chirp_2", "chirp_3":
+			# songbird calls: short whistled notes that glide (robin-like trills, tit "tee-tee", sparrow chirps)
+			var v := int(which.right(1))
+			var notes: Array = [[[3200, 4200, 0.07], [4100, 3500, 0.06], [3600, 4400, 0.08]],
+				[[5200, 5000, 0.09], [0, 0, 0.05], [5200, 5000, 0.09], [0, 0, 0.05], [3900, 3800, 0.14]],
+				[[2800, 3400, 0.05], [0, 0, 0.04], [2900, 3500, 0.05], [0, 0, 0.04], [3000, 3300, 0.05]],
+				[[4400, 3000, 0.16], [0, 0, 0.06], [4200, 3200, 0.12]]][v]
+			var ph := 0.0
+			for nt in notes:
+				var f0: float = nt[0]
+				var f1: float = nt[1]
+				var d: float = nt[2]
+				var m := int(RATE * d)
+				for i in m:
+					var t := float(i) / m
+					if f0 <= 0.0:
+						samples.append(0.0)
+						continue
+					var f := lerpf(f0, f1, t) + sin(t * 40.0) * 60.0
+					ph += TAU * f / RATE
+					var env := sin(t * PI) * (1.0 if t > 0.1 else t * 10.0)
+					samples.append(sin(ph) * env * 0.5)
+		"flutter":
+			# wings taking off: a few soft, fast whooshes
+			var n := int(RATE * 0.35)
+			var lp := 0.0
+			for i in n:
+				var t := float(i) / RATE
+				lp += (randf_range(-1.0, 1.0) - lp) * 0.25
+				var beats := pow(maxf(sin(t * TAU * 16.0), 0.0), 3.0)
+				samples.append(lp * beats * (1.0 - t / 0.35) * 0.9)
 		"squeak":
 			var n := int(RATE * 0.35)
 			var ph := 0.0
