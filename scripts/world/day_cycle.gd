@@ -169,6 +169,12 @@ func apply(c: Dictionary) -> Dictionary:
 	out["mist"] = m["mist"] * float(c.get("mist_amount", 1.0))
 	out["flies"] = m["flies"]
 	out["night"] = nightness()
+	# color grading: warmer in the golden hours, cooler and bluer at night
+	var night := float(out["night"])
+	out["grade_warm"] = lerpf(float(c.get("grade_warm", 0.0)), 0.7, float(m["glow"]) * 0.6 * (1.0 - night))
+	out["grade_warm"] = lerpf(float(out["grade_warm"]), -0.6, night)
+	out["grade_shadow"] = (c.get("grade_shadow", Color(0.35, 0.55, 0.75)) as Color).lerp(Color(0.25, 0.32, 0.8), night * 0.7)
+	out["grade_high"] = (c.get("grade_high", Color(1.0, 0.86, 0.62)) as Color).lerp(Color(1.0, 0.72, 0.45), float(m["glow"]) * 0.5 * (1.0 - night))
 	# sunbeams: strongest with low morning and evening light, none from the moon
 	out["shaft_time"] = 0.0 if moon else (0.55 + 0.6 * float(m["glow"])) * clampf(float(m["e"]) * 1.5, 0.0, 1.0)
 	# nights are cool, misty mornings a little too (a sweater starts to make sense)

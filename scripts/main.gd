@@ -626,6 +626,8 @@ func _process_inner(delta: float) -> void:
 	RenderingServer.global_shader_parameter_set("player_pos", player.global_position if player and mode != Mode.MENU else Vector3(0, -1000, 0))
 	RenderingServer.global_shader_parameter_set("camera_world", _active_camera().global_position)
 	film.visible = Settings.values["film_look"]
+	_update_grading(delta)
+	atmosphere.set_resting(player != null and mode == Mode.PLAYING and (player.resting or player.sleeping), delta)
 	_update_underwater(cam, delta)
 	outlines.visible = Settings.values["outlines"]
 	mountains.follow(cam.global_position, world.height_local(cam.global_position.x, cam.global_position.z) - 30.0)
@@ -922,6 +924,39 @@ func _update_night_flies(cam: Camera3D, fwd: Vector3) -> void:
 		night_flies.particles.emitting = true
 		night_flies.particles.amount_ratio = flies
 	night_flies.follow(cam.global_position, fwd)
+
+
+var _grade := {}
+
+
+## Biome and time-of-day color grading (smoothly blended). With the film look it drives split toning,
+## white balance and contrast; without it (Low/Medium) at least the white balance, through the environment.
+func _update_grading(delta: float) -> void:
+	var sh := atmosphere.shown
+	if sh.is_empty():
+		return
+	var k := 1.0 - exp(-delta * 1.2)
+	for key in ["grade_shadow", "grade_high", "grade_warm", "grade_contrast"]:
+		var v = sh.get(key)
+		if v == null:
+			continue
+		if not _grade.has(key):
+			_grade[key] = v
+		elif v is Color:
+			_grade[key] = (_grade[key] as Color).lerp(v, k)
+		else:
+			_grade[key] = lerpf(_grade[key], v, k)
+	var fm := film.material as ShaderMaterial
+	fm.set_shader_parameter("shadow_tint", _grade.get("grade_shadow", Color(0.35, 0.55, 0.75)))
+	fm.set_shader_parameter("highlight_tint", _grade.get("grade_high", Color(1.0, 0.86, 0.62)))
+	fm.set_shader_parameter("warmth", _grade.get("grade_warm", 0.0))
+	fm.set_shader_parameter("contrast", _grade.get("grade_contrast", 0.25))
+	if not film.visible:
+		var w: float = _grade.get("grade_warm", 0.0)
+		atmosphere.env.adjustment_color_correction = null
+		atmosphere.env.adjustment_brightness = 1.0
+		atmosphere.env.adjustment_contrast = 1.0 + float(_grade.get("grade_contrast", 0.25)) * 0.2
+		atmosphere.env.adjustment_saturation = float(sh.get("saturation", 1.08)) * (1.0 + absf(w) * 0.03)
 
 
 func _update_mist() -> void:

@@ -133,5 +133,10 @@ that competes with the scout; motion slow and calm.
 - **Depth of field while resting:** when you sit, the distance blurs softly (and sharpens again when you walk).
 - **Color grading per biome and time of day:** warm/cool balance, tinted shadows and highlights, contrast;
   golden hour warmer, dusk cooler. Works on all presets.
+- **Result:** per-biome `grade_shadow`, `grade_high`, `grade_warm`, `grade_contrast`, bent by the clock (golden
+  hours warmer and with golden highlights, nights cool and blue), blended smoothly into the film-look pass
+  (white balance + split toning + S-curve); without the film look a gentler contrast/saturation. Rest blur:
+  resting or sleeping pulls the far focus from 220 m to 24 m over ~2 s (back in ~1 s), setting "Soft focus while
+  resting". Fewer fallen petals on the trail itself.
 
 ## 10. Website, README, release

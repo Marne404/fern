@@ -31,6 +31,8 @@ var _last_z := INF
 
 ## Distance at which the haze reaches full strength
 var fog_end := 1100.0
+var _dof: CameraAttributesPractical
+var _rest_k := 0.0
 
 func setup(p_gen: WorldGen, parent: Node) -> void:
 	gen = p_gen
@@ -118,6 +120,7 @@ func apply_quality() -> void:
 	sun.light_angular_distance = 1.2 if Settings.values["shadows"] >= 4 else 0.5
 	# depth of field: distant scenery soft like a painting
 	var attrs := CameraAttributesPractical.new()
+	_dof = attrs
 	attrs.dof_blur_far_enabled = Settings.values["dof"]
 	attrs.dof_blur_far_distance = 220.0
 	attrs.dof_blur_far_transition = 400.0
@@ -226,3 +229,18 @@ func _apply() -> void:
 		vol = maxf(vol, 0.0015)
 	env.volumetric_fog_enabled = Settings.values["volumetric"] and vol > 0.0005
 	env.volumetric_fog_density = minf(vol, 0.007)
+
+
+## Resting: the distance melts softly (and comes back when you walk on). Works on every preset
+## (setting "rest_blur"); on Ultra it deepens the always-on distance blur.
+func set_resting(on: bool, delta: float) -> void:
+	if _dof == null:
+		return
+	var want := 1.0 if (on and Settings.values.get("rest_blur", true)) else 0.0
+	_rest_k = move_toward(_rest_k, want, delta * (0.45 if want > _rest_k else 0.9))
+	var always: bool = Settings.values["dof"]
+	_dof.dof_blur_far_enabled = always or _rest_k > 0.01
+	var k := smoothstep(0.0, 1.0, _rest_k)
+	_dof.dof_blur_far_distance = lerpf(220.0, 24.0, k)
+	_dof.dof_blur_far_transition = lerpf(400.0, 60.0, k)
+	_dof.dof_blur_amount = lerpf(0.035 if always else 0.0, 0.06, k)

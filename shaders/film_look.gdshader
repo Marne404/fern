@@ -9,6 +9,8 @@ uniform vec3 highlight_tint : source_color = vec3(1.0, 0.86, 0.62);
 uniform float vibrance = 0.3;
 uniform float vignette = 0.28;
 uniform float grain = 0.014;
+uniform float warmth = 0.0;          // −1 cool … 1 warm (white balance shift)
+uniform float contrast = 0.25;       // strength of the S-curve
 
 void fragment() {
 	vec2 uv = SCREEN_UV;
@@ -19,6 +21,8 @@ void fragment() {
 	float sh = 1.0 - smoothstep(0.0, 0.45, l);
 	float hi = smoothstep(0.5, 1.0, l);
 	vec3 g = c;
+	// white balance: warm = more red/less blue, cool the other way (kept gentle)
+	g *= vec3(1.0 + warmth * 0.07, 1.0 + warmth * 0.015, 1.0 - warmth * 0.09);
 	g = mix(g, g * shadow_tint * 1.55, sh * 0.3);
 	g = mix(g, g * highlight_tint * 1.1, hi * 0.25);
 
@@ -30,7 +34,7 @@ void fragment() {
 	g = mix(vec3(lg), g, 1.0 + vibrance * (1.0 - sat));
 
 	// slight S-curve for more depth
-	g = mix(g, g * g * (3.0 - 2.0 * g), 0.25);
+	g = mix(g, g * g * (3.0 - 2.0 * g), contrast);
 
 	vec2 q = uv - 0.5;
 	g *= clamp(1.0 - dot(q, q) * vignette * 2.4, 0.0, 1.0);
