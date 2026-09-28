@@ -311,6 +311,7 @@ func row(z: float, with_ponds := true) -> Dictionary:
 		"a": a, "b": b, "t": t,
 		"ponds": ponds_near(z) if with_ponds else [],
 		"pools": pools_near(z),
+		"brooks": brooks_near(z) if with_ponds else [],
 	}
 
 
@@ -319,6 +320,27 @@ func offset_in_row(x: float, r: Dictionary) -> float:
 
 
 func height_in_row(x: float, r: Dictionary) -> float:
+	var h := _height_core(x, r)
+	# brooks beside the path: a small channel with gentle banks
+	for b in r["brooks"]:
+		var c := brook_center(b, r)
+		if c.x == INF:
+			continue
+		var dx: float = absf(x - c.x) / r["inv_len"]
+		var hw: float = b["half"] * c.y
+		if dx > hw + 3.0:
+			continue
+		var lvl := brook_level(b, r, c.x)
+		var target: float
+		if dx < hw:
+			target = lvl - 0.12 - float(b["depth"]) * (1.0 - (dx / hw) * (dx / hw))
+		else:
+			target = lvl - 0.12 + (dx - hw) * 0.34
+		h = minf(h, lerpf(h, target, c.y))
+	return h
+
+
+func _height_core(x: float, r: Dictionary) -> float:
 	var z: float = r["z"]
 	var d := absf(offset_in_row(x, r))
 	var h: float = r["elev"] + _und.get_noise_2d(x, z) * r["und"]
@@ -510,9 +532,91 @@ func water_in_row(x: float, r: Dictionary, margin := 1.05) -> float:
 	for rv in r["rivers"]:
 		if river_distance(x, z, rv) < river_half(river_along(x, z, rv), rv) * margin + 0.3:
 			return rv["level"]
+	for b in r.get("brooks", []):
+		var c := brook_center(b, r)
+		if c.x != INF and c.y > 0.3 and absf(x - c.x) / r["inv_len"] < float(b["half"]) * c.y * margin + 0.15:
+			return brook_level(b, r, c.x)
 	if r["coast"] > 0.01:
 		return r["sea"]
 	return -INF
+
+
+# ================================================================ Brooks
+# Now and then a little brook runs beside the path for a while: it wells up from a spring, keeps to one side
+# of the trail with a few bends and finally turns away into the valley.
+
+const BROOK_CELL := 700.0
+var _brooks := {}
+var _br_mutex := Mutex.new()
+
+
+func brook(k: int) -> Dictionary:
+	_br_mutex.lock()
+	var cached = _brooks.get(k)
+	_br_mutex.unlock()
+	if cached != null:
+		return cached
+	var b := _compute_brook(k)
+	_br_mutex.lock()
+	_brooks[k] = b
+	_br_mutex.unlock()
+	return b
+
+
+func _compute_brook(k: int) -> Dictionary:
+	if k < 1:
+		return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _hash(k, 909)
+	var z0 := -(k + 0.15 + rng.randf() * 0.5) * BROOK_CELL
+	var length := rng.randf_range(90.0, 190.0)
+	var zm := z0 - length * 0.5
+	var chance: float = biomes[dominant_biome(zm)]["terrain"].get("brooks", 0.5)
+	if rng.randf() > chance:
+		return {}
+	# not near obstacles, ponds' neighbours or the coast
+	if obstacle_zone(z0, 90.0) or obstacle_zone(z0 - length, 90.0) or obstacle_zone(zm, 90.0):
+		return {}
+	if coast_info(z0).y > 0.05 or coast_info(z0 - length).y > 0.05:
+		return {}
+	return {"k": k, "z0": z0, "z1": z0 - length, "side": 1.0 if rng.randf() < 0.5 else -1.0,
+		"off": rng.randf_range(7.5, 10.0), "half": rng.randf_range(1.3, 1.7), "depth": 0.5,
+		"phase": rng.randf() * TAU, "turn": 1.0 if rng.randf() < 0.5 else -1.0}
+
+
+func brooks_near(z: float) -> Array:
+	var out := []
+	var k := floori(-z / BROOK_CELL)
+	for kk in [k - 1, k, k + 1]:
+		var b := brook(kk)
+		if not b.is_empty() and z <= float(b["z0"]) + 3.0 and z >= float(b["z1"]) - 30.0:
+			out.append(b)
+	return out
+
+
+## Brook centre at the row's z: Vector2(x, strength 0..1) or (INF, 0) outside it.
+## It starts narrow at the spring, and near its end it bends away from the path into the valley.
+func brook_center(b: Dictionary, r: Dictionary) -> Vector2:
+	var z: float = r["z"]
+	var z0: float = b["z0"]
+	var z1: float = b["z1"]
+	if z > z0 + 1.0 or z < z1 - 28.0:
+		return Vector2(INF, 0.0)
+	var t := (z0 - z) / (z0 - z1)
+	var strength := smoothstep(0.0, 0.05, t) * 0.55 + 0.45 * smoothstep(0.0, 0.15, t)
+	if z > z0:
+		strength *= clampf(1.0 - (z - z0), 0.0, 1.0)
+	var off: float = b["off"] + sin(z * 0.06 + float(b["phase"])) * 1.3 + sin(z * 0.17 + float(b["phase"]) * 2.0) * 0.4
+	# the end: it turns away from the trail and disappears between the hills
+	var away := smoothstep(z1 + 12.0, z1 - 28.0, z)
+	off += away * 26.0
+	strength *= 1.0 - smoothstep(z1 - 18.0, z1 - 28.0, z)
+	return Vector2(r["px"] + float(b["side"]) * off / r["inv_len"], strength)
+
+
+## Water level of the brook at x (it follows the untouched ground at its bed, a little below)
+func brook_level(b: Dictionary, r: Dictionary, cx: float) -> float:
+	return _height_core(cx, r) - 0.28
 
 
 # ================================================================ Obstacles

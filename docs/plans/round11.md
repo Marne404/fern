@@ -106,6 +106,13 @@ that competes with the scout; motion slow and calm.
   flowers) floating on still ponds.
 - **Brooks beside the path:** a small stream in a carved bed that runs along the trail for a while (from a
   spring), with flowing water, pebbles, a babbling sound, and turns away into the valley.
+- **Result:** procedural reeds with cattails (swaying through the foliage wind) at pond shores and brook banks;
+  lily pads in groups on still ponds, 30 % in bloom (white or pink with a golden heart). Brooks: one per 700 m cell
+  by biome chance, 90–190 m long, 7.5–10 m beside the path, 2.6–3.4 m wide (the 2 m terrain grid must resolve the
+  channel), meandering, starting at a rock and bending away into the valley at the end; carved in `height_in_row`
+  (level = untouched ground − 0.28 m), water ribbon per chunk (only the chunk it runs through), flowing, clear,
+  little foam and almost no sky mirror, pebbles in the bed, no grass or blades inside, babbling loop at the nearest
+  point. `_wet()` knows brooks.
 
 ## 8. Terrain variety
 

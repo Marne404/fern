@@ -145,6 +145,7 @@ func run() -> void:
 	await _test_steps(p)
 	_test_day_cycle()
 	_test_weather()
+	_test_brook()
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -363,6 +364,28 @@ func _test_weather() -> void:
 	for i in 3000:
 		d.advance(0.1, 0.0)
 	check("No rain in the desert", d.rain < 0.01 and d.state == Weather.FAIR)
+
+
+## A brook: carved bed under water, banks above it, water found by water_level
+func _test_brook() -> void:
+	var gen: WorldGen = main.gen
+	var b := {}
+	for k in range(1, 80):
+		b = gen.brook(k)
+		if not b.is_empty():
+			break
+	check("There are brooks", not b.is_empty())
+	if b.is_empty():
+		return
+	var z: float = (float(b["z0"]) + float(b["z1"])) * 0.5
+	var r := gen.row(z)
+	var c := gen.brook_center(b, r)
+	var lvl := gen.brook_level(b, r, c.x)
+	var bed := gen.height_in_row(c.x, r)
+	var bank := gen.height_in_row(c.x + float(b["side"]) * 4.0 / r["inv_len"], r)
+	check("Brook bed lies under the water", bed < lvl - 0.3, "bed %.2f water %.2f" % [bed, lvl])
+	check("Brook banks rise above the water", bank > lvl, "bank %.2f" % bank)
+	check("water_level finds the brook", absf(gen.water_level(c.x, z) - lvl) < 0.01)
 
 
 func _test_voice(p: Wanderer) -> void:

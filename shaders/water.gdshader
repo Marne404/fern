@@ -21,13 +21,16 @@ instance uniform vec3 deep_color : source_color = vec3(0.08, 0.32, 0.5);
 uniform vec3 foam_color : source_color = vec3(0.95, 0.98, 1.0);
 uniform float clarity_depth = 2.2;
 instance uniform vec2 flow = vec2(0.0);   // rivers: flow direction * speed (m/s)
+instance uniform float brook = 0.0;       // 1 = a small clear brook: little foam, you see the pebbles
 
 varying vec3 v_world;
+varying float v_brook;
 varying vec2 v_local;
 
 void vertex() {
 	vec3 lw = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	v_local = lw.xz;
+	v_brook = brook;
 	v_world = lw + vec3(world_origin.x, 0.0, world_origin.y);
 }
 
@@ -126,7 +129,8 @@ void fragment() {
 
 	// Genshin water: strong turquoise in the shallows, clear blue in the depth
 	vec3 water = mix(shallow_color * vec3(0.85, 1.05, 1.1), deep_color * vec3(0.9, 1.0, 1.15), depth_fac);
-	float clarity = exp(-thickness / clarity_depth);
+	float clarity = exp(-thickness / mix(clarity_depth, 1.4, brook));
+	clarity = mix(clarity, max(clarity, 0.75), brook);
 	vec3 body = mix(water, under * mix(vec3(1.0), shallow_color * 1.4, 0.4), clarity * 0.75);
 
 	// shore foam in lines that run gently onto the shore
@@ -140,6 +144,8 @@ void fragment() {
 	}
 	// foam is a close-up detail: no white ring from afar
 	foam *= 1.0 - smoothstep(18.0, 60.0, length(VERTEX));
+	// brooks: only a lacy edge and a few bubbles in the current
+	foam *= mix(1.0, 0.28, brook);
 	body = mix(body, foam_color, foam * 0.75);
 	body = mix(body, foam_color, clamp(rings, 0.0, 1.0) * 0.4);
 
@@ -148,8 +154,8 @@ void fragment() {
 	NORMAL_MAP = vec3(nmap.x * 0.5 + 0.5, nmap.z * 0.5 + 0.5, 1.0);
 	NORMAL_MAP_DEPTH = 0.9;
 	// ring crests break up the mirror image (otherwise they vanish in the bright reflection)
-	ROUGHNESS = max(mix(0.04, 0.5, foam), clamp(rings, 0.0, 1.0) * 0.5);
-	SPECULAR = 0.65;
+	ROUGHNESS = max(max(mix(0.04, 0.5, foam), clamp(rings, 0.0, 1.0) * 0.5), brook * 0.3);
+	SPECULAR = mix(0.65, 0.05, brook);
 	ALPHA = mix(0.88, 1.0, depth_fac) * smoothstep(0.0, 0.04, thickness);
 }
 
@@ -158,6 +164,8 @@ void light() {
 	vec3 r = reflect(-LIGHT, NORMAL);
 	float rv = clamp(dot(r, VIEW), 0.0, 1.0);
 	float sparkle = pow(rv, 900.0) * 30.0 + pow(rv, 120.0) * 2.5 + pow(rv, 12.0) * 0.12;
+	// a brook is small and lively: glints, but no broad mirror of the sun
+	sparkle *= mix(1.0, 0.07, v_brook);
 	SPECULAR_LIGHT += LIGHT_COLOR * ATTENUATION * sparkle;
 	DIFFUSE_LIGHT += LIGHT_COLOR * ATTENUATION * clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * 0.3 / PI;
 }

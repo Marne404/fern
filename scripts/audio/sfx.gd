@@ -121,6 +121,52 @@ static func rain_loop() -> AudioStreamWAV:
 	return w
 
 
+## A babbling brook: soft rushing noise with bubbly little tones, loops seamlessly (4 s)
+static func brook_loop() -> AudioStreamWAV:
+	if _cache.has("brook"):
+		return _cache["brook"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 21
+	var n := int(RATE * 4.0)
+	var samples := PackedFloat32Array()
+	samples.resize(n)
+	var lp := 0.0
+	var hp := 0.0
+	for i in n:
+		var x := rng.randf_range(-1.0, 1.0)
+		lp += (x - lp) * 0.2
+		hp = lp - hp * 0.0
+		var t := float(i) / RATE
+		# the rush swells a little (whole cycles in the loop)
+		samples[i] = lp * 0.35 * (0.8 + 0.2 * sin(t * TAU * 0.5))
+	# bubbles: short rising blips
+	for bnum in 140:
+		var start := rng.randi_range(0, n - 2000)
+		var f0 := rng.randf_range(500.0, 1400.0)
+		var d := rng.randf_range(0.02, 0.06)
+		var m := int(RATE * d)
+		var ph := 0.0
+		for k in m:
+			var tt := float(k) / m
+			ph += TAU * f0 * (1.0 + tt * 0.8) / RATE
+			samples[start + k] += sin(ph) * sin(tt * PI) * rng.randf_range(0.08, 0.2)
+	var fade := 3000
+	for k in fade:
+		var w := float(k) / fade
+		samples[k] = samples[k] * w + samples[n - fade + k] * (1.0 - w)
+	var out := PackedFloat32Array(samples.slice(0, n - fade))
+	var peak := 0.0
+	for v in out:
+		peak = maxf(peak, absf(v))
+	for i in out.size():
+		out[i] = out[i] / maxf(peak, 1e-5) * 0.6
+	var w := _wav(out)
+	w.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	w.loop_end = out.size()
+	_cache["brook"] = w
+	return w
+
+
 ## A bee's buzz: a soft, wobbling hum (sawtooth through a low-pass), loops
 static func buzz_loop() -> AudioStreamWAV:
 	if _cache.has("buzz"):

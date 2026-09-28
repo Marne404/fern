@@ -35,6 +35,7 @@ var songbirds: Songbirds
 var deer: Deer
 var _soaked_hint := false
 var _cloud_drift := 0.0
+var _brook_sound: AudioStreamPlayer3D
 var gusts: WindGusts
 var leaf_fall: LeafFall
 var desert_fx: DesertFx
@@ -109,6 +110,13 @@ func _ready() -> void:
 			var pd := gen.pond(k)
 			if pd.z > 0.0:
 				print("Pond z=%.0f x=%.0f r=%.0f path_x=%.0f biome=%s" % [pd.y, pd.x, pd.z, gen.path_x(pd.y), gen.biomes[gen.dominant_biome(pd.y)]["name"]])
+	if _args.has("brooks"):
+		for k in 40:
+			var b := gen.brook(k)
+			if not b.is_empty():
+				print("Brook %d: z %.0f → %.0f side %d (%s)" % [k, b["z0"], b["z1"], int(b["side"]), gen.biomes[gen.dominant_biome(b["z0"])]["name"]])
+		get_tree().quit()
+		return
 	if _args.has("obstacles"):
 		for k in 30:
 			var ob := gen.obstacle(k)
@@ -569,6 +577,7 @@ func _process_inner(delta: float) -> void:
 	particles.set_kind(atmosphere.current.get("particles", "motes"), atmosphere.current.get("particle_color", Color.WHITE))
 	particles.follow(cam.global_position, fwd)
 	_update_night_flies(cam, fwd)
+	_update_brook_sound(cam)
 	var sh := atmosphere.shown
 	var beams: float = float(sh.get("shafts", 0.0)) * float(sh.get("shaft_time", 1.0)) * (1.0 - atmosphere.weather.clouds) * (1.0 - atmosphere.underwater)
 	canopy_shafts.update(beams, -(sh.get("sun_dir", Vector3(0, -1, 0)) as Vector3), sh.get("sun_color", Color.WHITE), cam.global_position, delta)
@@ -861,6 +870,40 @@ func _rain_on_player(delta: float) -> void:
 	if not _soaked_hint and player.body.wet > 0.35:
 		_soaked_hint = true
 		hud.show_message("You're getting soaked. A rain jacket would help." if not covered else "Good thing you brought rain gear.")
+
+
+## The brook babbles from its nearest point
+func _update_brook_sound(cam: Camera3D) -> void:
+	if _brook_sound == null:
+		_brook_sound = AudioStreamPlayer3D.new()
+		_brook_sound.stream = Sfx.brook_loop()
+		_brook_sound.unit_size = 6.0
+		_brook_sound.max_distance = 40.0
+		add_child(_brook_sound)
+	if _frame % 10 != 0:
+		return
+	var w := world.local_to_world(cam.global_position)
+	var best := INF
+	var best_p := Vector3.ZERO
+	for dz in [-8.0, -3.0, 0.0, 3.0, 8.0]:
+		var r := gen.row(w.z + dz)
+		for b in r["brooks"]:
+			var c := gen.brook_center(b, r)
+			if c.x == INF or c.y < 0.3:
+				continue
+			var p := Vector3(c.x, gen.brook_level(b, r, c.x), w.z + dz)
+			var d := p.distance_to(w)
+			if d < best:
+				best = d
+				best_p = p
+	var vol: float = Settings.values.get("sfx_volume", 0.8)
+	if best < 40.0 and vol > 0.01:
+		_brook_sound.global_position = world.world_to_local(best_p)
+		_brook_sound.volume_db = -8.0 + linear_to_db(vol)
+		if not _brook_sound.playing:
+			_brook_sound.play()
+	elif _brook_sound.playing:
+		_brook_sound.stop()
 
 
 func _update_night_flies(cam: Camera3D, fwd: Vector3) -> void:

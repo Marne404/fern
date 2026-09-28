@@ -56,6 +56,7 @@ func build() -> Dictionary:
 	result["trunks"] = trunks
 	result["rocks"] = rocks
 	result["water"] = _water()
+	result["brooks"] = _brook_water()
 	var disks := PackedVector3Array()
 	for d in rock_disks:
 		disks.append(Vector3(d.x + corner.x, d.y + corner.y, d.z))
@@ -241,10 +242,52 @@ func _below_sea(lx: float, lz: float, r: Dictionary) -> bool:
 ## Is the local point under water (with a safety margin)?
 func _wet(lx: float, lz: float, margin: float) -> bool:
 	var r := row_at(corner.y + lz)
-	if r["ponds"].is_empty() and r["rivers"].is_empty() and r["pools"].is_empty():
+	if r["ponds"].is_empty() and r["rivers"].is_empty() and r["pools"].is_empty() and r["brooks"].is_empty():
 		return false
 	var wl := _pond_level(corner.x + lx, r)
 	return wl > -INF and surface_height(lx, lz) < wl + margin
+
+
+## Brook water in this chunk: a ribbon along the brook, 1 m steps, local coordinates.
+## Returns [{verts, uvs, flow}] (flow: direction along the brook towards its lower end).
+func _brook_water() -> Array:
+	var out := []
+	if lod == 2:
+		return out
+	var seen := {}
+	for z in [corner.y, corner.y + SIZE * 0.5, corner.y + SIZE]:
+		for b in gen.brooks_near(z):
+			seen[b["k"]] = b
+	for k in seen:
+		var b: Dictionary = seen[k]
+		var verts := PackedVector3Array()
+		var uvs := PackedVector2Array()
+		var levels := []
+		var zz := corner.y + SIZE
+		var step := 1.0 if lod == 0 else 4.0
+		var first := true
+		while zz >= corner.y - 0.01:
+			var r := gen.row(zz)
+			var c := gen.brook_center(b, r)
+			# only the chunk the brook runs through draws it (a little overlap at the borders, no gaps)
+			if c.x != INF and c.y > 0.25 and c.x >= corner.x - 1.0 and c.x < corner.x + SIZE + 1.0:
+				var lvl := gen.brook_level(b, r, c.x)
+				var hw: float = (float(b["half"]) * c.y + 0.35) / r["inv_len"]
+				levels.append(lvl)
+				verts.append(Vector3(c.x - hw - corner.x, lvl, zz - corner.y))
+				verts.append(Vector3(c.x + hw - corner.x, lvl, zz - corner.y))
+				uvs.append(Vector2(0, zz))
+				uvs.append(Vector2(1, zz))
+			elif not first and verts.size() >= 4:
+				break
+			first = false
+			zz -= step
+		if verts.size() < 4:
+			continue
+		# flows towards its lower end
+		var down: float = 1.0 if float(levels[levels.size() - 1]) < float(levels[0]) else -1.0
+		out.append({"verts": verts, "uvs": uvs, "flow": Vector2(0.0, -down * 0.9)})
+	return out
 
 
 ## Ponds whose center lies in this chunk
@@ -339,6 +382,43 @@ func _in_clearing(lx: float, lz: float) -> bool:
 func _scatter_shores() -> void:
 	if lod != 0:
 		return
+	# brooks: pebbles in the bed, reeds and a few ferns on the banks, a rock where it wells up
+	var bseen := {}
+	for z in [corner.y, corner.y + SIZE * 0.5, corner.y + SIZE]:
+		for b in gen.brooks_near(z):
+			bseen[b["k"]] = b
+	for k in bseen:
+		var b: Dictionary = bseen[k]
+		rng.seed = hash([gen.seed_value, k, 77])
+		var zz := corner.y + rng.randf() * 1.5
+		while zz < corner.y + SIZE:
+			var r := row_at(zz)
+			var c := gen.brook_center(b, r)
+			if c.x != INF and c.y > 0.3:
+				var hw: float = float(b["half"]) * c.y
+				for i in 2:
+					var lx: float = c.x + rng.randf_range(-hw, hw) * 0.8 - corner.x
+					var lz := zz - corner.y + rng.randf_range(-0.5, 0.5)
+					if lx > 0.0 and lx < SIZE and lz > 0.0 and lz < SIZE:
+						_add("shore/Pebble_Round_%d" % (rng.randi() % 5 + 1), _ground_xf(lx, lz, rng.randf_range(0.5, 1.1), 1.0, 0.02), Color(0, 0, 0, rng.randf()))
+				if rng.randf() < 0.3:
+					var side := -1.0 if rng.randf() < 0.5 else 1.0
+					var bx: float = c.x + side * (hw + rng.randf_range(0.2, 0.9)) - corner.x
+					var bz := zz - corner.y
+					if bx > 0.0 and bx < SIZE and bz > 0.0 and bz < SIZE:
+						var reed := rng.randf() < 0.6
+						var model := "Proc_Reeds" if reed else "Fern_1"
+						_add("shore/" + model, _ground_xf(bx, bz, rng.randf_range(0.6, 0.9) if reed else rng.randf_range(0.28, 0.36), 0.2, 0.0), Color(0, 0, 0, rng.randf()))
+			zz += rng.randf_range(0.8, 1.6)
+		var z0: float = b["z0"]
+		if z0 >= corner.y and z0 < corner.y + SIZE:
+			var r0 := row_at(z0 - 1.0)
+			var c0 := gen.brook_center(b, r0)
+			if c0.x != INF:
+				var sx := c0.x - corner.x
+				var sz := z0 - corner.y + 1.2
+				if sx > 0.0 and sx < SIZE and sz > 0.0 and sz < SIZE:
+					_add("shore/Rock_Medium_2", _ground_xf(sx, sz, 1.15, 0.5, 0.35), Color(0, 0, 0, 0.5))
 	var seen := {}
 	for key in rows:
 		for p in rows[key]["ponds"]:
@@ -361,11 +441,40 @@ func _scatter_shores() -> void:
 			if h > pond.w + 0.45 or h < pond.w - 0.7 or _in_rock(lx, lz):
 				continue
 			var reed := rng.randf() < 0.75
-			var model: String = "Grass_Wispy_Tall" if reed else ["Plant_1", "Plant_1_Big", "Fern_1"][rng.randi() % 3]
-			var scale: float = rng.randf_range(0.8, 1.4) if reed else (rng.randf_range(0.25, 0.35) if model == "Fern_1" else rng.randf_range(0.6, 1.0))
+			var cattails := reed and rng.randf() < 0.5
+			var model: String = ("Proc_Reeds" if cattails else "Grass_Wispy_Tall") if reed else ["Plant_1", "Plant_1_Big", "Fern_1"][rng.randi() % 3]
+			var scale: float = (rng.randf_range(0.8, 1.2) if cattails else rng.randf_range(0.8, 1.4)) if reed else (rng.randf_range(0.25, 0.35) if model == "Fern_1" else rng.randf_range(0.6, 1.0))
 			var col := Color(0.22, 0.42, 0.12).lerp(Color(0.55, 0.62, 0.2), rng.randf()).srgb_to_linear()
 			col.a = rng.randf()
 			_add("shore/" + model, _ground_xf(lx, lz, scale, 0.3, 0.0), col)
+	# water lilies on still ponds (not in waterfall pools): groups of pads near the shore, some in bloom
+	for key in rows:
+		for p in rows[key]["ponds"]:
+			seen[p] = "pond"
+	for p in seen:
+		if not (seen[p] is String):
+			continue
+		var pond: Vector4 = p
+		rng.seed = hash([gen.seed_value, int(pond.x), int(pond.y), 57])
+		var groups := int(pond.z * 0.6 * veg)
+		for g in groups:
+			var a := rng.randf() * TAU
+			var er := gen.water_radius(pond, pond.x + cos(a), pond.y + sin(a))
+			var gd := er * rng.randf_range(0.45, 0.8)
+			var gx := pond.x + cos(a) * gd
+			var gz := pond.y + sin(a) * gd
+			for i in rng.randi_range(3, 8):
+				var px := gx + rng.randf_range(-1.6, 1.6)
+				var pz := gz + rng.randf_range(-1.6, 1.6)
+				var lx := px - corner.x
+				var lz := pz - corner.y
+				if lx < 0.0 or lz < 0.0 or lx >= SIZE or lz >= SIZE:
+					continue
+				if gen.water_rel(pond, px, pz) > 0.9 or surface_height(lx, lz) > pond.w - 0.25:
+					continue
+				var model := "Proc_Lily" if rng.randf() < 0.3 else "Proc_LilyPad"
+				var xf := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.7, 1.2)), Vector3(lx, pond.w + 0.015, lz))
+				_add("shore/" + model, xf, Color(0, 0, 0, rng.randf()))
 
 
 func _scatter() -> void:

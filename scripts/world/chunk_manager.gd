@@ -325,6 +325,8 @@ func _install(data: Dictionary) -> void:
 	_make_instances(node, data)
 	for w in data.get("water", []):
 		node.add_child(_make_water(w))
+	for bw in data.get("brooks", []):
+		node.add_child(_make_brook(bw))
 	if data.has("collision"):
 		node.add_child(_make_collision(data))
 	add_child(node)
@@ -506,6 +508,38 @@ func _make_water(w: Dictionary) -> MeshInstance3D:
 	mi.transform = Transform3D(Basis().scaled(Vector3(r, 1.0, r)), w["pos"])
 	mi.set_instance_shader_parameter("shallow_color", w["shallow"])
 	mi.set_instance_shader_parameter("deep_color", w["deep"])
+	return mi
+
+
+var _brook_colors := [Color(0.42, 0.8, 0.74), Color(0.14, 0.42, 0.46)]
+
+
+func _make_brook(bw: Dictionary) -> MeshInstance3D:
+	if _water_mat == null:
+		_make_water({"radius": 1.0, "pos": Vector3.ZERO, "shallow": Color.WHITE, "deep": Color.WHITE}).free()
+	var verts: PackedVector3Array = bw["verts"]
+	var idx := PackedInt32Array()
+	for i in range(0, verts.size() - 2, 2):
+		idx.append_array([i, i + 1, i + 2, i + 1, i + 3, i + 2])
+	var norms := PackedVector3Array()
+	norms.resize(verts.size())
+	norms.fill(Vector3.UP)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_TEX_UV] = bw["uvs"]
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var mi := MeshInstance3D.new()
+	mi.mesh = m
+	mi.material_override = _water_mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.set_instance_shader_parameter("shallow_color", _brook_colors[0])
+	mi.set_instance_shader_parameter("deep_color", _brook_colors[1])
+	mi.set_instance_shader_parameter("flow", bw["flow"])
+	mi.set_instance_shader_parameter("brook", 1.0)
 	return mi
 
 

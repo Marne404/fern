@@ -208,6 +208,12 @@ func _build_tile(t: Vector2i, lod: int) -> MultiMeshInstance3D:
 			var o: float = h.call(ix0, iz0)
 			var c := Color(0.0, h.call(1 - ix0, iz0) - o, h.call(ix0, 1 - iz0) - o, h.call(1 - ix0, 1 - iz0) - o)
 			var b := Basis().scaled(Vector3(-1.0 if fx else 1.0, 1.0, -1.0 if fz else 1.0))
+			# no blades in a brook bed
+			var pr: Dictionary = rows[pj]
+			for bk in pr["brooks"]:
+				var bc := gen.brook_center(bk, pr)
+				if bc.x != INF and absf(wx + (pi + 0.5) * PATCH - bc.x) / pr["inv_len"] < float(bk["half"]) * bc.y + PATCH * 0.5 + 0.3:
+					b = Basis().scaled(Vector3.ZERO)
 			var origin := Vector3((pi + ix0) * PATCH, o, (pj + iz0) * PATCH)
 			mm.set_instance_transform(k, Transform3D(b, origin))
 			mm.set_instance_custom_data(k, c)
