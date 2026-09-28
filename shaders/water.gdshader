@@ -11,6 +11,7 @@ global uniform vec4 water_ring0;
 global uniform vec4 water_ring1;
 global uniform vec4 water_ring2;
 global uniform vec4 water_ring3;
+global uniform float rain_amount;
 
 uniform sampler2D depth_tex : hint_depth_texture, filter_linear;
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
@@ -85,6 +86,23 @@ void fragment() {
 			vec2 v = ring(p, c, t - cyc * period, 2.8, 0.45, rdir) * near;
 			rings += v.x;
 			nmap.xz += rdir * v.y * 0.35;
+		}
+	}
+	// raindrops: many small rings
+	if (rain_amount > 0.01 && near > 0.0) {
+		for (int layer = 0; layer < 2; layer++) {
+			vec2 off = vec2(float(layer) * 5.3, float(layer) * 2.1);
+			vec2 rp = p * 0.9 + off;
+			vec2 cell = floor(rp);
+			float hc = hash1(cell);
+			float tt = TIME * (1.1 + hc * 0.5) + hc;
+			float cyc = floor(tt);
+			if (hash1(cell + cyc * 1.7) < rain_amount) {
+				vec2 c = (cell + 0.2 + 0.6 * vec2(hash1(cell + cyc), hash1(cell - cyc * 0.9)) - off) / 0.9;
+				vec2 v = ring(p, c, fract(tt) * 0.9, 0.9, 0.35, rdir) * near * 0.8;
+				rings += v.x;
+				nmap.xz += rdir * v.y * 0.3;
+			}
 		}
 	}
 	nmap = normalize(nmap);

@@ -144,6 +144,7 @@ func run() -> void:
 	await _test_backpack(p)
 	await _test_steps(p)
 	_test_day_cycle()
+	_test_weather()
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -336,6 +337,32 @@ func _test_day_cycle() -> void:
 	d.hour = 23.0
 	var n := d.apply(c)
 	check("Nights are darker and cooler", n["sun_energy"] < 0.8 and n["temperature"] < 11.0, "%.2f / %.1f °C" % [n["sun_energy"], n["temperature"]])
+
+
+## Weather: a whole shower cycle, wet ground, rainbow, desert stays dry
+func _test_weather() -> void:
+	var w := Weather.new()
+	w.reset()
+	w.next_shower = 0.0
+	var began := false
+	var max_rain := 0.0
+	var max_rb := 0.0
+	for i in 6000:
+		if w.advance(0.1, 1.0):
+			began = true
+		max_rain = maxf(max_rain, w.rain)
+		max_rb = maxf(max_rb, w.rainbow)
+		if began and w.state == Weather.FAIR:
+			break
+	check("A shower begins and ends", began and w.state == Weather.FAIR, "state %d" % w.state)
+	check("It rained and the ground got wet", max_rain > 0.4, "%.2f" % max_rain)
+	check("A rainbow after the shower", max_rb > 0.5, "%.2f" % max_rb)
+	var d := Weather.new()
+	d.reset()
+	d.next_shower = 0.0
+	for i in 3000:
+		d.advance(0.1, 0.0)
+	check("No rain in the desert", d.rain < 0.01 and d.state == Weather.FAIR)
 
 
 func _test_voice(p: Wanderer) -> void:

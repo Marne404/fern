@@ -55,6 +55,11 @@ that competes with the scout; motion slow and calm.
 - **Wet ground:** global wetness: darker, glossier ground and path, puddles in dips of the path (noise +
   path depth) that mirror the sky and get rain rings; rings on ponds; wet sheen on rocks.
 - The scout gets wet without rain jacket/poncho; a message; rain jacket protects.
+- **Result:** Weather state machine (fair → building 45 s → rain 70–160 s → clearing 35 s → after 80 s with a
+  rainbow), biome `rain` factor (desert 0, highlands 1.8), first shower after 5–9 min. Overcast look: grayer sky,
+  lower clouds, weak sun, more ambient. Rain: 3000 streaks in front of the camera, ground splashes, looping rain
+  sound (synthesized). Wet world: darker glossy soil with sun sheen, puddles on the path with rain rings,
+  wet rocks, darker leaves, rain rings on ponds. Strong rainbow after showers. No measurable GPU cost.
 
 ## 4. Light shafts through canopies
 

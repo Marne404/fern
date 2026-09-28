@@ -9,6 +9,9 @@ vec3 to_world(vec3 local_world) {
 }
 
 global uniform float cloud_shadow_strength;
+// weather: how wet everything is (0..1) and how hard it rains right now (0..1)
+global uniform float wetness;
+global uniform float rain_amount;
 
 // Distant trees change to impostors inside this band (meters from the camera, 0 = off). camera_world is the
 // camera position in local coordinates, set by the game every frame (the same in the shadow passes).

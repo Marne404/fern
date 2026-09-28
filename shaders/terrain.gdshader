@@ -3,7 +3,7 @@
 // CUSTOM1.y = height above the nearest water, CUSTOM1.z = 1 at the sea, CUSTOM2 = litter color + amount.
 // The path mask comes as a small texture per chunk.
 shader_type spatial;
-render_mode specular_disabled, cull_disabled;
+render_mode specular_schlick_ggx, cull_disabled;
 
 #include "res://shaders/wind.gdshaderinc"
 
@@ -22,6 +22,7 @@ varying float v_cloud;
 varying vec3 v_wnormal;
 varying vec2 v_water;
 varying vec4 v_litter;
+varying float v_sheen;
 
 void vertex() {
 	v_local = VERTEX;
@@ -199,11 +200,59 @@ void fragment() {
 		float foam = sea * smoothstep(0.75, 0.9, normalize(v_wnormal).y) * (1.0 - smoothstep(0.0, 0.05, abs(above - reach + 0.1))) * smoothstep(0.35, 0.6, n_fine + 0.2);
 		col = mix(col, vec3(0.95, 0.97, 0.96), foam * 0.6);
 	}
+	// after rain: dark, glossy soil and puddles in the hollows of the path that mirror the sky
+	float rough = 1.0;
+	float spec = 0.0;
+	v_sheen = 0.0;
+	if (wetness > 0.001) {
+		float flat_ground = smoothstep(0.9, 0.97, normalize(v_wnormal).y);
+		float wet = wetness * (1.0 - wall * 0.4);
+		col *= mix(1.0, 0.6, wet * (0.6 + 0.4 * path_mask));
+		float pn = texture(paint_noise, p * 0.085 + 0.31).r * 0.75 + n_small * 0.25;
+		float puddle = smoothstep(0.6, 0.66, pn + path_mask * 0.14 - 0.06) * smoothstep(0.3, 0.75, wetness) * flat_ground;
+		puddle *= smoothstep(0.2, 0.6, path_mask + 0.35);
+		col = mix(col, col * vec3(0.42, 0.46, 0.55), puddle);
+		rough = mix(1.0, 0.42, wet * 0.85);
+		spec = 0.22 * wet;
+		v_sheen = wet * 0.35;
+		if (puddle > 0.01) {
+			rough = mix(rough, 0.03, puddle);
+			spec = mix(spec, 0.55, puddle);
+			v_sheen = max(v_sheen, puddle);
+			vec3 up_v = (VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz;
+			vec3 n_p = up_v;
+			// raindrops ring the puddles
+			if (rain_amount > 0.01) {
+				vec2 g = vec2(0.0);
+				for (int layer = 0; layer < 2; layer++) {
+					vec2 rp = p * 1.6 + float(layer) * 3.7;
+					vec2 cell = floor(rp);
+					vec2 h = hash2(cell);
+					float ph = fract(TIME * (0.9 + h.x * 0.6) + h.y);
+					if (hash2(cell + floor(TIME * (0.9 + h.x * 0.6) + h.y)).x < rain_amount) {
+						vec2 dd = fract(rp) - (0.25 + h * 0.5);
+						float r = length(dd);
+						float ring = sin((r - ph * 0.45) * 60.0) * exp(-pow((r - ph * 0.45) * 12.0, 2.0)) * (1.0 - ph);
+						g += (dd / max(r, 1e-3)) * ring;
+					}
+				}
+				n_p = normalize((VIEW_MATRIX * vec4(-g.x * 0.35, 1.0, -g.y * 0.35, 0.0)).xyz);
+			}
+			NORMAL = normalize(mix(NORMAL, n_p, puddle));
+		}
+	}
 	ALBEDO = col;
-	ROUGHNESS = 1.0;
+	ROUGHNESS = rough;
+	SPECULAR = spec;
 }
 
 void light() {
 	float ndl = clamp(dot(NORMAL, LIGHT), 0.0, 1.0);
 	DIFFUSE_LIGHT += LIGHT_COLOR * ATTENUATION * ndl * (1.0 - v_cloud) / PI;
+	// wet sheen: a sharp highlight of the sun in puddles and on wet soil
+	if (v_sheen > 0.001) {
+		vec3 hv = normalize(LIGHT + VIEW);
+		float sp = pow(clamp(dot(NORMAL, hv), 0.0, 1.0), mix(24.0, 400.0, v_sheen)) * mix(0.3, 3.0, v_sheen) * v_sheen;
+		SPECULAR_LIGHT += LIGHT_COLOR * ATTENUATION * sp * (1.0 - v_cloud);
+	}
 }

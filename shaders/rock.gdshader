@@ -43,7 +43,9 @@ void fragment() {
 	float n = texture(paint_noise, v_world.xz * 0.05 + v_world.y * 0.03).r;
 	float moss = smoothstep(0.55, 0.85, up + (n - 0.5) * 0.8) * moss_amount;
 	c = mix(c, moss_color * (0.8 + 0.4 * n), moss);
+	// wet after rain: darker and with a sheen
+	c *= mix(1.0, 0.68, wetness);
 	ALBEDO = c * (1.0 - cloud_shadow(v_world.xz, TIME) * 0.45);
-	ROUGHNESS = 0.85;
-	SPECULAR = 0.3;
+	ROUGHNESS = mix(0.85, 0.32, wetness);
+	SPECULAR = mix(0.3, 0.55, wetness);
 }

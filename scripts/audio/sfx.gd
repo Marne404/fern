@@ -78,6 +78,49 @@ static func _make_step(which: String) -> AudioStreamWAV:
 	return _wav(samples)
 
 
+## Rain: soft, even hiss (low-passed noise) with a few droplets tapping on leaves; loops seamlessly
+static func rain_loop() -> AudioStreamWAV:
+	if _cache.has("rain"):
+		return _cache["rain"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7
+	var n := int(RATE * 3.0)
+	var samples := PackedFloat32Array()
+	samples.resize(n)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in n:
+		var x := rng.randf_range(-1.0, 1.0)
+		lp += (x - lp) * 0.32
+		lp2 += (lp - lp2) * 0.5
+		samples[i] = lp2 * 0.55 + (lp - lp2) * 0.35
+	# droplets: tiny ticks with a short ring, spread over the loop
+	for d in 90:
+		var start := rng.randi_range(0, n - 800)
+		var f := rng.randf_range(1800.0, 4200.0)
+		var amp := rng.randf_range(0.08, 0.3)
+		for k in 700:
+			var t := float(k) / RATE
+			samples[start + k] += sin(TAU * f * t) * exp(-t * 90.0) * amp
+	# crossfade the end into the start so the loop has no click
+	var fade := 2000
+	for k in fade:
+		var w := float(k) / fade
+		samples[k] = samples[k] * w + samples[n - fade + k] * (1.0 - w)
+	var out := PackedFloat32Array(samples.slice(0, n - fade))
+	var peak := 0.0
+	for v in out:
+		peak = maxf(peak, absf(v))
+	for i in out.size():
+		out[i] = out[i] / maxf(peak, 1e-5) * 0.7
+	var w := _wav(out)
+	w.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	w.loop_begin = 0
+	w.loop_end = out.size()
+	_cache["rain"] = w
+	return w
+
+
 static func _make(which: String) -> AudioStreamWAV:
 	var samples := PackedFloat32Array()
 	match which:

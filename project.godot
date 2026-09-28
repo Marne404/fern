@@ -93,6 +93,14 @@ daylight={
 "type": "float",
 "value": 1.0
 }
+wetness={
+"type": "float",
+"value": 0.0
+}
+rain_amount={
+"type": "float",
+"value": 0.0
+}
 sand_storm={
 "type": "float",
 "value": 0.0

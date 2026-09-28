@@ -29,6 +29,8 @@ var butterflies: Butterflies
 var particles: AmbientParticles
 ## fireflies at dusk and night in every biome
 var night_flies: AmbientParticles
+var rain_fx: RainFx
+var _soaked_hint := false
 var gusts: WindGusts
 var leaf_fall: LeafFall
 var desert_fx: DesertFx
@@ -181,6 +183,9 @@ func _ready() -> void:
 	particles = AmbientParticles.new()
 	night_flies = AmbientParticles.new()
 	add_child(night_flies)
+	rain_fx = RainFx.new()
+	rain_fx.world = world
+	add_child(rain_fx)
 	birds = Birds.new()
 	birds.world = world
 	mountains = Mountains.new()
@@ -333,6 +338,22 @@ func start_journey() -> void:
 	# a journey begins in the morning (test helper: --hour=19.5)
 	atmosphere.day.hour = float(_args.get("hour", "7.0"))
 	atmosphere.day.advance(0.0)
+	atmosphere.weather.reset()
+	# test helpers: --rain (a shower right now), --afterrain (wet, clearing, rainbow)
+	if _args.has("rain"):
+		atmosphere.weather.state = Weather.RAIN
+		atmosphere.weather.clouds = 1.0
+		atmosphere.weather.rain = float(_args["rain"]) if _args["rain"] != "1" else 1.0
+		atmosphere.weather.wet = 1.0
+		atmosphere.weather.next_shower = 0.0
+		atmosphere.weather.set("_strength", atmosphere.weather.rain)
+		atmosphere.weather.set("_dur", 9999.0)
+	elif _args.has("afterrain"):
+		atmosphere.weather.state = Weather.AFTER
+		atmosphere.weather.set("_t", 25.0)
+		atmosphere.weather.clouds = 0.2
+		atmosphere.weather.wet = 1.0
+		atmosphere.weather.rainbow = 1.0
 	atmosphere.update(start_z, 0.0, true)
 	hud.set_playing(true)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -485,6 +506,10 @@ func _process_inner(delta: float) -> void:
 				atmosphere.update(world.local_to_world(player.global_position).z, 0.0, true)
 				var to_sun := atmosphere.sun.global_basis.z
 				yaw = atan2(-to_sun.x, -to_sun.z)
+			if _args.has("lookAntiSun"):
+				atmosphere.update(world.local_to_world(player.global_position).z, 0.0, true)
+				var from_sun := atmosphere.sun.global_basis.z
+				yaw = atan2(from_sun.x, from_sun.z)
 			if _args.has("lookrel"):
 				var lr: PackedFloat64Array = _args["lookrel"].split_floats(",")
 				yaw = atan2(-lr[0], -lr[1])
@@ -502,6 +527,10 @@ func _process_inner(delta: float) -> void:
 	# the clock runs while you hike (not in the menu, not while paused)
 	if mode == Mode.PLAYING and not get_tree().paused:
 		atmosphere.day.advance(delta)
+		if atmosphere.weather.advance(delta, float(atmosphere.current.get("rain", 1.0))):
+			hud.show_message("It's starting to rain.")
+			_soaked_hint = false
+		_rain_on_player(delta)
 	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
 	# test helpers for tuning the lighting
@@ -515,6 +544,9 @@ func _process_inner(delta: float) -> void:
 	particles.set_kind(atmosphere.current.get("particles", "motes"), atmosphere.current.get("particle_color", Color.WHITE))
 	particles.follow(cam.global_position, fwd)
 	_update_night_flies(cam, fwd)
+	var wd: Vector2 = ProjectSettings.get_setting("shader_globals/wind_direction")["value"]
+	rain_fx.update(float(atmosphere.shown.get("rain", 0.0)) if atmosphere.underwater < 0.01 else 0.0,
+		1.0 - float(atmosphere.shown.get("night", 0.0)) * 0.8, cam.global_position, fwd, wd.normalized(), delta)
 	gusts.strength = atmosphere.current.get("gusts", 0.5)
 	leaf_fall.update(cam, delta)
 	desert_fx.update(cam, delta, atmosphere.current.get("dust", 0.0))
@@ -777,6 +809,18 @@ func _setup_post() -> void:
 	underwater_fx.material = um
 	underwater_fx.visible = false
 	layer.add_child(underwater_fx)
+
+
+## Rain soaks you unless you wear the rain jacket or the poncho
+func _rain_on_player(delta: float) -> void:
+	var w := atmosphere.weather
+	if not player or not w.is_raining() or player.swimming:
+		return
+	var covered := player._wears("regenjacke") or player._wears("poncho")
+	player.body.wet = minf(player.body.wet + w.rain * delta * (0.004 if covered else 0.03), 1.0)
+	if not _soaked_hint and player.body.wet > 0.35:
+		_soaked_hint = true
+		hud.show_message("You're getting soaked. A rain jacket would help." if not covered else "Good thing you brought rain gear.")
 
 
 func _update_night_flies(cam: Camera3D, fwd: Vector3) -> void:

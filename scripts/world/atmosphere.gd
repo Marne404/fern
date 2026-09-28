@@ -19,6 +19,7 @@ var dominant := 0
 var dust := 0.0
 ## times of day
 var day := DayCycle.new()
+var weather := Weather.new()
 ## the atmosphere as shown: biome blend bent to the time of day (current stays the pure biome blend)
 var shown := {}
 ## ground height of the valley near the camera (for the valley mist)
@@ -88,7 +89,7 @@ func setup(p_gen: WorldGen, parent: Node) -> void:
 	_read_day_settings()
 	Settings.changed.connect(func(k):
 		apply_quality()
-		if k in ["time_of_day", "day_minutes"]:
+		if k in ["time_of_day", "day_minutes", "weather"]:
 			_read_day_settings()
 			_last_z = INF)
 
@@ -154,6 +155,7 @@ func update(world_z: float, delta: float, force := false) -> void:
 
 func _read_day_settings() -> void:
 	day.fixed = int(Settings.values.get("time_of_day", 0))
+	weather.mode = int(Settings.values.get("weather", 0))
 	day.day_minutes = float(Settings.values.get("day_minutes", 36.0))
 	day.advance(0.0)
 
@@ -197,7 +199,7 @@ func _apply_underwater() -> void:
 
 
 func _apply() -> void:
-	shown = day.apply(current)
+	shown = weather.apply(day.apply(current))
 	var c := shown
 	sun.basis = Basis.looking_at(c["sun_dir"], Vector3.UP)
 	sun.light_color = c["sun_color"]
@@ -207,6 +209,8 @@ func _apply() -> void:
 		sky_mat.set_shader_parameter(k, c[k])
 	# water and waterfalls brighten themselves a little (anime look): not in the dark
 	RenderingServer.global_shader_parameter_set("daylight", 1.0 - float(c["night"]) * 0.75)
+	RenderingServer.global_shader_parameter_set("wetness", float(c.get("wet", 0.0)))
+	RenderingServer.global_shader_parameter_set("rain_amount", float(c.get("rain", 0.0)))
 	env.ambient_light_energy = c["ambient_energy"]
 	env.ambient_light_color = c["ambient_color"]
 	_apply_fog()

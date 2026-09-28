@@ -77,6 +77,7 @@ var values := {
 	"sfx_volume": 0.8,
 	"time_of_day": 0,           # 0 day cycle, 1 morning, 2 midday, 3 golden hour, 4 dusk, 5 night
 	"day_minutes": 36.0,        # real minutes for a whole day
+	"weather": 0,               # 0 changing, 1 always fair, 2 always rain
 	"scout": {},                # look of your scout (see Scout.DEFAULT_LOOK)
 	"third_person": false,
 	"emote_wheel": [],          # 8 emote ids for the wheel (empty = Scout.DEFAULT_WHEEL)

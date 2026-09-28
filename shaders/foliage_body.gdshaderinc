@@ -144,6 +144,8 @@ void fragment() {
 	// large-scale color variation so nothing looks tiled
 	float n = v_var;
 	col *= 0.9 + 0.2 * n;
+	// wet leaves: a little darker and richer
+	col = mix(col, adjust_saturation(col, 1.15) * 0.86, wetness);
 	ALBEDO = bake_mask > 0.5 ? vec3(0.0) : adjust_saturation(col, saturation);
 #ifndef OPAQUE_GRASS
 	// mipmaps average the leaf edges below the cutoff -> distant crowns dissolve.

@@ -141,7 +141,9 @@ void sky() {
 	}
 
 	if (rainbow > 0.0 && h > 0.0) {
-		col += rainbow_color(d, sun_dir) * rainbow * 0.3 * smoothstep(0.0, 0.05, h) * (1.0 - smoothstep(0.35, 0.6, h));
+		// strong rainbows (after a shower) are wider, brighter and reach higher
+		float rb = clamp(rainbow, 0.0, 1.5);
+		col += rainbow_color(d, sun_dir) * rb * mix(0.3, 0.55, smoothstep(0.6, 1.2, rb)) * smoothstep(0.0, 0.05, h) * (1.0 - smoothstep(mix(0.35, 0.6, smoothstep(0.6, 1.2, rb)), 0.8, h));
 	}
 	float sun = smoothstep(0.99955 - sun_size * 0.0001, 0.9997, sd);
 	if (!AT_CUBEMAP_PASS) {

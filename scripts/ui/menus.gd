@@ -463,6 +463,7 @@ func _build_settings() -> Control:
 	_slider(list, "impostor_distance", "Trees as impostors from", 120, 500, 10, func(v): return "%d m" % int(v))
 	_option(list, "time_of_day", "Time of day", ["Day cycle", "Always morning", "Always midday", "Always golden hour", "Always dusk", "Always night"])
 	_slider(list, "day_minutes", "Length of a day", 12, 120, 2, func(v): return "%d min" % int(v))
+	_option(list, "weather", "Weather", ["Changing", "Always fair", "Always rain"])
 	_slider(list, "shadow_range", "Shadow distance", 0.5, 3.0, 0.1, func(v): return "%d %%" % roundi(v * 100))
 	_check(list, "wind_fx", "Wind lines")
 	_check(list, "particles", "Leaves, pollen & weather effects")

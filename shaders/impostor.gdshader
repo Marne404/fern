@@ -81,6 +81,7 @@ void fragment() {
 	// same variation as the meshes: per-tree shade and large-scale color noise
 	col *= 0.9 + 0.2 * fract(v_shade * 17.31);
 	col *= (0.9 + 0.2 * v_tone) / bake_tone;
+	col *= 1.0 - wetness * 0.13;
 	// trunks of real trees sit in the crown's shade and ambient occlusion, a flat billboard gets neither
 	col *= mix(1.0, 0.58, v_bark);
 	ALBEDO = col;
