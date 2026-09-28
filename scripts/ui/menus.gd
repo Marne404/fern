@@ -481,6 +481,8 @@ func _build_settings() -> Control:
 	_check(list, "opt_shadow_filter", "Ultra shadows: medium filter")
 	_check(list, "opt_blade_budget", "Build grass blades gradually (prevents hitches)")
 	_check(list, "opt_music_thread", "Load music in the background")
+	_check(list, "opt_tree_lod", "Simplified crowns for distant trees (75 m+)")
+	_check(list, "opt_tree_shadow_lod", "Simplified shadows for distant trees (45 m+)")
 	list = _tab("Display")
 	_option(list, "fps_limit", "Frame rate limit", FPS_LIMITS.map(func(v): return "Unlimited" if v == 0 else "%d FPS" % v))
 	_check(list, "vsync", "VSync")

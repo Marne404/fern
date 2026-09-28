@@ -68,6 +68,8 @@ var values := {
 	"opt_blade_budget": true,   # build grass blade tiles with a time budget
 	"opt_foliage_noaniso": true, # leaf masks without anisotropic filtering
 	"opt_music_thread": true,   # load music in the background
+	"opt_tree_shadow_lod": true, # trees farther than 45 m cast shadows with their simplified far crown
+	"opt_tree_lod": true,       # trees farther than 75 m are drawn with the simplified far crown
 	"music": true,
 	"music_volume": 0.7,
 	"sfx_volume": 0.8,

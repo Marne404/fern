@@ -331,6 +331,22 @@ suspension bridge (broken planks), mud, fallen rockslide, fence with stile, thic
 
 Research, then build what gives the most without visible loss, each as a toggle.
 
+**Measured** (Ryzen Z1 / RADV, 1920×1080 offscreen, Ultra, Birch Wood; GPU ms, ±3 ms run-to-run drift):
+all on ≈ 84 · sun shadows off −17 · trees off −13 (their shadows alone −10) · grass tufts off −6 ·
+MSAA 4× → off −10 · PCSS off −1.5 · shadow split blending off ≈ 0 · sky (clouds) ≈ 2 · SSAO/SSIL are already
+half resolution (engine default) · terrain ≈ 0.
+
+**Built (toggles in Performance, default on):**
+- `opt_tree_lod`: trees beyond 75 m use the thinned far crown (visibility ranges with hysteresis) – −3 to −4 ms
+  in forests, no visible difference in A/B screenshots.
+- `opt_tree_shadow_lod`: the shadow of trees beyond 45 m comes from the far crown (last cascade, where a texel
+  is bigger than a leaf card) – −2 to −2.5 ms, no visible difference.
+
+**Tried and dropped:** terrain occlusion culling (coarse ArrayOccluder3D per chunk, 2 m under the surface):
+−18 % objects in valleys but only ≈ 1 ms GPU and +0.4 ms CPU; it also crashes the distribution's Godot build
+(official templates work). **Not worth it without visible loss:** PCSS off (harder shadows), MSAA 4× → 2×.
+**Recommendation for weak GPUs:** FSR 2 at 77 % instead of MSAA 4× (upscaler option exists), dynamic resolution.
+
 ## 9. Website update
 
 New screenshots (new scout), new items/emotes/biomes, re-render scout group, publish.

@@ -329,12 +329,65 @@ func _make_instances(node: Node3D, data: Dictionary) -> void:
 			mmi.visibility_range_end = grass_distance * (1.0 if info["kind"] == "grass" else 1.25) + 24.0
 			node.add_child(mmi)
 			continue
+		var base: String = key.get_slice("#", 0)
+		if info["kind"] == "tree" and not base.ends_with("@far"):
+			_tree_lods(node, mmi, mm, base, info["shadows"])
 		if vis > 0.0:
 			var model: String = key.get_slice("#", 0).get_slice("/", key.get_slice("#", 0).get_slice_count("/") - 1)
 			mmi.visibility_range_end = vis + ChunkBuilder.cell_size(model) * 0.5
 			mmi.visibility_range_end_margin = 12.0
 			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		node.add_child(mmi)
+
+
+## Tree levels of detail with visibility ranges (they also apply to the shadow passes):
+##   look:    full crown up to TREE_LOD_DIST, thinned far crown beyond      (opt_tree_lod)
+##   shadow:  full crown up to SHADOW_LOD_DIST, far crown beyond            (opt_tree_shadow_lod)
+## In the last shadow cascade a texel is bigger than a leaf card, and at 70 m a card covers a few pixels.
+const SHADOW_LOD_DIST := 45.0
+const TREE_LOD_DIST := 75.0
+
+
+func _tree_lods(node: Node3D, mmi: MultiMeshInstance3D, mm: MultiMesh, base: String, shadows: bool) -> void:
+	var look_lod: bool = Settings.values.get("opt_tree_lod", true)
+	var shadow_lod: bool = shadows and Settings.values.get("opt_tree_shadow_lod", true)
+	if not look_lod and not shadow_lod:
+		return
+	var far_mesh: Mesh = _mesh_for(base + "@far")["mesh"]
+	var dv := TREE_LOD_DIST if look_lod else 0.0
+	if look_lod:
+		mmi.visibility_range_end = dv
+		mmi.visibility_range_end_margin = 6.0
+		var vis_far := _mm_copy(mm, far_mesh)
+		vis_far.visibility_range_begin = dv
+		vis_far.visibility_range_begin_margin = 6.0
+		vis_far.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		node.add_child(vis_far)
+	if shadow_lod:
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var sh_near := MultiMeshInstance3D.new()
+		sh_near.multimesh = mm
+		sh_near.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		sh_near.visibility_range_end = SHADOW_LOD_DIST
+		node.add_child(sh_near)
+		var sh_far := _mm_copy(mm, far_mesh)
+		sh_far.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		sh_far.visibility_range_begin = SHADOW_LOD_DIST
+		if look_lod:
+			sh_far.visibility_range_end = dv
+		node.add_child(sh_far)
+
+
+func _mm_copy(mm: MultiMesh, mesh: Mesh) -> MultiMeshInstance3D:
+	var copy := MultiMesh.new()
+	copy.transform_format = MultiMesh.TRANSFORM_3D
+	copy.use_custom_data = true
+	copy.mesh = mesh
+	copy.instance_count = mm.instance_count
+	copy.buffer = mm.buffer
+	var inst := MultiMeshInstance3D.new()
+	inst.multimesh = copy
+	return inst
 
 
 func _make_water(w: Dictionary) -> MeshInstance3D:

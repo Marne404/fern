@@ -600,6 +600,7 @@ func _process_inner(delta: float) -> void:
 				"ssao": atmosphere.env.ssao_enabled = false
 				"blades": grass.visible = false
 				"pcss": atmosphere.sun.light_angular_distance = 0.5
+				"nopcss": atmosphere.sun.light_angular_distance = 0.0
 				"softmed": RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM)
 				"dist100": atmosphere.sun.directional_shadow_max_distance = 100.0
 				"ssil": atmosphere.env.ssil_enabled = false
@@ -615,6 +616,11 @@ func _process_inner(delta: float) -> void:
 						for m in c.get_children():
 							if m is MultiMeshInstance3D and m.multimesh.mesh.resource_name.contains("Tree") or m is MultiMeshInstance3D and m.multimesh.mesh.resource_name.begins_with("Pine"):
 								m.visible = false
+				"treeshadows":
+					for c in world.get_children():
+						for m in c.get_children():
+							if m is MultiMeshInstance3D and (m.multimesh.mesh.resource_name.contains("Tree") or m.multimesh.mesh.resource_name.begins_with("Pine")):
+								m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				"grass":
 					for c in world.get_children():
 						for m in c.get_children():
