@@ -494,8 +494,21 @@ static func spring() -> Dictionary:
 	var rock := rock_style(Color(0.72, 0.74, 0.7), 0.55)
 	var tints := [Color(1.0, 1.0, 1.0), Color(1.0, 0.88, 0.25), Color(0.45, 0.65, 1.0), Color(1.0, 0.55, 0.75),
 		Color(0.7, 0.45, 1.0), Color(1.0, 0.45, 0.25)]
+	var tall := tree_style(Color(0.2, 0.48, 0.07), Color(0.66, 0.92, 0.3), {"tint": Color(0.95, 0.85, 0.8)}, 5.0, {"translucency": 1.0})
+	var fruit := tree_style(Color(0.9, 0.72, 0.8), Color(1.0, 0.97, 0.97), {"tint": Color(0.92, 0.8, 0.78)}, 6.0, {"translucency": 1.1})
+	var hawthorn := {"leaves": leaves(Color(0.14, 0.38, 0.06), Color(0.5, 0.8, 0.2), {"sphere_normals": 0.8}), "stiffness": 7.0}
+	var carpet := {"kind": "cluster", "models": ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flower_1_Single", "Flower_7_Single"],
+		"styles": [{}], "density": 3.2, "dist": [2.5, 70.0], "count": 40, "radius": 5.0, "scale": [0.5, 0.85], "tints": tints,
+		"vis": 80.0, "near": true, "tilt": 0.8, "patch": [1]}
+	var daisies := {"kind": "cluster", "models": ["Flower_6", "Flower_6_2"], "styles": [{}], "density": 3.0, "dist": [2.2, 60.0],
+		"count": 14, "radius": 2.5, "scale": [0.7, 1.1], "vis": 55.0, "near": true, "tilt": 0.9, "patch": [1, 3]}
+	var hedges := hedge_layer(hawthorn, 30.0)
+	hedges["patch"] = [3]
 	return {
 		"name": NAMES[4],
+		# meadow as before · flower carpet · spring orchard · hedged pasture
+		"patches": [{"name": "meadow", "share": 0.35}, {"name": "flower carpet", "share": 0.25},
+			{"name": "spring orchard", "share": 0.2}, {"name": "hedged pasture", "share": 0.2}],
 		"blades": blades(0.55, Color(0.12, 0.34, 0.05), Color(0.52, 0.86, 0.16), Color(0.85, 0.92, 0.3)),
 		"terrain": terrain({"scree": 0, "gullies": 0.5, "hummocks": 1.0, "brooks": 0.9, "litter": 0.25, "litter_color": Color(0.98, 0.96, 0.88), "far_height": 40.0, "obstacles": ["river", "fallen_tree", "cliff", "stile"], "valley_width": 34.0, "valley_ramp": 110.0, "valley_height": 22.0, "undulation": 2.4,
 			"grass_dark": Color(0.26, 0.54, 0.1), "grass_light": Color(0.5, 0.76, 0.16),
@@ -503,7 +516,7 @@ static func spring() -> Dictionary:
 			"slope_color": Color(0.4, 0.58, 0.18), "path_color": Color(0.78, 0.68, 0.46), "crack": 0.4,
 			"ponds": 0.55, "pond_size": Vector2(10.0, 22.0),
 			"water_shallow": Color(0.42, 0.86, 0.74), "water_deep": Color(0.1, 0.42, 0.55)}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.32, 0.55, 0.78), "grade_high": Color(1.0, 0.96, 0.72), "grade_warm": 0.0, "falls": 0.7, "deer": true, "rainbow": 0.8, "temperature": 19.0, "sun_dir": Vector3(-0.4, -0.6, 0.62), "sun_color": Color(1.0, 0.95, 0.84), "sun_energy": 1.9,
+		"atmosphere": atmosphere({"fx": {"dandelion": 1.0}, "grade_shadow": Color(0.32, 0.55, 0.78), "grade_high": Color(1.0, 0.96, 0.72), "grade_warm": 0.0, "falls": 0.7, "deer": true, "rainbow": 0.8, "temperature": 19.0, "sun_dir": Vector3(-0.4, -0.6, 0.62), "sun_color": Color(1.0, 0.95, 0.84), "sun_energy": 1.9,
 			"ambient_energy": 0.48, "ambient_color": Color(0.62, 0.8, 0.55),
 			"zenith_color": Color(0.16, 0.5, 0.95), "horizon_color": Color(0.76, 0.9, 1.0), "cloud_coverage": 0.47,
 			"cirrus_amount": 0.7, "fog_color": Color(0.8, 0.9, 0.98), "fog_density": 0.0012, "saturation": 1.12,
@@ -513,10 +526,11 @@ static func spring() -> Dictionary:
 			grass_layer([Color(0.42, 0.76, 0.12), Color(0.34, 0.66, 0.1), Color(0.56, 0.84, 0.18), Color(0.48, 0.8, 0.14)],
 				[Color(0.62, 0.86, 0.2), Color(0.9, 0.9, 0.35), Color(0.5, 0.8, 0.16)], 2400.0, Vector2(0.28, 0.52), SHORT_GRASS + ["Grass_Common_Tall"]),
 			{"kind": "tree", "models": COMMON, "styles": [oak, oak, fresh], "spacing": 24.0, "chance": 0.6, "dist": [9.0, 400.0],
-				"falloff": [20.0, 160.0, 0.6], "grove": [0.026, -0.2], "scale": [1.5, 2.3], "radius": 4.0, "collide": "trunk", "trunk": 0.35},
+				"falloff": [20.0, 160.0, 0.6], "grove": [0.026, -0.2], "scale": [1.5, 2.3], "radius": 4.0, "collide": "trunk", "trunk": 0.35,
+				"thin": {1: 0.4, 2: 0.3, 3: 0.35}},
 			hero_tree(["CommonTree_1", "CommonTree_2"], oak, Vector2(4.2, 5.2)),
 			{"kind": "tree", "models": ["TwistedTree_1", "TwistedTree_4"], "styles": [bloom], "spacing": 70.0, "chance": 0.5, "dist": [10.0, 200.0],
-				"scale": [0.45, 0.6], "radius": 5.0, "collide": "trunk", "trunk": 0.45},
+				"scale": [0.45, 0.6], "radius": 5.0, "collide": "trunk", "trunk": 0.45, "thin": {1: 0.3}},
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 42.0, "chance": 0.25, "dist": [8.0, 60.0],
 				"scale": [1.0, 2.6], "sink": 0.2, "radius": 3.0, "collide": "rock"},
 			{"kind": "detail", "models": ["Bush_Common", "Bush_Common_Flowers", "Bush_Common_Flowers"], "styles": [bush], "density": 3.5,
@@ -532,6 +546,16 @@ static func spring() -> Dictionary:
 			small_rock_layer(rock, 1.5),
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			erratic_layer(rock_style(Color(0.7, 0.7, 0.68), 0.7), 130.0),
+			# round 12: tall trees on the edges, flower carpets, spring orchards, hedged pastures
+			{"kind": "tree", "models": TALL, "styles": [tall], "spacing": 34.0, "chance": 0.6, "dist": [14.0, 400.0],
+				"grove": [0.03, 0.1], "scale": [0.72, 1.0], "radius": 4.0, "collide": "trunk", "trunk": 0.35, "thin": {1: 0.3}},
+			carpet,
+			daisies,
+			{"kind": "tree", "models": CHERRIES, "styles": [fruit], "spacing": 13.0, "chance": 0.9, "dist": [7.0, 110.0], "patch": [2],
+				"scale": [0.38, 0.5], "radius": 3.5, "collide": "trunk", "trunk": 0.25},
+			hedges,
+			{"kind": "detail", "models": ["Bush_Large_Flowers"], "styles": [hawthorn], "density": 0.9, "dist": [5.0, 60.0], "patch": [3],
+				"scale": [0.7, 1.0], "shadows": true, "vis": 130.0, "near": true, "tilt": 0.3},
 		],
 	}
 

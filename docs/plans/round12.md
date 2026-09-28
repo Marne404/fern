@@ -233,3 +233,20 @@ Idea: hanami. Real cherry trees in full bloom, a pink carpet under them, petals 
 - Result: the grove is now real sakura (pink, some lilac), the avenue lines the path with crowns reaching over
   it, the orchard stands in a grid with flowering bushes, the blossom meadow is open and colorful. Petal gusts
   follow `WindGusts.current_strength` (fast fade in/out), 220 petals with a scale curve so they pop in softly.
+
+## Step 3.5 – Spring Meadow
+
+Idea: May. Wide green hills, fields of flowers in one color each, blossoming fruit trees, hawthorn hedges
+around pastures, dandelion seeds drifting in the sun.
+
+- Everywhere: groups of tall, fresh-green TallThick trees on the meadow edges (silhouettes against the sky).
+- Patches: meadow 35 % (as today) · flower carpet 25 % · spring orchard 20 % · hedged pasture 20 %.
+  - Flower carpet: dense single-color fields of the new flower families plus low Flower_6 ground cover.
+  - Spring orchard: small white-pink cherries (fruit blossom) in a loose grid with fresh-green TallThick.
+  - Hedged pasture: hawthorn hedgerows (long bushes, white blossom bushes), short grass, lone trees.
+  - Trees thinned in the carpet/orchard/pasture so each patch keeps its character.
+- Effect "dandelion": white dandelion seeds drifting slowly upwards with the wind, glowing in backlight; by
+  day, dry weather only.
+- Result: flower carpets in bands of color right beside the path, a snow-white fruit-blossom orchard with
+  flowering bushes, hawthorn hedgerows around pastures, tall fresh trees on the hills. Dandelion seeds use an
+  own tuft shader (14 hairs, halo, seed dot) that glows against the sun.
