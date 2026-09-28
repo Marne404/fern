@@ -33,7 +33,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
 	# how hard the wind blows right now (1 = calm, up to ~2.6 in a strong gust)
 	var gust := clampf((WindGusts.current_strength - 1.0) / 1.2, 0.0, 1.0)
-	for name in ["gossamer", "petal_gust", "dandelion", "samara", "crystal_motes", "wisps"]:
+	for name in ["gossamer", "petal_gust", "dandelion", "samara", "crystal_motes", "wisps", "spores"]:
 		var w := float(fx.get(name, 0.0))
 		var at := cam.global_position + fwd * 9.0 + Vector3(0, -0.4, 0)
 		match name:
@@ -47,6 +47,9 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 				# will-o'-wisps: from dusk to dawn, faintly on grey foggy days
 				w *= clampf(night * 1.4 + float(shown.get("overcast", 0.0)) * 0.3, 0.0, 1.0) * (1.0 - clampf(rain * 3.0, 0.0, 1.0))
 				at = cam.global_position + fwd * 14.0 + Vector3(0, -0.8, 0)
+			"spores":
+				# glowing spores: always a few, many more when it gets dark
+				w *= lerpf(0.35, 1.0, night) * (1.0 - clampf(rain * 3.0, 0.0, 1.0))
 			"crystal_motes":
 				# cold, clear mornings: the air glitters in the low sun
 				var hour := float(shown.get("hour", 12.0))
@@ -341,6 +344,39 @@ func _build(name: String) -> GPUParticles3D:
 			var wq := QuadMesh.new()
 			wq.material = wm
 			p.draw_pass_1 = wq
+		"spores":
+			# glowing spores rising slowly from the forest floor, cyan and violet
+			p.amount = 320
+			p.lifetime = 12.0
+			p.visibility_aabb = AABB(Vector3(-30, -10, -30), Vector3(60, 25, 60))
+			pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+			pm.emission_box_extents = Vector3(20, 0.5, 20)
+			pm.emission_shape_offset = Vector3(0, -0.5, 0)
+			pm.direction = Vector3.UP
+			pm.spread = 20.0
+			pm.initial_velocity_min = 0.2
+			pm.initial_velocity_max = 0.45
+			pm.gravity = Vector3(0, 0.01, 0)
+			pm.turbulence_enabled = true
+			pm.turbulence_noise_scale = 3.0
+			pm.turbulence_noise_strength = 0.8
+			pm.turbulence_influence_min = 0.04
+			pm.turbulence_influence_max = 0.1
+			pm.scale_min = 0.03
+			pm.scale_max = 0.07
+			var gsp := Gradient.new()
+			gsp.set_color(0, Color(0.35, 1.0, 0.95, 0))
+			gsp.set_color(1, Color(0.8, 0.5, 1.0, 0))
+			gsp.add_point(0.2, Color(0.4, 1.0, 0.95, 1))
+			gsp.add_point(0.75, Color(0.75, 0.55, 1.0, 0.9))
+			var gtsp := GradientTexture1D.new()
+			gtsp.gradient = gsp
+			pm.color_ramp = gtsp
+			var spm := ShaderMaterial.new()
+			spm.shader = preload("res://shaders/spore.gdshader")
+			var spq := QuadMesh.new()
+			spq.material = spm
+			p.draw_pass_1 = spq
 		"crystal_motes":
 			# fine ice crystals in cold morning air: tiny sparks that flash when they catch the sun
 			p.amount = 260

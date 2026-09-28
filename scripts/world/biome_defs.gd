@@ -885,15 +885,35 @@ static func glow() -> Dictionary:
 	var violet := tree_style(Color(0.3, 0.2, 0.5), Color(0.9, 0.62, 0.9), {"tint": Color(0.7, 0.72, 0.9)}, 7.0, {"translucency": 1.2})
 	var shroom := {"mushroom_tint": Color(0.42, 0.62, 0.85), "mushroom_glow": Color(0.12, 0.45, 0.6)}
 	var rock := rock_style(Color(0.42, 0.45, 0.6), 0.5, false, {"moss_color": Color(0.2, 0.55, 0.55)})
+	var shroom_violet := {"mushroom_tint": Color(0.72, 0.5, 0.95), "mushroom_glow": Color(0.42, 0.18, 0.6)}
+	var shroom_teal := {"mushroom_tint": Color(0.4, 0.85, 0.85), "mushroom_glow": Color(0.1, 0.5, 0.5)}
+	var crystal := tree_style(Color(0.12, 0.34, 0.42), Color(0.55, 0.95, 0.9), {"tint": Color(0.7, 0.72, 0.9)}, 9.0,
+		{"translucency": 1.2, "sphere_normals": 0.5, "glow": 0.12})
+	var glow_rock := rock_style(Color(0.46, 0.5, 0.68), 0.8, true, {"moss_color": Color(0.25, 0.75, 0.7), "triplanar_scale": 0.07})
+	var glow_plants := cluster_layer(["Plant_2", "Plant_2_Big", "Plant_4", "Plant_2"], 3.0, [2.5, 45.0], 5, 2.0, [0.6, 1.0], false,
+		{"plant": {"glow": 0.55}})
+	glow_plants["patch"] = [2]
+	var glade_flowers := cluster_layer(WILDFLOWERS, 3.5, [2.5, 45.0], 12, 2.8, [0.45, 0.75])
+	glade_flowers["tints"] = [Color(0.4, 0.9, 1.0), Color(0.8, 0.5, 1.0), Color(0.55, 0.6, 1.0)]
+	glade_flowers["patch"] = [2]
+	var ring := {"kind": "cluster", "models": ["Mushroom_Common", "Mushroom_RedCap", "Mushroom_Common"], "styles": [shroom_violet], "density": 0.9,
+		"dist": [5.0, 40.0], "count": 22, "radius": 3.2, "ring": true, "scale": [0.9, 1.6], "shadows": false, "vis": 80.0, "near": true, "tilt": 0.8,
+		"patch": [1]}
+	var ring_teal := ring.duplicate()
+	ring_teal["styles"] = [shroom_teal]
+	ring_teal["radius"] = 2.2
 	return {
 		"name": NAMES[10],
+		# deep wood as before · mushroom ring · blue glade · crystal grove
+		"patches": [{"name": "deep wood", "share": 0.4}, {"name": "mushroom ring", "share": 0.2},
+			{"name": "blue glade", "share": 0.25}, {"name": "crystal grove", "share": 0.15}],
 		"blades": blades(0.5, Color(0.04, 0.16, 0.2), Color(0.25, 0.7, 0.65), Color(0.45, 0.5, 0.95)),
 		"terrain": terrain({"scree": 0, "gullies": 0.3, "hummocks": 0.3, "brooks": 0.4, "litter": 0.45, "litter_color": Color(0.3, 0.75, 0.72), "far_height": 50.0, "valley_width": 14.0, "valley_height": 12.0, "undulation": 1.3, "ponds": 0.5,
 			"grass_dark": Color(0.14, 0.34, 0.34), "grass_light": Color(0.3, 0.58, 0.52),
 			"region_dark": Color(0.2, 0.2, 0.38), "region_light": Color(0.3, 0.3, 0.5),
 			"slope_color": Color(0.38, 0.4, 0.55), "path_color": Color(0.66, 0.6, 0.66), "crack": 0.2,
 			"water_shallow": Color(0.18, 0.55, 0.7), "water_deep": Color(0.04, 0.12, 0.3)}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.3, 0.35, 0.8), "grade_high": Color(0.8, 1.0, 0.92), "grade_warm": -0.3, "grade_contrast": 0.3, "shafts": 0.35, "rain": 0.7, "clock": 0.3, "mist_amount": 1.0, "sun_dir": Vector3(0.4, -0.2, 0.9), "sun_color": Color(1.0, 0.7, 0.75), "sun_energy": 1.45,
+		"atmosphere": atmosphere({"fx": {"spores": 1.0}, "grade_shadow": Color(0.3, 0.35, 0.8), "grade_high": Color(0.8, 1.0, 0.92), "grade_warm": -0.3, "grade_contrast": 0.3, "shafts": 0.35, "rain": 0.7, "clock": 0.3, "mist_amount": 1.0, "sun_dir": Vector3(0.4, -0.2, 0.9), "sun_color": Color(1.0, 0.7, 0.75), "sun_energy": 1.45,
 			"ambient_energy": 0.6, "ambient_color": Color(0.5, 0.55, 0.85), "fog_color": Color(0.55, 0.5, 0.8),
 			"fog_density": 0.004, "fog_sun_scatter": 0.5, "volumetric": 0.008, "saturation": 1.05, "exposure": 1.0,
 			"zenith_color": Color(0.16, 0.2, 0.48), "horizon_color": Color(0.95, 0.62, 0.7), "cloud_coverage": 0.55,
@@ -901,10 +921,10 @@ static func glow() -> Dictionary:
 			"particles": "fireflies", "particle_color": Color(0.6, 1.0, 0.5), "butterflies": 0, "birds": false, "temperature": 13.0,
 			"mountain_color": Color(0.25, 0.25, 0.45), "mountain_shadow": Color(0.18, 0.18, 0.38), "mountain_snow": 0.0}),
 		"layers": [
-			grass_layer([Color(0.2, 0.62, 0.6), Color(0.15, 0.5, 0.55), Color(0.3, 0.7, 0.65)],
-				[Color(0.45, 0.45, 0.9), Color(0.35, 0.6, 0.85)], 2200.0, Vector2(0.45, 0.9)),
+			thinned(grass_layer([Color(0.2, 0.62, 0.6), Color(0.15, 0.5, 0.55), Color(0.3, 0.7, 0.65)],
+				[Color(0.45, 0.45, 0.9), Color(0.35, 0.6, 0.85)], 2200.0, Vector2(0.45, 0.9)), {1: 0.3, 2: 0.55}),
 			{"kind": "tree", "models": TWISTED, "styles": [teal, teal, violet], "spacing": 13.0, "chance": 0.75, "dist": [6.0, 400.0],
-				"scale": [0.5, 0.8], "radius": 5.0, "collide": "trunk", "trunk": 0.45},
+				"scale": [0.5, 0.8], "radius": 5.0, "collide": "trunk", "trunk": 0.45, "thin": {1: 0.25, 2: 0.15, 3: 0.4}},
 			hero_tree(["TwistedTree_3", "TwistedTree_1"], teal, Vector2(1.6, 2.0)),
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 30.0, "chance": 0.3, "dist": [6.0, 40.0],
 				"scale": [1.0, 2.4], "sink": 0.2, "radius": 2.5, "collide": "rock"},
@@ -913,6 +933,18 @@ static func glow() -> Dictionary:
 				"count": 12, "radius": 2.5, "scale": [0.45, 0.75], "tints": [Color(0.4, 0.9, 1.0), Color(0.8, 0.5, 1.0)],
 				"vis": 70.0, "near": true, "tilt": 0.8},
 			cluster_layer(["Fern_1"], 1.0, [2.5, 30.0], 2, 1.5, [0.3, 0.45], true, {"plant": {"texture_tint": Color(0.5, 1.0, 1.1)}}),
+			# round 12: glowing shelves and caps, mushroom rings, blue glades, crystal groves
+			{"kind": "detail", "models": ["Mushroom_Oyster"], "styles": [shroom_teal], "density": 0.0, "on_trunks": 0.45,
+				"scale": [0.35, 0.6], "shadows": false, "vis": 70.0, "near": true},
+			cluster_layer(["Mushroom_RedCap"], 1.2, [2.2, 25.0], 4, 0.9, [0.35, 0.6], false, shroom_violet),
+			ring,
+			ring_teal,
+			glow_plants,
+			glade_flowers,
+			{"kind": "tree", "models": GIANT_PINES, "styles": [crystal], "spacing": 13.0, "chance": 0.75, "dist": [7.0, 400.0],
+				"patch": [3], "scale": [1.2, 1.7], "radius": 4.5, "collide": "trunk", "trunk": 0.42},
+			{"kind": "rock", "models": BIG_ROCKS + ["Rock_Medium_4"], "styles": [glow_rock], "spacing": 20.0, "chance": 0.5, "dist": [6.0, 60.0],
+				"patch": [3], "scale": [0.6, 1.3], "sink": 0.2, "radius": 4.0, "collide": "rock"},
 		],
 	}
 

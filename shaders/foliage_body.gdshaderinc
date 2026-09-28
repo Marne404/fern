@@ -28,6 +28,8 @@ uniform float near_fade = 0.0;     // fade out blades right in front of the came
 uniform bool instance_tint = false; // blossom color per instance (INSTANCE_CUSTOM.rgb)
 uniform bool impostor_cut = false;  // distant tree meshes: hand over to the impostor inside the band
 instance uniform float bake_mask = 0.0;  // impostor baking: 1 = draw the bark mask (leaves black)
+uniform float glow = 0.0;           // luminous plants (Glowing Forest): own light, stronger in the dark
+global uniform float daylight;
 
 
 varying float v_grad;
@@ -147,6 +149,12 @@ void fragment() {
 	// wet leaves: a little darker and richer
 	col = mix(col, adjust_saturation(col, 1.15) * 0.86, wetness);
 	ALBEDO = bake_mask > 0.5 ? vec3(0.0) : adjust_saturation(col, saturation);
+	if (glow > 0.0 && bake_mask < 0.5) {
+		// brightest in the pale parts of the leaf, breathing slowly
+		float lum = dot(col, vec3(0.3, 0.55, 0.15));
+		float breathe = 0.8 + 0.2 * sin(TIME * 0.9 + v_shade * 20.0);
+		EMISSION = adjust_saturation(col, 1.3) * smoothstep(0.15, 0.6, lum) * glow * breathe * mix(1.0, 0.35, daylight);
+	}
 #ifndef OPAQUE_GRASS
 	// mipmaps average the leaf edges below the cutoff -> distant crowns dissolve.
 	// raise the opacity depending on the mip level (keeps the coverage in the distance).

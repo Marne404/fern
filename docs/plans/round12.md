@@ -332,3 +332,20 @@ trees on the ridges, waterfalls in the distance, swallows darting over the meado
 - Result: mossy Rock_Big terrace rocks and slender trees on the ridges, boulder fields with ferns, tall
   groves, flower terraces (grass thinned to 35 % there, or the tall Cliff Lands grass hid every flower);
   light shafts in the groves. Swallows: five dark forked-tail birds looping low over the meadow, banking.
+
+## Step 3.11 – Glowing Forest
+
+Idea: the fairy-tale forest at eternal dusk: glowing mushrooms, blue and violet leaves, mushroom rings,
+luminous plants, spores drifting upwards.
+
+- Everywhere: glowing oyster shelves on the trunks, glowing red caps turned violet/teal, blue Plant_2–6.
+- Patches: deep wood 40 % (as today) · mushroom ring 20 % · blue glade 25 % · crystal grove 15 %.
+  - Mushroom ring: big glowing mushrooms in rings (cluster with high count in a circle), few trees.
+  - Blue glade: carpets of blue/violet plants and flowers that glow faintly, open sky.
+  - Crystal grove: pale-leaved giant pines with teal crowns, grey-blue big rocks with glowing moss.
+- Effect "spores": glowing spores rising slowly from the ground (cyan/violet), strongest at night.
+- Result: fairy rings of glowing mushrooms (new cluster key `ring`), glowing teal shelf fungi on trunks,
+  violet caps, blue glades with softly glowing Plant_2/Plant_4 (new foliage uniform `glow`, stronger in the
+  dark, breathing slowly), crystal groves of teal giant pines with glowing moss rocks, rising spores (own
+  shader, colors from the ramp). Kit colors checked in a lineup: Plant_2 blue, Plant_3 orange, Plant_4
+  magenta, Plant_5 dark red, Plant_6 pink.

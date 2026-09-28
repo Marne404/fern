@@ -728,6 +728,9 @@ func _place_cluster(b: int, li: int, layer: Dictionary, lx: float, lz: float) ->
 	for k in int(layer["count"]):
 		var a := rng.randf() * TAU
 		var dd := sqrt(rng.randf()) * radius
+		if layer.get("ring", false):
+			# fairy rings: on a circle instead of inside it
+			dd = radius * (0.88 + dd / radius * 0.12)
 		var px := lx + cos(a) * dd
 		var pz := lz + sin(a) * dd
 		if px < 0.0 or pz < 0.0 or px > SIZE or pz > SIZE:
