@@ -221,7 +221,7 @@ static func meadow() -> Dictionary:
 	var stubble := [Color(0.94, 0.8, 0.42), Color(0.88, 0.72, 0.34), Color(0.98, 0.86, 0.5), Color(0.84, 0.66, 0.3)]
 	var asters := cluster_layer(WILDFLOWERS, 0.8, [2.5, 30.0], 7, 1.8, [0.4, 0.7])
 	asters["tints"] = [Color(0.62, 0.45, 1.0), Color(0.75, 0.55, 1.0), Color(1.0, 0.86, 0.2), Color(1.0, 0.95, 0.85)]
-	var bracken := cluster_layer(["Fern_2"], 0.9, [3.0, 40.0], 3, 2.0, [0.22, 0.34], true, {"plant": {"texture_tint": Color(1.35, 0.72, 0.32)}})
+	var bracken := cluster_layer(["Fern_2"], 0.9, [3.0, 40.0], 4, 2.2, [0.8, 1.2], true, {"plant": {"texture_tint": Color(1.35, 0.72, 0.32)}})
 	bracken["patch"] = [1, 3]
 	var agarics := cluster_layer(["Mushroom_RedCap"], 0.7, [2.5, 30.0], 3, 0.8, [0.35, 0.6])
 	agarics["patch"] = [1]
@@ -292,7 +292,7 @@ static func forest() -> Dictionary:
 		{"sphere_normals": 0.5, "translucency": 0.5})
 	var undergrowth := {"leaves": leaves(Color(0.12, 0.34, 0.06), Color(0.46, 0.74, 0.18), {"sphere_normals": 0.85}), "stiffness": 6.0}
 	var mossy := rock_style(Color(0.7, 0.72, 0.68), 0.75, true, {"triplanar_scale": 0.08})
-	var ferns := cluster_layer(["Fern_2"], 14.0, [2.3, 45.0], 7, 3.2, [0.4, 0.62], true)
+	var ferns := cluster_layer(["Fern_1", "Fern_2", "Fern_2"], 6.0, [2.3, 45.0], 8, 3.2, [1.0, 1.6], true)
 	ferns["patch"] = [2]
 	var blue_plants := cluster_layer(["Plant_2", "Plant_2_Big"], 0.8, [2.5, 35.0], 3, 1.4, [0.6, 1.0], true)
 	blue_plants["patch"] = [2]
@@ -572,7 +572,7 @@ static func maple() -> Dictionary:
 	var crimson_bush := {"leaves": leaves(Color(0.52, 0.06, 0.04), Color(0.95, 0.3, 0.1), {"sphere_normals": 0.85}), "stiffness": 6.0}
 	var amber_bush := {"leaves": leaves(Color(0.72, 0.3, 0.04), Color(1.0, 0.62, 0.18), {"sphere_normals": 0.85}), "stiffness": 6.0}
 	var mossy := rock_style(Color(0.62, 0.62, 0.56), 0.85, true, {"triplanar_scale": 0.08, "moss_color": Color(0.46, 0.6, 0.16)})
-	var rust_ferns := cluster_layer(["Fern_2"], 2.2, [3.0, 40.0], 3, 2.0, [0.3, 0.46], true, {"plant": {"texture_tint": Color(1.4, 0.62, 0.3)}})
+	var rust_ferns := cluster_layer(["Fern_2"], 2.2, [3.0, 40.0], 4, 2.2, [0.9, 1.3], true, {"plant": {"texture_tint": Color(1.4, 0.62, 0.3)}})
 	rust_ferns["patch"] = [2]
 	var clearing_flowers := cluster_layer(WILDFLOWERS, 2.2, [2.5, 40.0], 8, 2.4, [0.45, 0.7])
 	clearing_flowers["tints"] = [Color(1.0, 0.72, 0.2), Color(0.7, 0.5, 1.0), Color(1.0, 0.9, 0.6)]
@@ -701,7 +701,7 @@ static func bog() -> Dictionary:
 	var silver := {"bark": {"tint": Color(0.86, 0.86, 0.84), "brightness": 2.1, "desaturate": 0.9, "ao_strength": 0.4}, "stiffness": 14.0}
 	var carr := birch_style(Color(0.46, 0.54, 0.12), Color(0.82, 0.86, 0.36), {"translucency": 0.9})
 	var sedge := [Color(0.5, 0.52, 0.2), Color(0.58, 0.56, 0.24), Color(0.44, 0.48, 0.18), Color(0.66, 0.6, 0.3)]
-	var fern_island := cluster_layer(["Fern_2"], 9.0, [2.5, 45.0], 5, 2.6, [0.42, 0.62], true)
+	var fern_island := cluster_layer(["Fern_1", "Fern_2"], 5.0, [2.5, 45.0], 7, 3.0, [1.0, 1.6], true)
 	fern_island["patch"] = [2]
 	var fern_plants := cluster_layer(["Plant_2", "Plant_2_Big"], 1.0, [2.5, 40.0], 3, 1.4, [0.6, 1.0], true)
 	fern_plants["patch"] = [2]
@@ -830,7 +830,7 @@ static func cliffs() -> Dictionary:
 	var blooms := {"kind": "cluster", "models": WILDFLOWERS + ["Flower_6"], "styles": [{}], "density": 4.5, "dist": [2.5, 60.0], "count": 30,
 		"radius": 4.0, "scale": [0.55, 0.9], "tints": [Color(1.0, 1.0, 1.0), Color(1.0, 0.9, 0.3), Color(0.5, 0.65, 1.0)],
 		"vis": 75.0, "near": true, "tilt": 0.8, "patch": [3]}
-	var boulder_ferns := cluster_layer(["Fern_2"], 3.5, [3.0, 50.0], 3, 2.0, [0.3, 0.46], true)
+	var boulder_ferns := cluster_layer(["Fern_2"], 3.0, [3.0, 50.0], 4, 2.2, [0.9, 1.3], true)
 	boulder_ferns["patch"] = [1]
 	return {
 		"name": NAMES[9],
@@ -959,7 +959,7 @@ static func lakes() -> Dictionary:
 	var real_birch_gold := birch_style(Color(0.62, 0.6, 0.1), Color(0.98, 0.9, 0.34))
 	var tall_dark := tree_style(Color(0.1, 0.36, 0.08), Color(0.46, 0.76, 0.22), {"tint": Color(0.95, 0.85, 0.8)}, 6.0, {"translucency": 0.9})
 	var shore_grass := [Color(0.52, 0.72, 0.2), Color(0.6, 0.76, 0.26), Color(0.46, 0.66, 0.18), Color(0.7, 0.74, 0.34)]
-	var shore_ferns := cluster_layer(["Fern_2"], 2.0, [3.0, 40.0], 3, 2.0, [0.3, 0.46], true)
+	var shore_ferns := cluster_layer(["Fern_2"], 2.0, [3.0, 40.0], 4, 2.2, [0.9, 1.3], true)
 	shore_ferns["patch"] = [1]
 	var white_fl := cluster_layer(["Flower_6", "Flower_1_Single", "Flower_1_Group"], 1.8, [2.5, 40.0], 8, 2.2, [0.45, 0.75])
 	white_fl["tints"] = [Color(1.0, 1.0, 0.96), Color(0.94, 0.96, 1.0)]
@@ -1088,8 +1088,20 @@ static func birch_wood() -> Dictionary:
 	var rock := rock_style(Color(0.7, 0.72, 0.68), 0.55)
 	var white_flowers := cluster_layer(["Flower_3_Group", "Flower_3_Single"], 0.8, [2.5, 26.0], 7, 1.6, [0.4, 0.65])
 	white_flowers["tints"] = [Color(1.0, 1.0, 0.95), Color(0.96, 0.94, 1.0)]
+	var real := birch_style(Color(0.28, 0.54, 0.1), Color(0.76, 0.94, 0.32))
+	var real_gold := birch_style(Color(0.76, 0.56, 0.08), Color(1.0, 0.88, 0.34))
+	var real_orange := birch_style(Color(0.84, 0.36, 0.05), Color(1.0, 0.66, 0.22))
+	var fern_floor := cluster_layer(["Fern_1", "Fern_2", "Fern_2"], 5.5, [2.3, 45.0], 8, 3.0, [1.0, 1.55], true)
+	fern_floor["patch"] = [1]
+	var lily := cluster_layer(["Flower_6", "Flower_6_2", "Flower_1_Single"], 3.0, [2.3, 40.0], 10, 2.0, [0.5, 0.8])
+	lily["tints"] = [Color(1.0, 1.0, 0.96)]
+	lily["patch"] = [1]
+	var dell_rock := rock_style(Color(0.66, 0.68, 0.64), 0.9, true, {"triplanar_scale": 0.08})
 	return {
 		"name": NAMES[13],
+		# birch hall as before · fern floor · golden corner · mossy dell
+		"patches": [{"name": "birch hall", "share": 0.4}, {"name": "fern floor", "share": 0.25},
+			{"name": "golden corner", "share": 0.2}, {"name": "mossy dell", "share": 0.15}],
 		"blades": blades(0.45, Color(0.14, 0.3, 0.06), Color(0.6, 0.8, 0.2), Color(0.92, 0.86, 0.36)),
 		"terrain": terrain({"scree": 0, "gullies": 0.4, "hummocks": 0.4, "brooks": 0.75, "litter": 0.55, "litter_color": Color(0.96, 0.78, 0.22), "far_height": 45.0,
 			"obstacles": ["fallen_tree", "river", "mud"], "ponds": 0.25, "path_width": 2.8,
@@ -1097,18 +1109,20 @@ static func birch_wood() -> Dictionary:
 			"grass_dark": Color(0.36, 0.52, 0.12), "grass_light": Color(0.62, 0.72, 0.2),
 			"region_dark": Color(0.62, 0.6, 0.18), "region_light": Color(0.78, 0.7, 0.28),
 			"path_color": Color(0.72, 0.62, 0.44), "slope_color": Color(0.5, 0.52, 0.3), "crack": 0.5}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.35, 0.52, 0.55), "grade_high": Color(1.0, 0.92, 0.62), "grade_warm": 0.3, "deer": true, "shafts": 1.0, "sun_dir": Vector3(-0.4, -0.55, 0.72), "sun_color": Color(1.0, 0.94, 0.82), "sun_energy": 1.8,
+		"atmosphere": atmosphere({"fx": {"gossamer": 0.5}, "grade_shadow": Color(0.35, 0.52, 0.55), "grade_high": Color(1.0, 0.92, 0.62), "grade_warm": 0.3, "deer": true, "shafts": 1.0, "sun_dir": Vector3(-0.4, -0.55, 0.72), "sun_color": Color(1.0, 0.94, 0.82), "sun_energy": 1.8,
 			"ambient_energy": 0.6, "ambient_color": Color(0.7, 0.78, 0.6), "fog_color": Color(0.88, 0.92, 0.86),
 			"fog_density": 0.0035, "fog_sun_scatter": 0.4, "volumetric": 0.008, "exposure": 0.92,
 			"zenith_color": Color(0.34, 0.6, 0.9), "horizon_color": Color(0.9, 0.93, 0.9), "cloud_coverage": 0.45,
 			"particles": "leaves", "particle_color": Color(1.0, 0.84, 0.28), "butterflies": 4, "temperature": 14.0,
 			"mountain_color": Color(0.5, 0.56, 0.46), "mountain_snow": 0.2}),
 		"layers": [
-			grass_layer([Color(0.52, 0.78, 0.18), Color(0.44, 0.7, 0.14), Color(0.66, 0.84, 0.24)],
-				[Color(0.9, 0.78, 0.28), Color(0.8, 0.82, 0.3)], 1800.0),
-			{"kind": "tree", "models": COMMON, "styles": [birch], "region_styles": [golden], "spacing": 8.0, "chance": 0.8,
-				"dist": [5.0, 400.0], "falloff": [20.0, 160.0, 0.55], "grove": [0.022, -0.2], "scale": [1.2, 2.0], "radius": 2.4, "collide": "trunk", "trunk": 0.26},
-			hero_tree(["CommonTree_2", "CommonTree_4"], birch, Vector2(3.6, 4.4)),
+			thinned(grass_layer([Color(0.52, 0.78, 0.18), Color(0.44, 0.7, 0.14), Color(0.66, 0.84, 0.24)],
+				[Color(0.9, 0.78, 0.28), Color(0.8, 0.82, 0.3)], 1800.0), {1: 0.4}),
+			# (the real birches replace the painted ones in the same places)
+			{"kind": "tree", "models": BIRCHES, "styles": [real], "region_styles": [real_gold], "spacing": 8.0, "chance": 0.8,
+				"dist": [5.0, 400.0], "falloff": [20.0, 160.0, 0.55], "grove": [0.022, -0.2], "scale": [0.62, 1.0], "radius": 2.4, "collide": "trunk", "trunk": 0.2,
+				"thin": {1: 0.7, 2: 0.2}},
+			hero_tree(["Birch_1", "Birch_4"], real, Vector2(1.9, 2.3)),
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 32.0, "chance": 0.3, "dist": [6.0, 40.0],
 				"scale": [1.0, 2.4], "sink": 0.2, "radius": 2.5, "collide": "rock"},
 			cluster_layer(["Fern_1"], 2.4, [2.5, 40.0], 4, 1.8, [0.3, 0.5]),
@@ -1117,6 +1131,15 @@ static func birch_wood() -> Dictionary:
 			cluster_layer(["Clover_1", "Clover_2"], 0.6, [2.5, 22.0], 8, 1.5, [0.6, 1.0]),
 			pebble_layer(rock_style(Color(0.74, 0.74, 0.7), 0.0, false, {"top_light": 0.3}), 16.0),
 			small_rock_layer(rock),
+			# round 12: fern floors, golden corners, mossy dells
+			fern_floor,
+			lily,
+			{"kind": "tree", "models": BIRCHES, "styles": [real_gold, real_gold, real_orange], "spacing": 7.0, "chance": 0.85,
+				"dist": [5.0, 400.0], "patch": [2], "scale": [0.62, 1.0], "radius": 2.2, "collide": "trunk", "trunk": 0.2},
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4"], "styles": [dell_rock], "spacing": 16.0, "chance": 0.55,
+				"dist": [6.0, 60.0], "patch": [3], "scale": [0.6, 1.3], "sink": 0.22, "radius": 4.0, "collide": "rock"},
+			oyster_layer(0.3),
+			cluster_layer(["Mushroom_RedCap"], 0.7, [2.5, 25.0], 3, 0.8, [0.3, 0.55]),
 		],
 	}
 

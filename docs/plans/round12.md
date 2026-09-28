@@ -381,3 +381,20 @@ olive groves, hedgerows, a warm hazy afternoon light.
 - Result: golden wheat strips in rows between the lavender (rows layers can now carry a grass palette), olive
   groves, hedgerow meadows with poppies, narrow dark cypresses (tree layers can set their own `squash`), a
   light heat shimmer and a few seeds drifting in the sun.
+
+## Step 3.14 – Birch Wood
+
+Idea: a bright hall of real birches – white trunks in rows of light, a fern floor, lily-of-the-valley,
+shelf fungi, a golden corner where autumn has already begun.
+
+- The main tree layer switches from the painted CommonTree birches to the real Birch_1–5 (same places).
+- Patches: birch hall 40 % (as today) · fern floor 25 % · golden corner 20 % · mossy dell 15 %.
+  - Fern floor: dense Fern_2 with white flowers, grass thinned.
+  - Golden corner: golden and orange birches, yellow leaf litter particles stronger.
+  - Mossy dell: mossy big rocks, shelf fungi, fly agarics.
+- Effect: the birch leaves already fall; add "gossamer" lightly and stronger leaf fall.
+- Result: the birch hall is now made of the kit's real birches (same places), golden corners in gold and
+  orange, fern floors, mossy dells with big rocks, fungi.
+- Fix across biomes: the ferns are only ~1.5 m wide at scale 1 (the earlier "9 m" came from reading the
+  bounds of all accessors, not only positions). All new fern carpets were ~0.6 m tufts; they are now 1.0–1.6
+  (Forest Trail, Deadwood Bog, Birch Wood with Fern_1 mixed in; bracken, rust ferns, boulder and shore ferns).
