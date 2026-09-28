@@ -520,3 +520,27 @@ bog cotton, low racing clouds; wild and wide.
 - Helpers: `--mmistats` (batches/instances/triangles per model family), `--hide=Prefix,…`.
 - After: Autumn birch stand 47 ms (round 11: 44.6), Red Maple 46, Cherry Valley 38, Old Forest 44, Wheat 40,
   Forest Trail 45.
+
+## Step 5 – Skies and the night sky (plan)
+
+New sky forms in the sky shader, each with a strength per biome (atmosphere keys, blended across borders),
+bent by the time of day and hidden by overcast weather:
+
+| Key | Look | When | Strongest in |
+|---|---|---|---|
+| `sky_towers` | towering cumulus rising from the horizon all around, sunlit cream tops, blue-grey bases, hazy feet | afternoon (12–19 h), a little in the morning | Wheat Fields, Spring Meadow, Lavender Hills, Cliff Lands, Coast |
+| `sky_mackerel` | a field of small high cloudlets (altocumulus) in the upper sky, lit pink at dawn/dusk | all day, best morning and evening | Golden Birch Slopes, Mountain Pines, Autumn Meadow, Highlands |
+| `sky_bands` | thin pastel strata along the horizon, glowing gold/pink towards the sun | golden hour, dusk, dawn | Sunset Coast, Cherry Valley, Desert, Lavender, Blossom Grove |
+| `aurora` | green-to-violet curtains with vertical rays waving slowly over the northern (forward) sky | night only, clear sky | Heather Highlands, Mountain Pines, Rock Gorge, Lake Country, Blue Fern Hollow |
+| `shooting_stars` | now and then a streak crosses the starry sky (about one a minute, more in dark clear biomes) | night | everywhere (Desert, Mountains more) |
+
+Test: renders at 15:30 in Wheat Fields (towers), 7:30 in Golden Birch Slopes (mackerel), 19:10 at the coast
+(bands), 23:00 in the Highlands (aurora, shooting stars caught with a fixed debug time), GPU cost.
+- Result: towering cumulus as a skyline of heads with cauliflower edges, sunlit cream tops and blue-grey
+  feet (afternoons); mackerel skies of small cloudlets (best with a low sun); pastel strata glowing gold and
+  pink at the horizon (dawn, golden hour); aurora curtains in green to violet with vertical rays over the
+  forward sky, waving slowly (clear nights); up to three shooting-star slots crossing the sky now and then.
+  Ordinary heaps thin out when towers or a mackerel sky are strong. Forms per biome (all 22), shaped by the
+  hour, hidden by overcast. Cost: nothing measurable. Helpers `--skyset=key:value,…` and `--shoot=-1`.
+- Wheat was the next big cost (Grass_Wheat has ~1190 triangles): rows now 1.2 × 0.75 m with bigger tufts and a
+  65–70 m view range, stubble sparser, the autumn stubble grass lighter. Wheat Fields 66 → 37 ms (High).

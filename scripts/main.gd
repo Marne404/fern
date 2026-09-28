@@ -585,6 +585,12 @@ func _process_inner(delta: float) -> void:
 	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
 	# test helpers for tuning the lighting
+	if _args.has("skyset") and atmosphere.debug_sky.is_empty():
+		for pair in _args["skyset"].split(","):
+			var kv3: PackedStringArray = pair.split(":")
+			atmosphere.debug_sky[kv3[0]] = float(kv3[1])
+	if _args.has("shoot"):
+		atmosphere.sky_mat.set_shader_parameter("shooting_seed", float(_args["shoot"]))
 	if _args.has("tm"):
 		atmosphere.env.tonemap_mode = int(_args["tm"])
 	if _args.has("white"):

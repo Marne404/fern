@@ -164,6 +164,28 @@ func update(world_z: float, delta: float, force := false) -> void:
 	_apply()
 
 
+## test helper (--skyset=key:value,…): sky shader parameters forced after every update
+var debug_sky := {}
+
+
+## Sky forms by time of day: towering clouds grow in the afternoon, pastel strata glow at dawn and in the
+## golden hour, the mackerel sky is best when the sun is low; overcast hides them, the aurora needs the night.
+func _apply_sky_forms(c: Dictionary) -> void:
+	var h := day.hour
+	var night := float(c.get("night", 0.0))
+	var clear := 1.0 - clampf(float(c.get("overcast", 0.0)) * 1.4, 0.0, 1.0)
+	var afternoon := smoothstep(11.0, 14.0, h) * (1.0 - smoothstep(18.4, 19.8, h)) + 0.3 * smoothstep(8.5, 10.5, h) * (1.0 - smoothstep(11.0, 12.5, h))
+	var golden := maxf(smoothstep(16.6, 18.2, h) * (1.0 - smoothstep(20.3, 21.2, h)), smoothstep(4.5, 5.4, h) * (1.0 - smoothstep(7.4, 8.6, h)))
+	var low_sun := maxf(golden, 1.0 - smoothstep(8.0, 10.5, h) + smoothstep(15.5, 18.0, h))
+	sky_mat.set_shader_parameter("sky_towers", float(c.get("sky_towers", 0.0)) * afternoon * (1.0 - night) * clear)
+	sky_mat.set_shader_parameter("sky_bands", float(c.get("sky_bands", 0.0)) * (0.2 + 0.8 * golden) * (1.0 - night * 0.7) * clear)
+	sky_mat.set_shader_parameter("sky_mackerel", float(c.get("sky_mackerel", 0.0)) * (0.55 + 0.45 * clampf(low_sun, 0.0, 1.0)) * (1.0 - night * 0.8) * clear)
+	sky_mat.set_shader_parameter("aurora", float(c.get("aurora", 0.0)) * clear)
+	sky_mat.set_shader_parameter("shooting_stars", float(c.get("shooting_stars", 1.0)) * clear)
+	for k in debug_sky:
+		sky_mat.set_shader_parameter(k, debug_sky[k])
+
+
 func _read_day_settings() -> void:
 	day.fixed = int(Settings.values.get("time_of_day", 0))
 	weather.mode = int(Settings.values.get("weather", 0))
@@ -218,6 +240,7 @@ func _apply() -> void:
 	for k in ["zenith_color", "horizon_color", "cloud_coverage", "cirrus_amount", "cloud_shadow", "rainbow", "sun_glow",
 			"cloud_color", "stars", "moon"]:
 		sky_mat.set_shader_parameter(k, c[k])
+	_apply_sky_forms(c)
 	# water and waterfalls brighten themselves a little (anime look): not in the dark
 	RenderingServer.global_shader_parameter_set("daylight", 1.0 - float(c["night"]) * 0.75)
 	RenderingServer.global_shader_parameter_set("sun_vector", -(c["sun_dir"] as Vector3).normalized())
