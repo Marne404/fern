@@ -590,7 +590,32 @@ func _compute_obstacle(k: int) -> Dictionary:
 			o["pool"] = Vector4(px, pz, r, below - 0.7)
 		"fallen_tree":
 			o["height"] = 1.55     # trunk axis above the path
+		"stile":
+			o["length"] = 34.0     # half length of the fence
+			o["angle"] = rng.randf_range(-0.12, 0.12)
+		"mud":
+			o["len"] = rng.randf_range(8.0, 11.0)   # half extent along the path
+			o["wid"] = rng.randf_range(6.0, 8.0)    # half extent across
+		"boulders":
+			o["band"] = 7.0        # half depth of the rockslide along the path
+			o["half"] = 28.0       # half width across the valley
 	return o
+
+
+## Mud of a mud hollow at a point: 0 = dry, 1 = deep mud (soft, noisy edge)
+func mud_at(x: float, z: float) -> float:
+	var best := 0.0
+	for o in obstacles_near(z):
+		if o["type"] != "mud":
+			continue
+		var dz := (z - float(o["z"])) / float(o["len"])
+		if absf(dz) > 1.4:
+			continue
+		var dx := (x - path_x(z)) / float(o["wid"])
+		var d := dz * dz + dx * dx
+		var n := paint(x * 2.3 + 91.0, z * 2.3) - 0.5
+		best = maxf(best, clampf((1.0 + n * 0.6 - d) * 4.0, 0.0, 1.0))
+	return best
 
 
 func obstacles_near(z: float, reach := 0.0) -> Array:

@@ -248,6 +248,15 @@ func _build_tile(t: Vector2i, lod: int) -> MultiMeshInstance3D:
 	mmi.set_instance_shader_parameter("pond", pv)
 	# no blades under large rocks (up to 4 rocks per tile)
 	var disks := world.rock_disks_in(Rect2(wx, wz, TILE, TILE))
+	# mud hollows count as big disks: no blades in the mud
+	for o in gen.obstacles_near(wz + TILE * 0.5):
+		if o["type"] != "mud":
+			continue
+		for f: float in [-0.6, 0.0, 0.6]:
+			var mz: float = o["z"] + f * float(o["len"])
+			var md := Vector3(gen.path_x(mz), mz, float(o["wid"]) * (1.0 if f == 0.0 else 0.8))
+			if Rect2(wx, wz, TILE, TILE).grow(md.z).has_point(Vector2(md.x, md.y)):
+				disks.append(md)
 	disks.sort_custom(func(a, b): return a.z > b.z)
 	for i in 4:
 		var d: Vector3 = disks[i] if i < disks.size() else Vector3(0, 0, 0)

@@ -31,7 +31,7 @@ static func _make_step(which: String) -> AudioStreamWAV:
 	var kind := parts[1]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(which)
-	var dur: float = {"grass": 0.16, "path": 0.12, "sand": 0.16, "snow": 0.2, "wood": 0.14, "water": 0.3}.get(kind, 0.14)
+	var dur: float = {"grass": 0.16, "path": 0.12, "sand": 0.16, "snow": 0.2, "wood": 0.14, "water": 0.3, "mud": 0.26}.get(kind, 0.14)
 	var n := int(RATE * dur)
 	var samples := PackedFloat32Array()
 	samples.resize(n)
@@ -39,7 +39,7 @@ static func _make_step(which: String) -> AudioStreamWAV:
 	var lp2 := 0.0
 	var ph := 0.0
 	# low-pass amount (0..1, higher = brighter) and grain density per ground
-	var bright: float = {"grass": 0.35, "path": 0.55, "sand": 0.12, "snow": 0.45, "wood": 0.2, "water": 0.3}.get(kind, 0.3)
+	var bright: float = {"grass": 0.35, "path": 0.55, "sand": 0.12, "snow": 0.45, "wood": 0.2, "water": 0.3, "mud": 0.08}.get(kind, 0.3)
 	var grains: float = {"grass": 0.002, "path": 0.012, "sand": 0.0, "snow": 0.02, "wood": 0.0, "water": 0.004}.get(kind, 0.0)
 	for i in n:
 		var t := float(i) / RATE
@@ -60,6 +60,10 @@ static func _make_step(which: String) -> AudioStreamWAV:
 			v = v * 0.5 + sin(ph) * 0.9 * exp(-t * 30.0)
 		if kind == "snow":
 			v *= 0.8 + 0.4 * sin(t * TAU * 90.0)
+		if kind == "mud":
+			# squelch: low, sucking wobble that rises at the end
+			ph += TAU * lerpf(90.0, 260.0, pow(t / dur, 3.0)) / RATE
+			v = v * 0.6 + sin(ph) * 0.5 * smoothstep(0.3, 0.9, t / dur)
 		samples[i] = v * env
 	# same loudness for every ground (quiet sand would vanish, grainy gravel would click)
 	var rms := 0.0

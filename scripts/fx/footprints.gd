@@ -12,11 +12,13 @@ const PRINT_COLORS := {
 	"path": Color(0.3, 0.22, 0.14, 0.6),
 	"sand": Color(0.55, 0.38, 0.2, 0.65),
 	"snow": Color(0.5, 0.58, 0.78, 0.75),
+	"mud": Color(0.12, 0.08, 0.05, 0.7),
 }
 const PUFF_COLORS := {
 	"path": Color(0.86, 0.76, 0.58, 0.55),
 	"sand": Color(0.95, 0.85, 0.65, 0.6),
 	"snow": Color(1.0, 1.0, 1.0, 0.85),
+	"mud": Color(0.3, 0.2, 0.12, 0.0),
 	"grass": Color(0.8, 0.78, 0.6, 0.0),
 }
 

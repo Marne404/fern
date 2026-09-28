@@ -83,6 +83,9 @@ func _build(o: Dictionary) -> Node3D:
 		"river": _build_river(o, root)
 		"cliff": _build_cliff(o, root)
 		"fallen_tree": _build_fallen_tree(o, root)
+		"stile": _build_stile(o, root)
+		"mud": _build_mud(o, root)
+		"boulders": _build_boulders(o, root)
 	return root
 
 
@@ -1003,3 +1006,182 @@ func _physics_process(delta: float) -> void:
 			body.apply_force(Vector3(0, up, 0) + rel * body.mass * 0.9 * sub / n, p - body.global_position)
 		if any:
 			body.angular_velocity *= 1.0 - 0.8 * delta
+
+
+# ================================================================ Stile fence
+
+## A pasture fence across the valley; at the path a wooden stile with steps leads over it.
+func _build_stile(o: Dictionary, root: Node3D) -> void:
+	var z: float = o["z"]
+	var slope := gen.path_slope(z)
+	var across := Vector2(1.0, -slope).normalized().rotated(o["angle"])
+	var fwd := Vector2(-across.y, across.x)
+	var c := Vector2(o["px"], z)
+	var half_l: float = o["length"]
+	# posts symmetric around the stile, rails between them
+	var ts: Array[float] = []
+	var t := 0.9
+	while t < half_l:
+		ts.append(-t)
+		ts.append(t)
+		t += 2.4
+	ts.sort()
+	var prev := Vector3.INF
+	for i in ts.size():
+		var p := _ground(o, c + across * ts[i])
+		var stile_post := absf(ts[i]) < 1.0
+		_post(root, p, 1.75 if stile_post else 1.3)
+		if prev != Vector3.INF:
+			for h: float in [0.5, 0.95]:
+				var a := prev + Vector3(0, h, 0)
+				var b := p + Vector3(0, h, 0)
+				var d := b - a
+				_box(root, Vector3(0.05, 0.12, d.length() + 0.1), (a + b) * 0.5, Basis.looking_at(d.normalized(), Vector3.UP), "plank")
+		prev = p
+	# stile: three steps on each side and a top board over the upper rail. The steps are only the look;
+	# underneath lies an invisible ramp (35°) so walking over works smoothly without a jump.
+	var face := Basis.looking_at(Vector3(fwd.x, 0.0, fwd.y), Vector3.UP)
+	for side: float in [-1.0, 1.0]:
+		for k in 3:
+			var h := 0.8 - 0.27 * k
+			var d := 0.5 + k * 0.5
+			var g := _ground(o, c + fwd * d * side)
+			_box(root, Vector3(1.2, h, 0.5), g + Vector3(0, h * 0.5, 0), face, "plank", false)
+		var top_p := _ground(o, c + fwd * 0.25 * side) + Vector3(0, 1.1, 0)
+		var foot := _ground(o, c + fwd * 1.8 * side) + Vector3(0, 0.02, 0)
+		var ramp_dir := (foot - top_p).normalized()
+		var ramp := StaticBody3D.new()
+		var rcs := CollisionShape3D.new()
+		var rbox := BoxShape3D.new()
+		rbox.size = Vector3(1.2, 0.06, (foot - top_p).length())
+		rcs.shape = rbox
+		ramp.add_child(rcs)
+		ramp.transform = Transform3D(Basis.looking_at(ramp_dir, Vector3.UP), (top_p + foot) * 0.5 - Vector3(0, 0.03, 0))
+		root.add_child(ramp)
+	var top := _ground(o, c)
+	_box(root, Vector3(1.2, 1.06, 0.5), top + Vector3(0, 0.53, 0), face, "plank")
+
+	# the fence ends in bushes
+	for side: float in [-1.0, 1.0]:
+		var mi := MeshInstance3D.new()
+		mi.mesh = lib.mesh("Bush_Common", {"leaves": BiomeDefs.leaves(Color(0.2, 0.42, 0.1), Color(0.5, 0.75, 0.2), {"sphere_normals": 0.85}), "stiffness": 6.0})
+		mi.position = _ground(o, c + across * side * (half_l + 1.4))
+		mi.scale = Vector3.ONE * 2.2
+		root.add_child(mi)
+
+
+# ================================================================ Mud hollow
+
+var _mud_mat: ShaderMaterial
+
+
+## The path runs through a wide patch of mud (slow and tiring, see Wanderer); a few flat stones lead across.
+func _build_mud(o: Dictionary, root: Node3D) -> void:
+	var z: float = o["z"]
+	var half_len: float = o["len"] * 1.4
+	var half_wid: float = o["wid"] * 1.4
+	var step := 0.7
+	var nz := int(half_len * 2.0 / step) + 1
+	var nx := int(half_wid * 2.0 / step) + 1
+	var verts := PackedVector3Array()
+	var cols := PackedColorArray()
+	var norms := PackedVector3Array()
+	for j in nz:
+		var zz := z - half_len + j * step
+		var px := gen.path_x(zz)
+		for i in nx:
+			var x := px - half_wid + i * step
+			verts.append(Vector3(x - o["px"], gen.height(x, zz) + 0.05, zz - z))
+			cols.append(Color(1, 1, 1, gen.mud_at(x, zz)))
+			norms.append(Vector3.UP)
+	var idx := PackedInt32Array()
+	for j in nz - 1:
+		for i in nx - 1:
+			var a := j * nx + i
+			idx.append_array([a, a + 1, a + nx, a + 1, a + nx + 1, a + nx])
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = norms
+	arrays[Mesh.ARRAY_COLOR] = cols
+	arrays[Mesh.ARRAY_INDEX] = idx
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	if _mud_mat == null:
+		_mud_mat = ShaderMaterial.new()
+		_mud_mat.shader = preload("res://shaders/mud.gdshader")
+		_mud_mat.set_shader_parameter("noise_tex", _noise)
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.material_override = _mud_mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(mi)
+	# stepping stones beside the path center, far enough apart that you have to hop
+	var side: float = o["side"]
+	var zz2: float = z + float(o["len"]) * 0.85
+	var rng := RandomNumberGenerator.new()
+	rng.seed = o["seed"]
+	while zz2 > z - float(o["len"]) * 0.85:
+		var x2 := gen.path_x(zz2) + side * rng.randf_range(1.5, 1.9)
+		var g := _ground(o, Vector2(x2, zz2))
+		var size := Vector3(rng.randf_range(0.7, 0.9), 0.3, rng.randf_range(0.6, 0.8))
+		_box(root, size, g + Vector3(0, 0.08, 0), Basis(Vector3.UP, rng.randf() * TAU), "stone")
+		zz2 -= rng.randf_range(1.25, 1.5)
+
+
+# ================================================================ Boulder field
+
+var _hull_cache := {}
+
+
+## A rockslide across the valley: big boulders with a narrow winding way through, small ones to hop over.
+func _build_boulders(o: Dictionary, root: Node3D) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = o["seed"]
+	var z: float = o["z"]
+	var band: float = o["band"]
+	var half: float = o["half"]
+	var style := BiomeDefs.rock_style(Color(0.66, 0.66, 0.68), 0.45)
+	var models := ["Rock_Medium_1", "Rock_Medium_2", "Rock_Medium_3"]
+	for i in 46:
+		var dz := rng.randf_range(-band, band)
+		var zz := z + dz
+		var px := gen.path_x(zz)
+		var way := px + sin(zz * 0.35 + float(o["seed"] % 100)) * 0.8
+		var x := px + rng.randf_range(-half, half)
+		var big := rng.randf() < 0.78
+		var s := rng.randf_range(1.3, 3.2) if big else rng.randf_range(0.45, 0.7)
+		var model: String = models[rng.randi() % models.size()]
+		var mesh := lib.mesh(model, style)
+		# keep a 2.4 m wide way free (measured from the rock's real footprint)
+		var aabb := mesh.get_aabb()
+		var radius := maxf(absf(aabb.position.x), absf(aabb.end.x)) * s
+		radius = maxf(radius, maxf(absf(aabb.position.z), absf(aabb.end.z)) * s)
+		var keep := 1.2 + radius
+		if big and absf(x - way) < keep:
+			x = way + signf(x - way + 0.001) * (keep + rng.randf() * 3.0)
+		var rot := Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, rng.randf_range(-0.2, 0.2))
+		var pos := _ground(o, Vector2(x, zz), -s * 0.22)
+		var body := StaticBody3D.new()
+		var cs := CollisionShape3D.new()
+		var hull := ConvexPolygonShape3D.new()
+		var pts := PackedVector3Array()
+		for pnt in _rock_hull(model, mesh):
+			pts.append(pnt * s)
+		hull.points = pts
+		cs.shape = hull
+		cs.basis = rot
+		body.add_child(cs)
+		var mi := MeshInstance3D.new()
+		mi.mesh = mesh
+		mi.basis = rot.scaled(Vector3.ONE * s)
+		body.add_child(mi)
+		body.position = pos
+		root.add_child(body)
+
+
+func _rock_hull(model: String, mesh: Mesh) -> PackedVector3Array:
+	if not _hull_cache.has(model):
+		var shape := mesh.create_convex_shape(true, true) as ConvexPolygonShape3D
+		_hull_cache[model] = shape.points
+	return _hull_cache[model]

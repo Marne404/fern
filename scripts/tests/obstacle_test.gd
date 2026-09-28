@@ -95,6 +95,9 @@ func run() -> void:
 	await _test_rope(p, gen, ob)
 	await _test_cliff(p, gen, ob)
 	await _test_bounds(p, gen, ob)
+	await _test_stile(p, gen)
+	await _test_mud(p, gen)
+	await _test_boulders(p, gen)
 	await _test_freecam(p, gen)
 
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
@@ -485,3 +488,81 @@ func _test_freecam(p: Wanderer, gen: WorldGen) -> void:
 	key(KEY_F7, false)
 	await secs(2.0)
 	check("Back to normal: above ground again", p.fly_mode == 0 and wpos(p).y > gen.height(wpos(p).x, wpos(p).z) - 1.0)
+
+
+# ---------------------------------------------------------------- stile, mud, boulders
+
+func _find(gen: WorldGen, type: String) -> Dictionary:
+	for k in range(3, 400):
+		var o := gen.obstacle(k)
+		if not o.is_empty() and o["type"] == type:
+			return o
+	return {}
+
+
+## Follow the path from 14 m before the obstacle; returns the seconds until 12 m past it (-1 = not made)
+func _walk_through(p: Wanderer, gen: WorldGen, o: Dictionary, limit: float, track := {}) -> float:
+	var z0: float = o["z"]
+	await place(p, gen.path_point(z0 + 14.0) + Vector3(0, 0.3, 0), o["k"])
+	p.autopilot = func() -> Vector3:
+		var w := wpos(p)
+		var d := gen.path_point(w.z - 5.0) - w
+		d.y = 0.0
+		return d.normalized()
+	p.look_along(gen.path_point(z0) - wpos(p))
+	var t := 0.0
+	while t < limit and wpos(p).z > z0 - 12.0:
+		await frames(6)
+		t += 0.1
+		var lp := p.global_position
+		track["climb"] = maxf(track.get("climb", 0.0), lp.y - main.world.ground_y(lp.x, lp.z))
+		track["mud"] = maxf(track.get("mud", 0.0), p.mud)
+	p.autopilot = Callable()
+	return t if wpos(p).z <= z0 - 12.0 else -1.0
+
+
+func _test_stile(p: Wanderer, gen: WorldGen) -> void:
+	var o := _find(gen, "stile")
+	check("A stile exists in the world", not o.is_empty())
+	if o.is_empty():
+		return
+	var tr := {}
+	var t := await _walk_through(p, gen, o, 25.0, tr)
+	check("Walked over the stile", t > 0.0 and tr.get("climb", 0.0) > 0.8, "%.1f s, up to %.2f m" % [t, tr.get("climb", 0.0)])
+	# beside the stile the fence stops you
+	var z0: float = o["z"]
+	var across := Vector2(1.0, -gen.path_slope(z0)).normalized().rotated(o["angle"])
+	var beside := gen.path_point(z0 + 4.0) + Vector3(across.x, 0, across.y) * 7.0
+	await place(p, Vector3(beside.x, gen.height(beside.x, beside.z) + 0.3, beside.z), o["k"])
+	steer(p, gen.path_point(z0 - 6.0) - gen.path_point(z0 + 6.0))
+	await secs(5.0)
+	var fence_z := z0 + across.y * 7.0
+	check("The fence blocks beside the stile", wpos(p).z > fence_z - 0.6, "z=%.1f, fence at %.1f" % [wpos(p).z, fence_z])
+	p.autopilot = Callable()
+
+
+func _test_mud(p: Wanderer, gen: WorldGen) -> void:
+	var o := _find(gen, "mud")
+	check("A mud hollow exists in the world", not o.is_empty())
+	if o.is_empty():
+		return
+	# reference: the same distance on dry path just before it
+	var ref := o.duplicate()
+	ref["z"] = float(o["z"]) + 60.0
+	ref["k"] = -1
+	var t_ref := await _walk_through(p, gen, ref, 25.0)
+	p.body.wet = 0.0
+	var tr := {}
+	var t := await _walk_through(p, gen, o, 40.0, tr)
+	check("Waded through the mud, slower", t > 0.0 and t > t_ref * 1.25 and tr.get("mud", 0.0) > 0.5,
+		"%.1f s vs %.1f s dry, mud %.2f" % [t, t_ref, tr.get("mud", 0.0)])
+	check("Mud makes you wet", p.body.wet >= 0.2, "wet %.2f" % p.body.wet)
+
+
+func _test_boulders(p: Wanderer, gen: WorldGen) -> void:
+	var o := _find(gen, "boulders")
+	check("A boulder field exists in the world", not o.is_empty())
+	if o.is_empty():
+		return
+	var t := await _walk_through(p, gen, o, 30.0)
+	check("Found the way through the boulders", t > 0.0, "%.1f s" % t)

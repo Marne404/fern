@@ -291,6 +291,16 @@ func _find_clearings() -> void:
 			var r := 1.4 if p["type"] == "schild" else 2.6
 			clearings.append(Vector3(lx, lz, r))
 			blockers.append(Vector3(lx, lz, r + 1.0))
+	# mud hollows: no plants in the mud (three circles along the path cover the ellipse)
+	for o in gen.obstacles_near(corner.y + SIZE * 0.5):
+		if o["type"] != "mud":
+			continue
+		for f: float in [-0.6, 0.0, 0.6]:
+			var mz: float = o["z"] + f * float(o["len"])
+			var mx := gen.path_x(mz)
+			var rad: float = float(o["wid"]) * (1.05 if f == 0.0 else 0.85)
+			clearings.append(Vector3(mx - corner.x, mz - corner.y, rad))
+			blockers.append(Vector3(mx - corner.x, mz - corner.y, rad + 1.0))
 
 
 func _in_rock(lx: float, lz: float) -> bool:

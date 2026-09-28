@@ -47,6 +47,8 @@ var resting := false
 var sleeping := false
 var swimming := false
 var in_water := false
+## 0..1 how deep in the mud of a mud hollow you stand
+var mud := 0.0
 var prompt := ""
 ## Structured prompt for the HUD: object name (may be empty), key, action
 var prompt_title := ""
@@ -356,6 +358,14 @@ func _physics_process(delta: float) -> void:
 	speed *= clampf(1.0 - (inventory.total_weight() - 14.0) / 40.0, 0.55, 1.0)
 	if in_water and not swimming:
 		speed *= 0.7
+	# mud hollow: slow, tiring, no sprinting
+	mud = 0.0
+	if world and on_floor and not in_water:
+		var mw := world.local_to_world(global_position)
+		if global_position.y < world.ground_y(global_position.x, global_position.z) + 0.2:
+			mud = world.gen.mud_at(mw.x, mw.z)
+	if mud > 0.3:
+		speed *= lerpf(1.0, 0.55, mud) * (WALK_SPEED / speed if sprint else 1.0)
 	# balancing: slower on a log, gently pulled to the log's center while walking
 	if is_instance_valid(_on_log) and on_floor:
 		if not sprint:
@@ -392,6 +402,9 @@ func _physics_process(delta: float) -> void:
 	_harmonica_t = maxf(_harmonica_t - delta, 0.0)
 	body.rest_bonus = 1.5 if _harmonica_t > 0.0 else 1.0
 	var effort := 3 if swimming else (2 if sprint else (1 if dir != Vector3.ZERO else 0))
+	if mud > 0.3 and dir != Vector3.ZERO:
+		effort = maxi(effort, 2)
+		body.wet = maxf(body.wet, 0.25)
 	var climb := maxf(get_real_velocity().y, 0.0) if on_floor else 0.0
 	body.update(delta, effort, climb, inventory.total_weight(), air_temp, inventory.warmth(), resting)
 	_update_body_events(delta)
@@ -1183,6 +1196,8 @@ func _ground_kind(p: Vector3) -> String:
 	var g := world.ground_y(p.x, p.z)
 	if global_position.y > g + 0.3:
 		return "wood"
+	if mud > 0.3:
+		return "mud"
 	var w := world.local_to_world(p)
 	return world.gen.ground_kind(w.x, w.z)
 
