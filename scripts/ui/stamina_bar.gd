@@ -24,6 +24,11 @@ var _shout := ""
 var _shout_t := 0.0
 var _last_state := 0
 var _alpha := 0.7
+## Colors of outline and background (the backpack shows the bar on paper)
+var line := LINE
+var bg := BG
+## false: only the bar (no chips, needs or shouts), always fully visible
+var hud := true
 
 
 func _init() -> void:
@@ -49,6 +54,10 @@ func _process(delta: float) -> void:
 			shout("BACK ON YOUR FEET!")
 		_last_state = body.state
 	_shout_t = maxf(_shout_t - delta, 0.0)
+	if not hud:
+		_alpha = 1.0
+		queue_redraw()
+		return
 	var busy := body.stamina < body.max_stamina() - 1.0 or body.state != Body.State.FIT or _max_shown < 97.0
 	_alpha = move_toward(_alpha, 1.0 if busy else 0.55, delta * 1.5)
 	queue_redraw()
@@ -80,19 +89,20 @@ func _draw() -> void:
 	if body == null:
 		return
 	var a := _alpha
-	var o := Vector2(10, size.y - H - 40)
-	var r := Rect2(o, Vector2(W, H))
+	var o := Vector2(10, size.y - H - 40) if hud else Vector2(4, size.y - H - 4)
+	var bw := W if hud else size.x - 8.0
+	var r := Rect2(o, Vector2(bw, H))
 	# background
-	_round_rect(r, BG * Color(1, 1, 1, a), H * 0.5)
+	_round_rect(r, bg * Color(1, 1, 1, a), H * 0.5)
 	# hatched max-stamina losses at the right end
 	var lost := clampf(100.0 - _max_shown, 0.0, 100.0)
-	var x_end := o.x + W
+	var x_end := o.x + bw
 	var causes := _causes()
-	var seg_x := x_end - W * lost / 100.0
+	var seg_x := x_end - bw * lost / 100.0
 	var x := seg_x
 	var icons := []
 	for c in causes:
-		var w: float = W * lost / 100.0 * c[1]
+		var w: float = bw * lost / 100.0 * c[1]
 		if w < 1.0:
 			continue
 		var col: Color = CAUSES[c[0]][0]
@@ -100,27 +110,29 @@ func _draw() -> void:
 		icons.append([x + w * 0.5, c[0]])
 		x += w
 	# current stamina
-	var fw := clampf(W * _shown / 100.0, 0.0, seg_x - o.x)
+	var fw := clampf(bw * _shown / 100.0, 0.0, seg_x - o.x)
 	if fw > 2.0:
 		var col: Color = FILL[body.state]
 		_round_rect(Rect2(o + Vector2(3, 3), Vector2(maxf(fw - 6.0, 4.0), H - 6)), Color(col, a), (H - 6) * 0.5)
 		draw_line(o + Vector2(10, 7), o + Vector2(maxf(fw - 10.0, 10.0), 7), Color(1, 1, 1, 0.3 * a), 2.0, true)
 	# hand-drawn outline: two slightly offset strokes
-	_round_outline(r, Color(LINE, a), H * 0.5, 2.5)
-	_round_outline(r.grow(1.0), Color(LINE, 0.25 * a), H * 0.5 + 1.0, 1.5)
+	_round_outline(r, Color(line, a), H * 0.5, 2.5)
+	_round_outline(r.grow(1.0), Color(line, 0.25 * a), H * 0.5 + 1.0, 1.5)
 	# icons over the segments
 	for ic in icons:
 		draw_set_transform(Vector2(ic[0], o.y - 15), 0.0, Vector2(1.3, 1.3))
-		_icon(ic[1], Vector2.ZERO, a)
+		draw_icon(self, ic[1], Vector2.ZERO, a)
 		draw_set_transform(Vector2.ZERO)
+	if not hud:
+		return
 	# active effects as chips below the bar
 	var chips := _effects()
 	var cx := o.x + 12.0
 	for ch in chips:
 		var c := Vector2(cx, o.y + H + 18)
-		draw_circle(c, 13.0, Color(BG, 0.7 * a))
-		draw_arc(c, 13.0, 0.0, TAU, 28, Color(LINE, 0.8 * a), 2.0, true)
-		_icon(ch, c, a)
+		draw_circle(c, 13.0, Color(bg, 0.7 * a))
+		draw_arc(c, 13.0, 0.0, TAU, 28, Color(line, 0.8 * a), 2.0, true)
+		draw_icon(self, ch, c, a)
 		cx += 32.0
 	if not needs.is_empty():
 		var f := UiTheme.body(800)
@@ -189,44 +201,44 @@ func _hatch(r: Rect2, col: Color) -> void:
 		x += step
 
 
-## Tiny icons drawn with primitives, centered at c
-func _icon(kind: String, c: Vector2, a: float) -> void:
-	var ink := Color(LINE, a)
+## Tiny icons drawn with primitives, centered at c (also used by the backpack)
+static func draw_icon(ci: CanvasItem, kind: String, c: Vector2, a: float, ink := LINE) -> void:
+	ink = Color(ink, a)
 	match kind:
 		"food":
-			draw_circle(c + Vector2(-2, -2), 5.5, Color("e9a23b", a))
-			draw_line(c + Vector2(2, 2), c + Vector2(7, 7), ink, 2.5, true)
-			draw_circle(c + Vector2(7, 7), 2.0, ink)
+			ci.draw_circle(c + Vector2(-2, -2), 5.5, Color("e9a23b", a))
+			ci.draw_line(c + Vector2(2, 2), c + Vector2(7, 7), ink, 2.5, true)
+			ci.draw_circle(c + Vector2(7, 7), 2.0, ink)
 		"water", "wet":
 			var pts := PackedVector2Array([c + Vector2(0, -8), c + Vector2(5, 1), c + Vector2(0, 6), c + Vector2(-5, 1)])
-			draw_colored_polygon(pts, Color("58a6e0", a))
-			draw_circle(c + Vector2(0, 1.5), 5.0, Color("58a6e0", a))
+			ci.draw_colored_polygon(pts, Color("58a6e0", a))
+			ci.draw_circle(c + Vector2(0, 1.5), 5.0, Color("58a6e0", a))
 		"rest":
-			draw_arc(c, 5.0, deg_to_rad(20.0), deg_to_rad(250.0), 16, Color("c9b8f0", a), 4.0, true)
+			ci.draw_arc(c, 5.0, deg_to_rad(20.0), deg_to_rad(250.0), 16, Color("c9b8f0", a), 4.0, true)
 		"cold":
 			for i in 3:
 				var d := Vector2.from_angle(i * PI / 3.0) * 7.0
-				draw_line(c - d, c + d, Color("bfe6fb", a), 2.0, true)
+				ci.draw_line(c - d, c + d, Color("bfe6fb", a), 2.0, true)
 		"hot", "sun":
-			draw_circle(c, 4.5, Color("f2c230", a))
+			ci.draw_circle(c, 4.5, Color("f2c230", a))
 			for i in 8:
 				var d := Vector2.from_angle(i * TAU / 8.0)
-				draw_line(c + d * 6.5, c + d * 9.0, Color("f2c230", a), 2.0, true)
+				ci.draw_line(c + d * 6.5, c + d * 9.0, Color("f2c230", a), 2.0, true)
 		"health":
-			draw_circle(c + Vector2(-3, -2), 3.8, Color("d8453e", a))
-			draw_circle(c + Vector2(3, -2), 3.8, Color("d8453e", a))
-			draw_colored_polygon(PackedVector2Array([c + Vector2(-6.5, -1), c + Vector2(6.5, -1), c + Vector2(0, 7)]), Color("d8453e", a))
+			ci.draw_circle(c + Vector2(-3, -2), 3.8, Color("d8453e", a))
+			ci.draw_circle(c + Vector2(3, -2), 3.8, Color("d8453e", a))
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-6.5, -1), c + Vector2(6.5, -1), c + Vector2(0, 7)]), Color("d8453e", a))
 		"warm":
-			draw_colored_polygon(PackedVector2Array([c + Vector2(0, -9), c + Vector2(5, 0), c + Vector2(0, 6), c + Vector2(-5, 0)]), Color("ec8a34", a))
-			draw_circle(c + Vector2(0, 1.5), 4.8, Color("ec8a34", a))
-			draw_circle(c + Vector2(0, 2.5), 2.2, Color("f2c230", a))
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(0, -9), c + Vector2(5, 0), c + Vector2(0, 6), c + Vector2(-5, 0)]), Color("ec8a34", a))
+			ci.draw_circle(c + Vector2(0, 1.5), 4.8, Color("ec8a34", a))
+			ci.draw_circle(c + Vector2(0, 2.5), 2.2, Color("f2c230", a))
 		"music":
-			draw_line(c + Vector2(2, -7), c + Vector2(2, 4), ink, 2.0, true)
-			draw_line(c + Vector2(2, -7), c + Vector2(6, -5), ink, 2.0, true)
-			draw_circle(c + Vector2(-1, 5), 3.2, ink)
+			ci.draw_line(c + Vector2(2, -7), c + Vector2(2, 4), ink, 2.0, true)
+			ci.draw_line(c + Vector2(2, -7), c + Vector2(6, -5), ink, 2.0, true)
+			ci.draw_circle(c + Vector2(-1, 5), 3.2, ink)
 		"boot":
-			draw_rect(Rect2(c + Vector2(-4, -7), Vector2(6, 10)), Color("8b5a36", a))
-			draw_rect(Rect2(c + Vector2(-4, 1), Vector2(10, 5)), Color("8b5a36", a))
+			ci.draw_rect(Rect2(c + Vector2(-4, -7), Vector2(6, 10)), Color("8b5a36", a))
+			ci.draw_rect(Rect2(c + Vector2(-4, 1), Vector2(10, 5)), Color("8b5a36", a))
 		"heavy":
-			draw_colored_polygon(PackedVector2Array([c + Vector2(-5, -2), c + Vector2(5, -2), c + Vector2(7, 7), c + Vector2(-7, 7)]), ink)
-			draw_arc(c + Vector2(0, -4), 3.0, PI, TAU, 10, ink, 2.0, true)
+			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-5, -2), c + Vector2(5, -2), c + Vector2(7, 7), c + Vector2(-7, 7)]), ink)
+			ci.draw_arc(c + Vector2(0, -4), 3.0, PI, TAU, 10, ink, 2.0, true)

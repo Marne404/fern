@@ -117,9 +117,15 @@ static func make_mesh(id: String) -> Mesh:
 
 
 ## Rendered icon (assets/icons, made with scripts/tests/item_icons.gd)
+## Cached, so textures drawn with draw_texture_rect stay alive after _draw()
+static var _icons := {}
+
+
 static func icon(id: String) -> Texture2D:
-	var path := "res://assets/icons/%s.png" % id
-	return load(path) if ResourceLoader.exists(path) else null
+	if not _icons.has(id):
+		var path := "res://assets/icons/%s.png" % id
+		_icons[id] = load(path) if ResourceLoader.exists(path) else null
+	return _icons[id]
 
 
 static func half_extent(id: String) -> float:

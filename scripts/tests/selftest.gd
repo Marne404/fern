@@ -141,6 +141,7 @@ func run() -> void:
 	await _test_all_items(p)
 	await _test_emotes(p)
 	await _test_voice(p)
+	await _test_backpack(p)
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -252,6 +253,41 @@ func _test_emotes(p: Wanderer) -> void:
 	wheel.open()
 	check("Emote wheel opens with 8 slots", wheel.is_open() and wheel._ids.size() == 8 and wheel._icons.all(func(t): return t != null))
 	wheel.close(false)
+
+
+## Backpack screen: slot grid, selection, use and drop through the buttons, HUD slot
+func _test_backpack(p: Wanderer) -> void:
+	var inv := p.inventory
+	inv.add(ItemDefs.make("apfel"))
+	inv.add(ItemDefs.make("keks"))
+	var bp: Backpack = main.backpack
+	bp.open(p)
+	await frames(3)
+	var slots := bp._grid.get_children().filter(func(c): return not c.is_queued_for_deletion())
+	check("Backpack shows all slots", slots.size() == Inventory.SLOTS, "%d" % slots.size())
+	check("Backpack card fits the window", bp._card.get_global_rect().size.x * bp._card.scale.x <= bp.get_viewport().get_visible_rect().size.x + 1.0)
+	var keks: Dictionary = inv.items[inv.items.size() - 1]
+	(slots[inv.items.size() - 1] as Button).pressed.emit()
+	check("Selecting a slot shows the item", bp._selected == keks)
+	var n := inv.items.size()
+	var use: Button = bp._detail.get_children().filter(func(c): return c is Button and not c.is_queued_for_deletion())[0]
+	use.pressed.emit()
+	await frames(2)
+	check("Use button eats a cookie from the tin", inv.items.size() == n and keks["charges"] == 2, "%d" % keks["charges"])
+	var apfel: Dictionary = inv.items.filter(func(x): return x["id"] == "apfel")[0]
+	bp._select(apfel)
+	await frames(1)
+	var drop: Button = null
+	for c in bp._detail.get_children():
+		if c is HBoxContainer and not c.is_queued_for_deletion():
+			drop = c.get_child(1)
+	drop.pressed.emit()
+	await frames(2)
+	check("Drop button drops the apple", not inv.items.has(apfel) and bp.is_open())
+	check("HUD backpack slot knows the player", main.hud._pack.player == p)
+	bp.close()
+	for c in main.dropped.get_children():
+		c.queue_free()
 
 
 func _test_voice(p: Wanderer) -> void:
