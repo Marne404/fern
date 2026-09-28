@@ -133,6 +133,27 @@ reasonably flat ground, grove structure with clearings, landmarks (rock arches, 
   sand and tumbleweeds, snow, fireflies), follow your scout, click it to make it hop – plus the scout editor in 3D,
   new third-person screenshots of the obstacles and biomes.
 
+## Round 10 – PEAK-style scout, field guide UI, new biomes and obstacles
+
+- **The scout, again:** rebuilt after reference pictures of PEAK – round head on a short body, big dot or sclera
+  eyes with lids and brows, many mouths, shirt with collar and shorts, sash, eight hats, glasses and neckerchiefs.
+  More expressive animation: idle fidgets, landing squash, flailing, scared/cold/effort faces.
+- **Emotes:** a radial wheel on **G** with 16 gestures and expressions (no dances), configurable slots.
+- **Voice groundwork:** microphone detection with push to talk, always on and voice activation, a level meter, and
+  lip sync for your own scout (unless an emote is playing). Nothing is sent yet.
+- **UI in the style of PEAK:** Nunito and Luckiest Guy, paper cards with hard shadows, settings in tabs; a HUD with a
+  stamina bar that shows what drains you (hunger, thirst, tiredness, cold, injury) as hatched segments; prompts
+  with keycaps; a backpack screen with a slot grid and item details.
+- **Items:** 50 hand-modeled items with icons (30 new: cheese, honey, cocoa, sunscreen, boots, compass, lantern,
+  kite, harmonica, fortune cookie …) and effects; structures and finds got proper models.
+- **World:** a real ocean (no more endless tiled water), wet shores, fallen leaves, petals and needles on the path,
+  footprints, dust puffs and footstep sounds, water rings from your steps and rising fish, higher settings for view
+  and grass distance (new *Extreme* preset).
+- **Three new biomes:** Lavender Hills (procedural lavender rows), Birch Wood and the misty Heather Highlands with
+  drizzle. **Three new obstacles:** a pasture fence with a stile, a mud hollow with stepping stones, a rockslide.
+- **Performance:** level of detail for distant trees and their shadows (visibility ranges); measurements and dropped
+  ideas in `plans/round10.md`.
+
 ![Your scouts](scouts.png)
 
 ---
@@ -140,4 +161,4 @@ reasonably flat ground, grove structure with clearings, landmarks (rock arches, 
 ## Ideas for later
 - Multiplayer (M3) – many obstacles are designed for teamwork (pushing, weight, holding ropes).
 - Day/night with fireflies, morning mist, the noise of waterfalls.
-- More obstacles: suspension bridge, scree field, mud, cattle grid, storm.
+- More obstacles: suspension bridge, scree field, cattle grid, storm.

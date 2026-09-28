@@ -5,14 +5,23 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const BIOME_CARDS = [
   ['autumn.jpg', 'Autumn Meadow', 'Golden grass, red maples and leaves in the wind'],
   ['spring.jpg', 'Spring Meadow', 'Fresh green hills and wildflowers'],
-  ['tp_blossom.jpg', 'Blossom Grove', 'Pink crowns over a flowery sunken lane'],
+  ['lavender.jpg', 'Lavender Hills', 'Purple rows, olive trees and warm evening light'],
+  ['blossom.jpg', 'Blossom Grove', 'Pink crowns over a flowery sunken lane'],
+  ['birch.jpg', 'Birch Wood', 'White trunks, ferns and golden haze'],
   ['maple.jpg', 'Red Maple Wood', 'Deep reds in the late afternoon'],
-  ['tp_pines.jpg', 'Mountain Pines', 'Tall pines and snowy peaks'],
+  ['forest.jpg', 'Forest Trail', 'Tall pines and a narrow path'],
+  ['highlands.jpg', 'Heather Highlands', 'Misty moors, drizzle and granite'],
+  ['pines.jpg', 'Mountain Pines', 'Tall pines and snowy peaks'],
   ['cliffs.jpg', 'Cliff Lands', 'Terraces, ledges and long views'],
   ['coast.jpg', 'Sunset Coast', 'Sea stacks glowing in the evening sun'],
-  ['tp_desert.jpg', 'Desert Valley', 'Endless dunes, mesas and tumbleweeds'],
-  ['tp_glow.jpg', 'Glowing Forest', 'Dusk, fireflies and glowing mushrooms'],
+  ['lakes.jpg', 'Lake Country', 'Birches, reeds and still water'],
+  ['bog.jpg', 'Deadwood Bog', 'Bare trees and dark ponds'],
+  ['desert.jpg', 'Desert Valley', 'Endless dunes, mesas and tumbleweeds'],
+  ['glow.jpg', 'Glowing Forest', 'Dusk, fireflies and glowing mushrooms'],
 ];
+const ITEMS = [["apfel", "Apple"], ["beeren", "Berries"], ["brot", "Bread"], ["muesliriegel", "Granola bar"], ["bohnen", "Can of beans"], ["wasserflasche", "Water bottle"], ["limonade", "Lemonade"], ["verband", "Bandage"], ["regenjacke", "Rain jacket"], ["pullover", "Wool sweater"], ["muetze", "Wool hat"], ["sonnenhut", "Sun hat"], ["seil", "Rope"], ["taschenlampe", "Flashlight"], ["fernglas", "Binoculars"], ["kamera", "Camera"], ["feldhandbuch", "Field guide"], ["wasserpistole", "Water pistol"], ["gummihuhn", "Rubber chicken"], ["stein", "Pretty stone"], ["kaese", "Cheese wedge"], ["pilze", "Mushrooms"], ["honig", "Jar of honey"], ["trockenobst", "Dried fruit"], ["schokolade", "Chocolate bar"], ["sandwich", "Sandwich"], ["moehre", "Carrot"], ["keks", "Cookie tin"], ["tee", "Thermos of tea"], ["kakao", "Cocoa"], ["saft", "Juice box"], ["pflaster", "Plasters"], ["erste_hilfe", "First aid kit"], ["sonnencreme", "Sunscreen"], ["schal", "Scarf"], ["handschuhe", "Gloves"], ["stiefel", "Hiking boots"], ["poncho", "Rain poncho"], ["kompass", "Compass"], ["karte", "Trail map"], ["messer", "Pocket knife"], ["stock", "Walking stick"], ["laterne", "Lantern"], ["pfeife", "Whistle"], ["mundharmonika", "Harmonica"], ["drachen", "Kite"], ["federn", "Feather"], ["muschel", "Seashell"], ["tannenzapfen", "Pinecone"], ["glueckskeks", "Fortune cookie"]];
+const EMOTE_BAR = [['wave', 'Wave'], ['cheer', 'Cheer'], ['laugh', 'Laugh'], ['thumbs', 'Thumbs up'], ['point', 'Point'], ['shrug', 'Shrug'],
+  ['facepalm', 'Facepalm'], ['clap', 'Clap'], ['think', 'Think'], ['salute', 'Salute'], ['stomp', 'Stomp'], ['cower', 'Cower']];
 
 // ------------------------------------------------------------ nav + reveal
 const nav = $('#nav');
@@ -51,7 +60,27 @@ BIOME_CARDS.forEach(([file, name, text]) => {
   f.addEventListener('keydown', (e) => { if (e.key === 'Enter') openLb(idx); });
   track.appendChild(f);
 });
-$$('.shot').forEach((s) => {
+// items: icons from the game, a wobbly sticker grid
+const itemBox = $('#items');
+ITEMS.forEach(([id, name], i) => {
+  const d = document.createElement('div');
+  d.className = 'item';
+  d.style.setProperty('--r', `${((i * 37) % 9) - 4}deg`);
+  d.innerHTML = `<img src="img/items/${id}.webp" alt="" width="96" height="96" loading="lazy"><span>${name}</span>`;
+  itemBox.appendChild(d);
+});
+// emote buttons under the scout editor (same gestures as the wheel in the game)
+const emoteBox = $('#emotes');
+EMOTE_BAR.forEach(([id, name]) => {
+  const b = document.createElement('button');
+  b.className = 'emote';
+  b.title = name;
+  b.setAttribute('aria-label', name);
+  b.innerHTML = `<img src="img/emotes/${id}.webp" alt="" width="56" height="56" loading="lazy">`;
+  b.addEventListener('click', () => { window.fernEmote?.(id); b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); });
+  emoteBox.appendChild(b);
+});
+$$('.shot, .ui-shot').forEach((s) => {
   const idx = items.push({ src: s.dataset.lb, title: s.dataset.title, text: s.dataset.text }) - 1;
   s.addEventListener('click', () => openLb(idx));
 });
@@ -124,6 +153,7 @@ async function start3D() {
       editor = new Editor($('#scout-canvas'), $('#editor'), (look) => hero.setLook(look));
       $('#surprise').addEventListener('click', () => editor.surprise());
       $('#wave').addEventListener('click', () => editor.wave());
+      window.fernEmote = (id) => editor.emote(id);
     };
     new IntersectionObserver((es, obs) => { if (es.some((e) => e.isIntersecting)) { makeEditor(); obs.disconnect(); sync(); } }, { rootMargin: '600px 0px' }).observe($('.stage'));
     // only render what can be seen

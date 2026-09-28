@@ -108,22 +108,24 @@ func _initialize() -> void:
 			_cam.look_at_from_position(Vector3(-2.6, 1.2, -0.6), Vector3(0, 0.95, 0))
 		"group":
 			var looks := [
-				{"skin": 0, "outfit": 0, "scarf": 0, "hat": 1, "hat_color": 10, "pack": 1, "face": 0},
-				{"skin": 5, "outfit": 2, "scarf": 2, "hat": 3, "hat_color": 11, "pack": 0, "face": 1},
-				{"skin": 3, "outfit": 1, "scarf": 5, "hat": 2, "hat_color": 8, "pack": 6, "face": 0},
-				{"skin": 7, "outfit": 4, "scarf": 7, "hat": 4, "hat_color": 0, "pack": 4, "face": 3},
-				{"skin": 1, "outfit": 3, "scarf": 3, "hat": 0, "hat_color": 1, "pack": 7, "face": 2},
+				{"skin": 0, "outfit": 0, "pants": 0, "sash": 7, "scarf": 0, "hat": 1, "hat_color": 10, "pack": 1, "face": 0, "extra": 3},
+				{"skin": 5, "outfit": 2, "pants": 1, "sash": 0, "scarf": 2, "hat": 3, "hat_color": 11, "pack": 0, "face": 1, "extra": 1},
+				{"skin": 3, "outfit": 1, "pants": 2, "sash": 6, "scarf": 5, "hat": 6, "hat_color": 8, "pack": 6, "face": 3, "extra": 0},
+				{"skin": 7, "outfit": 4, "pants": 3, "sash": 2, "scarf": 7, "hat": 4, "hat_color": 0, "pack": 4, "face": 4, "extra": 3},
+				{"skin": 1, "outfit": 3, "pants": 4, "sash": 9, "scarf": 3, "hat": 7, "hat_color": 1, "pack": 7, "face": 2, "extra": 4},
 			]
+			# a happy troop: waving, cheering, thumbs up, laughing
+			var acts := ["wave", "thumbs", "cheer", "laugh", "wave"]
 			var xs := [0.0, -1.0, 1.0, -1.95, 1.95]
 			var zs := [0.0, 0.35, 0.3, 0.8, 0.75]
 			for i in looks.size():
 				var sc := Scout.new(looks[i])
 				sc.position = Vector3(xs[i], 0, zs[i])
 				sc.rotation.y = xs[i] * 0.12
-				if i == 0 or i == 3:
+				if acts[i] == "wave":
 					sc.wave(100.0)
-				if i == 4:
-					sc.speed = 0.0
+				else:
+					sc.play_emote(acts[i])
 				world.add_child(sc)
 				_scouts.append(sc)
 			_cam.fov = 28.0

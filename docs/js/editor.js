@@ -141,6 +141,7 @@ export class Editor {
   surprise() { this.look = randomLook(); this.apply(); this.vel += 9; }
   fidget() { this.scout?.fidget(); }
   wave() { this.scout?.wave(2.4); }
+  emote(id) { this.scout?.playEmote(id); this.hop = 0; }
 
   apply() {
     saveLook(this.look);

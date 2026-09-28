@@ -4,7 +4,7 @@
 
 <p align="center">
   <b>An endless, cozy hiking game through hand-painted-looking nature.</b><br>
-  Walk one never-ending trail through twelve biomes, solve physical problems with ropes, logs and knots,<br>
+  Walk one never-ending trail through fifteen biomes, solve physical problems with ropes, logs and knots,<br>
   and see how far you get.
 </p>
 
@@ -18,20 +18,20 @@
 ---
 
 <p align="center">
-  <img src="docs/scouts.png" alt="Five scouts in different colors and hats" width="70%">
+  <img src="docs/scouts.png" alt="Five scouts in different colors and hats, waving, cheering and laughing" width="70%">
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/menu.jpg" width="49%">
-  <img src="docs/screenshots/tp_blossom.jpg" width="49%">
+  <img src="docs/screenshots/ui_menu.jpg" width="49%">
+  <img src="docs/screenshots/ui_hud.jpg" width="49%">
   <img src="docs/screenshots/autumn.jpg" width="49%">
-  <img src="docs/screenshots/coast.jpg" width="49%">
-  <img src="docs/screenshots/spring.jpg" width="49%">
-  <img src="docs/screenshots/desert.jpg" width="49%">
+  <img src="docs/screenshots/lavender.jpg" width="49%">
+  <img src="docs/screenshots/birch.jpg" width="49%">
+  <img src="docs/screenshots/highlands.jpg" width="49%">
   <img src="docs/screenshots/blossom.jpg" width="49%">
   <img src="docs/screenshots/glow.jpg" width="49%">
-  <img src="docs/screenshots/pines.jpg" width="49%">
-  <img src="docs/screenshots/maple.jpg" width="49%">
+  <img src="docs/screenshots/ui_backpack.jpg" width="49%">
+  <img src="docs/screenshots/ob_mud.jpg" width="49%">
 </p>
 
 ## What is Fern?
@@ -44,26 +44,39 @@ real, physical problem in your way, and there is no scripted solution:
   backpack wet), or knot two ropes together, stretch them between the posts and climb across.
 - **A giant fallen tree** at the end of a narrowing gorge – crouch underneath (not with a heavy backpack!) or climb over.
 - **A cliff with a waterfall** after a long climb – jump into the pool, rappel down on a rope, or take the long way round.
+- **A pasture fence** across the valley – climb the stile or find the end of the fence.
+- **A mud hollow** – wade through (slow, tiring, wet boots) or hop across the stepping stones.
+- **A rockslide** – boulders as big as houses with a winding way through.
 
 You hike as a **scout**: a round little hiker with noodle arms, a merit-badge sash and a backpack that is always a
-bit too big. Pick colors, a hat and a face in the main menu (*Your scout*). Your scout walks ahead of the camera on the
-title screen, and **V** switches between first and third person on the trail.
+bit too big. Pick colors, a hat, a face and extras in the main menu (*Your scout*). Your scout walks ahead of the
+camera on the title screen, **V** switches between first and third person on the trail and **G** opens the emote wheel.
 
 Fern is a single-player prototype of a planned co-op game (see the [game design](docs/GAME_DESIGN.md)).
 
 ## Features
 
-- **Your scout** – customizable hiker (10 colors, 8 uniforms, 5 hats, 4 faces) with procedural animation: walking,
-  running, crouching, sitting, swimming, climbing, flailing through the air, waving; faces react to exhaustion and sleep.
+- **Your scout** – customizable hiker (11 colors, 8 shirts and shorts, sash and scarf colors, 8 hats, 5 faces, glasses and
+  neckerchiefs) with procedural animation: walking, running, crouching, sitting, swimming, climbing, flailing through the
+  air, idle fidgets; faces react to exhaustion, fear, cold and sleep.
+- **Emotes** – a wheel (hold **G**) with 16 gestures and expressions: wave, point, thumbs up, cheer, laugh, shrug,
+  facepalm, clap, salute, think, cower, stomp, sit down, lie down, … The eight slots are configurable.
+- **Voice groundwork** – microphone detection with push to talk, always on or voice activation, a level meter and
+  optional monitoring; your scout's mouth moves with your voice. Nothing is sent anywhere yet (multiplayer comes later).
 - **Endless, seed-based world** – type any word or number as your world seed and share it with friends.
-- **12 biomes** that blend smoothly: Autumn Meadow, Spring Meadow, Forest Trail, Red Maple Wood, Blossom Grove,
-  Mountain Pines, Cliff Lands, Sunset Coast, Lake Country, Deadwood Bog, Glowing Forest and Desert Valley.
+- **15 biomes** that blend smoothly: Autumn Meadow, Spring Meadow, Lavender Hills, Forest Trail, Birch Wood,
+  Red Maple Wood, Blossom Grove, Mountain Pines, Heather Highlands, Cliff Lands, Sunset Coast, Lake Country,
+  Deadwood Bog, Glowing Forest and Desert Valley.
 - **A living landscape** – a winding trail with long climbs and descents, forested hills and mountain ranges,
   endless dunes with mesas, ponds, rivers, waterfalls, landmarks like rock arches and ruins.
 - **Weather and wind** – gusts roll through the grass, colorful trees drop their leaves, tumbleweeds bounce through
-  the desert, dust devils wander past and small sandstorms blur the horizon.
-- **Body and backpack** – stamina, hunger, thirst, tiredness, felt temperature and luggage weight. 20 items with
-  properties (waterproof, fragile, perishable, …). Swimming soaks what isn't waterproof; cameras break.
+  the desert, dust devils wander past, small sandstorms blur the horizon and drizzle drifts over the highlands.
+- **Small things** – footprints in sand, snow and mud, dust puffs, footstep sounds for every ground, fallen leaves and
+  petals on the path, wet shores, rings on the water where you wade and where fish rise.
+- **Body and backpack** – stamina, hunger, thirst, tiredness, felt temperature and luggage weight, shown PEAK-style
+  as a stamina bar with the causes marked. 50 hand-modeled items with properties (waterproof, fragile, perishable, …)
+  and effects (warm tea, sunscreen, a lantern, a kite, a harmonica, a compass …). Swimming soaks what isn't
+  waterproof; cameras break.
 - **Physics obstacles** – pushable, floating logs, ropes with a knot minigame (knot quality decides whether it holds),
   rappelling, fall damage (water breaks your fall).
 - **Dynamic music** – 56 tracks; every biome has its own playlist, tension music near obstacles, calm music while resting.
@@ -82,6 +95,8 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 | **Tab** | open backpack |
 | **R** | rest (sleep when tired) |
 | **V** | first / third person |
+| **G** (hold) | emote wheel |
+| **T** | push to talk (voice test, if enabled) |
 | **Mouse wheel** | camera distance (third person) |
 | **Right mouse** | binoculars |
 | **Q** | untie rope |
@@ -142,7 +157,10 @@ Command-line options after `--`, e.g. `godot --path . -- --play --z=-15000`:
 `--debugfx` weather state · `--biomes` / `--pois` / `--ponds` / `--landmarks` print lists · `--music` log track changes ·
 `--third` third person · `--scout` open the scout editor · `--pitch=-10 --yaw=15` camera angle at the start ·
 `--obstacles` print obstacle positions ·
-`--obtest` obstacle test (31 checks) · `--selftest` body/backpack test.
+`--body=stamina:30,food:10` / `--give=kaese,seil` / `--drop=laterne` test states · `--emote=cheer` · `--wheel` ·
+`--backpack` · `--settings=Graphics` · `--fakevoice=-20` · `--voicetest` microphone check ·
+`--off=shadows,trees,…` profiling ·
+`--obtest` obstacle test (40 checks) · `--selftest` body/backpack/items/emotes/voice test.
 
 Standalone tools: `godot --path . -s res://scripts/tests/scout_studio.gd -- --mode=lineup --out=x.png` renders scouts
 (modes `lineup`, `poses`, `face`, `back`, `walk`, `side`, `group`), `scripts/tests/scout_export.gd` exports the scout
@@ -153,7 +171,8 @@ as `docs/models/scout.glb` for the website.
 - **3D models:** [Quaternius](https://quaternius.com/) – Stylized Nature MegaKit (CC0)
 - **Music:** AlkaKrab – Fantasy Ambient, Desert, Fantasy RPG Vol. 2, Fairytale Magical Fantasy (licensed for games)
 - **Scout design:** inspired by the hikers of PEAK (Aggro Crab & Landfall); the model itself is made from scratch
-- **Font:** [Luckiest Guy](https://fonts.google.com/specimen/Luckiest+Guy) by Astigmatic (Apache 2.0)
+- **Fonts:** [Luckiest Guy](https://fonts.google.com/specimen/Luckiest+Guy) by Astigmatic (Apache 2.0),
+  [Nunito](https://fonts.google.com/specimen/Nunito) (OFL)
 - **Engine:** [Godot Engine](https://godotengine.org/) (MIT)
 
 See [CREDITS.md](CREDITS.md) for details.

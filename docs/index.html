@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fern – an endless, cozy hiking game</title>
-<meta name="description" content="Fern is a cozy, endless hiking game. Customize your scout, pack your bag and follow a trail that never ends – through twelve biomes, rivers, cliffs and fallen trees.">
+<meta name="description" content="Fern is a cozy, endless hiking game. Customize your scout, pack your bag and follow a trail that never ends – through fifteen biomes, over rivers, cliffs, fences, mud and boulder fields.">
 <meta name="theme-color" content="#3f8fe0">
 <meta property="og:title" content="Fern – an endless, cozy hiking game">
 <meta property="og:description" content="Customize your scout, pack your bag and follow a trail that never ends.">
@@ -44,6 +44,7 @@
     <a href="#scout">Your scout</a>
     <a href="#world">The trail</a>
     <a href="#obstacles">Obstacles</a>
+    <a href="#guide">Field guide</a>
     <a href="#badges">Features</a>
     <a href="#download">Download</a>
   </nav>
@@ -54,6 +55,7 @@
     <a href="#scout">Your scout</a>
     <a href="#world">The trail</a>
     <a href="#obstacles">Obstacles</a>
+    <a href="#guide">Field guide</a>
     <a href="#badges">Features</a>
     <a href="#download">Download</a>
     <a href="https://github.com/Marne404/fern">GitHub</a>
@@ -101,13 +103,14 @@
     <div class="reveal">
       <span class="eyebrow">Meet your scout</span>
       <h2 class="display sticker sun">Dress up.<br>Head out.</h2>
-      <p class="lead">A round little hiker with noodle arms, a merit-badge sash and a backpack that is always a bit too big. Pick colors, a hat and a face. They bounce, flail and wave along with you.</p>
+      <p class="lead">A round little hiker with noodle arms, a merit-badge sash and a backpack that is always a bit too big. Pick colors, a hat and a face. They bounce, flail, wave, laugh and facepalm along with you.</p>
       <div class="editor" id="editor"></div>
       <div class="editor-actions">
         <button class="btn small orange" id="surprise"><svg><use href="#i-dice"/></svg>Surprise me</button>
         <button class="btn small cream" id="wave"><svg><use href="#i-hand"/></svg>Wave!</button>
       </div>
-      <p class="note">It's the same editor as in the game. Your scout hikes ahead of you on the title screen, and <kbd>V</kbd> switches to third person on the trail.</p>
+      <div class="emotes" id="emotes" role="group" aria-label="Emotes"></div>
+      <p class="note">It's the same editor as in the game. Hold <kbd>G</kbd> on the trail for the emote wheel, and <kbd>V</kbd> switches to third person.</p>
     </div>
   </div>
 </section>
@@ -117,7 +120,7 @@
     <h2 class="display">No map. No markers.<br><em>Just the trail.</em></h2>
     <div class="stats">
       <div class="stat"><strong>∞</strong><span>kilometers of trail</span></div>
-      <div class="stat"><strong data-count="12">12</strong><span>biomes that blend into each other</span></div>
+      <div class="stat"><strong data-count="15">15</strong><span>biomes that blend into each other</span></div>
       <div class="stat"><strong data-count="56">56</strong><span>music tracks that follow your mood</span></div>
     </div>
   </div>
@@ -127,8 +130,8 @@
   <div class="wrap gallery-head reveal">
     <div>
       <span class="eyebrow">The trail</span>
-      <h2 class="display sticker leafy">Twelve moods,<br>one endless path</h2>
-      <p class="lead">Autumn meadows melt into blossom groves, pine valleys, sunset coasts, glowing forests and deserts that go on forever. Every world grows from a seed, so type in a word and your friends get the very same trail.</p>
+      <h2 class="display sticker leafy">Fifteen moods,<br>one endless path</h2>
+      <p class="lead">Autumn meadows melt into lavender hills, white birch woods, misty heather moors, sunset coasts, glowing forests and deserts that go on forever. Every world grows from a seed, so type in a word and your friends get the very same trail.</p>
     </div>
     <div class="arrows">
       <button id="prev" aria-label="Previous"><svg><use href="#i-left"/></svg></button>
@@ -183,6 +186,41 @@
         </ul>
       </div>
     </article>
+
+    <div class="ob-more">
+      <article class="mini reveal">
+        <div class="shot" data-lb="screenshots/ob_stile.jpg" data-title="The pasture fence" data-text="A fence runs right across the valley. Somebody built a stile."><img src="screenshots/thumb/ob_stile.jpg" alt="A wooden fence across the trail with a stile over it" loading="lazy" width="800" height="450"><span class="num">4</span></div>
+        <h3>The pasture fence</h3>
+        <p>Climb the stile, or go looking for the end of the fence.</p>
+      </article>
+      <article class="mini reveal">
+        <div class="shot" data-lb="screenshots/ob_mud.jpg" data-title="The mud hollow" data-text="Wade through, slowly and tired, or hop from stone to stone."><img src="screenshots/thumb/ob_mud.jpg" alt="A muddy hollow on the trail with stepping stones" loading="lazy" width="800" height="450"><span class="num">5</span></div>
+        <h3>The mud hollow</h3>
+        <p>Wading costs time, stamina and dry boots. The stepping stones cost courage.</p>
+      </article>
+      <article class="mini reveal">
+        <div class="shot" data-lb="screenshots/ob_boulders.jpg" data-title="The rockslide" data-text="Somewhere in there is a way through."><img src="screenshots/thumb/ob_boulders.jpg" alt="Huge boulders across a misty moor with a narrow gap" loading="lazy" width="800" height="450"><span class="num">6</span></div>
+        <h3>The rockslide</h3>
+        <p>Boulders as big as houses. Find the winding gap, or climb.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="guide pad" id="guide">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">Field guide</span>
+      <h2 class="display sticker sun">Fifty things worth carrying</h2>
+      <p class="lead" style="margin-inline:auto">Cheese and cocoa, a compass that points to the next obstacle, a lantern for the dusk, a kite for windy hills, a harmonica for the long evenings. Everything weighs something, and your body keeps count.</p>
+    </div>
+    <div class="items reveal" id="items"></div>
+    <div class="ui-grid">
+      <figure class="ui-shot reveal" data-lb="screenshots/ui_hud.jpg" data-title="On the trail" data-text="Stamina bar with everything that weighs on you: hunger, thirst, tiredness, cold, injuries."><img src="screenshots/thumb/ui_hud.jpg" alt="The game on the trail with the stamina bar bottom left" loading="lazy" width="800" height="450"><figcaption><b>Your body, at a glance</b><span>The stamina bar shows what drains you: hunger, thirst, tiredness, cold.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/ui_backpack.jpg" data-title="The backpack" data-text="Every item with weight, properties and what it does."><img src="screenshots/thumb/ui_backpack.jpg" alt="The backpack screen with item slots and details" loading="lazy" width="800" height="450"><figcaption><b>The backpack</b><span>Eighteen slots, every item with weight and a use.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/ui_wheel.jpg" data-title="The emote wheel" data-text="Hold G: wave, point, cheer, laugh, shrug and more."><img src="screenshots/thumb/ui_wheel.jpg" alt="The emote wheel around the scout" loading="lazy" width="800" height="450"><figcaption><b>Say it without words</b><span>Hold <kbd>G</kbd> for sixteen gestures and expressions.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/ui_menu.jpg" data-title="Base camp" data-text="Your scout hikes ahead on the title screen."><img src="screenshots/thumb/ui_menu.jpg" alt="The title screen with the menu and the scout on the trail" loading="lazy" width="800" height="450"><figcaption><b>Base camp</b><span>Pick a world seed, dress up, head out.</span></figcaption></figure>
+    </div>
   </div>
 </section>
 
@@ -201,7 +239,7 @@
       <div class="badge reveal">
         <svg class="patch" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="#ec8a34" stroke="#22301f" stroke-width="3"/><circle cx="60" cy="60" r="49" fill="none" stroke="#fffaf0" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="60" cy="60" r="40" fill="#fbf4e3" stroke="#22301f" stroke-width="2.5"/><rect x="40" y="40" width="40" height="44" rx="12" fill="#f2c230" stroke="#22301f" stroke-width="3"/><path d="M48 40v-4a12 8 0 0 1 24 0v4" fill="none" stroke="#22301f" stroke-width="3"/><rect x="47" y="60" width="26" height="16" rx="5" fill="#d9a735" stroke="#22301f" stroke-width="3"/><rect x="36" y="31" width="48" height="12" rx="6" fill="#5b86b5" stroke="#22301f" stroke-width="3"/></svg>
         <h3>Everything has weight</h3>
-        <p>Pack light and you're quick. Pack for everything and every climb hurts. Twenty items, all with a purpose.</p>
+        <p>Pack light and you're quick. Pack for everything and every climb hurts. Fifty items, all with a purpose.</p>
       </div>
       <div class="badge reveal">
         <svg class="patch" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="#5b8a4c" stroke="#22301f" stroke-width="3"/><circle cx="60" cy="60" r="49" fill="none" stroke="#fffaf0" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="60" cy="60" r="40" fill="#bfe6fb" stroke="#22301f" stroke-width="2.5"/><path d="M26 80 48 48l10 14 10-18 24 36Z" fill="#88a9cf" stroke="#22301f" stroke-width="3" stroke-linejoin="round"/><path d="m63 52 5-8 6 9-5 3-3-3-3 3Z" fill="#fff" stroke="#22301f" stroke-width="2" stroke-linejoin="round"/><path d="M38 82c8-8 14-2 22-8s16 2 24 8" fill="#9ccc4a" stroke="#22301f" stroke-width="3" stroke-linejoin="round"/><path d="M60 92c-4 0-4-6 0-6s4 6 8 6 4-6 0-6-4 6-8 6Z" fill="none" stroke="#22301f" stroke-width="2.4"/></svg>
@@ -223,6 +261,16 @@
         <h3>Runs on modest PCs</h3>
         <p>Low to Ultra presets and every optimization can be toggled. From a handheld to a gaming rig.</p>
       </div>
+      <div class="badge reveal">
+        <svg class="patch" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="#ec86b0" stroke="#22301f" stroke-width="3"/><circle cx="60" cy="60" r="49" fill="none" stroke="#fffaf0" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="60" cy="60" r="40" fill="#fbf4e3" stroke="#22301f" stroke-width="2.5"/><circle cx="60" cy="60" r="24" fill="#f2c230" stroke="#22301f" stroke-width="3"/><path d="M50 56q3-5 6 0M64 56q3-5 6 0" fill="none" stroke="#22301f" stroke-width="3" stroke-linecap="round"/><path d="M49 64q11 12 22 0Z" fill="#22301f"/></svg>
+        <h3>Say it with a wave</h3>
+        <p>An emote wheel full of gestures: point the way, cheer at the summit, facepalm at the river.</p>
+      </div>
+      <div class="badge reveal">
+        <svg class="patch" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="#3aa99c" stroke="#22301f" stroke-width="3"/><circle cx="60" cy="60" r="49" fill="none" stroke="#fffaf0" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="60" cy="60" r="40" fill="#fbf4e3" stroke="#22301f" stroke-width="2.5"/><rect x="51" y="36" width="18" height="30" rx="9" fill="#58a6e0" stroke="#22301f" stroke-width="3"/><path d="M44 58a16 16 0 0 0 32 0M60 74v8M52 84h16" fill="none" stroke="#22301f" stroke-width="3" stroke-linecap="round"/></svg>
+        <h3>Ready to talk</h3>
+        <p>Voice chat is on its way: push to talk, always on or voice activation already work, and your scout's mouth moves as you speak.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -239,6 +287,7 @@
       <div class="key"><kbd>E</kbd>pick up · use</div>
       <div class="key"><kbd>Tab</kbd>backpack</div>
       <div class="key"><kbd>R</kbd>rest · sleep</div>
+      <div class="key"><kbd>G</kbd>emotes</div>
       <div class="key"><kbd>V</kbd>third person</div>
     </div>
   </div>
@@ -258,7 +307,7 @@
       <div class="dl-notes"><span>Windows 10+ or Linux x86_64</span><span>Vulkan graphics</span><span>about 350 MB</span></div>
       <p class="smartscreen">Windows may say "Windows protected your PC" because the game isn't signed. Click <b>More info → Run anyway</b>.</p>
     </div>
-    <div class="troop"><img src="scouts.png" alt="Five scouts in different colors and hats, two of them waving" width="1319" height="581" loading="lazy"><div class="hill"></div></div>
+    <div class="troop"><img src="scouts.png" alt="Five scouts in different colors and hats, waving, cheering and laughing" width="1320" height="518" loading="lazy"><div class="hill"></div></div>
   </div>
 </section>
 </main>
