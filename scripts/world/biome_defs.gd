@@ -42,8 +42,15 @@ const WILDFLOWERS := ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flo
 
 
 static func all() -> Array[Dictionary]:
-	return [meadow(), forest(), desert(), blossom(), spring(), maple(), alpine(), bog(), coast(), cliffs(), glow(), lakes(),
+	var list: Array[Dictionary] = [meadow(), forest(), desert(), blossom(), spring(), maple(), alpine(), bog(), coast(), cliffs(), glow(), lakes(),
 		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood(), wheat_fields(), cherry_valley(), golden_slopes(), rock_gorge(), blue_hollow()]
+	# the round-12 tree layers (patches, new biomes) thin out with distance like the old ones: dense stands only
+	# near the path, the far hills keep their silhouette through fewer, impostor-drawn trees
+	for bi in list.size():
+		for layer: Dictionary in list[bi]["layers"]:
+			if layer["kind"] == "tree" and not layer.has("falloff") and (layer.has("patch") or bi >= 15) and float(layer["dist"][1]) > 150.0:
+				layer["falloff"] = [20.0, 150.0, 0.45]
+	return list
 
 
 # ================================================================ Style building blocks
@@ -263,7 +270,7 @@ static func meadow() -> Dictionary:
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			erratic_layer(rock_style(Color(0.66, 0.67, 0.64), 0.7), 150.0),
 			# round 12: birch stands, hedged stubble fields, lone trees
-			{"kind": "tree", "models": BIRCHES, "styles": [birch_gold, birch_gold, birch_orange, birch_late], "spacing": 6.5, "chance": 0.8,
+			{"kind": "tree", "models": BIRCHES, "styles": [birch_gold, birch_gold, birch_orange], "spacing": 8.0, "chance": 0.8,
 				"dist": [5.5, 400.0], "patch": [1], "scale": [0.6, 0.95], "radius": 2.2, "collide": "trunk", "trunk": 0.2},
 			hedges,
 			{"kind": "grass", "models": ["Grass_Wheat", "Grass_Wheat", "Grass_Wispy_Short"], "density": 1100.0, "dist": [5.0, 95.0],

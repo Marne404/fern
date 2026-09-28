@@ -505,3 +505,18 @@ bog cotton, low racing clouds; wild and wide.
   dense tree/rock patches stood inside obstacles, and a small stone lay in the narrow way. Scatter trees and
   rocks now keep clear of boulder fields, mud hollows and stiles near the path (`obstacle_keep_clear`), small
   stones lie beside the narrow line. `--obtest --only_boulders` runs just that check. Both test suites pass.
+
+## Performance check after the biomes
+
+- First measurement on High (1920×1080): 66–90 ms instead of ~45 ms in round 11 at the same spots.
+- Cause 1 (big): the Pro kit's textures were imported as plain 2D textures – no mipmaps, no VRAM compression
+  – because the materials are built in code and Godot's "used in 3D" detection never saw them. Alpha-tested
+  leaves without mipmaps cost 5–10× per tree (12 TallThick: +31 ms, now +5 ms). The new `.png.import` files
+  copy the settings of their free-kit counterparts (these files are gitignored with the Pro textures: when
+  importing the kit again, copy the settings again).
+- Cause 2: the new dense tree layers had no distance falloff; all patch layers and new biomes now thin out
+  beyond 20–150 m like the old ones (added centrally in `BiomeDefs.all()`); the autumn birch stand uses 3
+  styles and 8 m spacing; Birch/TallThick make no twin trees.
+- Helpers: `--mmistats` (batches/instances/triangles per model family), `--hide=Prefix,…`.
+- After: Autumn birch stand 47 ms (round 11: 44.6), Red Maple 46, Cherry Valley 38, Old Forest 44, Wheat 40,
+  Forest Trail 45.

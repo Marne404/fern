@@ -699,6 +699,41 @@ func _process_inner(delta: float) -> void:
 			var co := cc.get_collider() as Node
 			print("  contact: %s (%s) n=%s at %s" % [co.name if co else "?", co.get_parent().name if co and co.get_parent() else "", cc.get_normal(), cc.get_position()])
 		print("rot=%s pending=%s pos=%s vel=%s floor=%s act=%s climbing=%s state=%d stamina=%.0f input=%s rope=%s crouch=%s" % [player.rotation_degrees, _spawn_pending, player.global_position, player.velocity, player.is_on_floor(), player.can_act(), player.climbing, player.body.state, player.body.stamina, player.input_enabled, player.rope, player.crouching])
+	if _args.has("hide") and _frame % 30 == 0:
+		# test helper: --hide=Bush_Large,Fern hides multimeshes whose model starts with one of these
+		var pre: PackedStringArray = _args["hide"].split(",")
+		for c in world.get_children():
+			for m in c.get_children():
+				var mh := m as MultiMeshInstance3D
+				if mh and mh.multimesh and mh.multimesh.mesh:
+					for pfx in pre:
+						if mh.multimesh.mesh.resource_name.begins_with(pfx):
+							mh.visible = false
+	if _args.has("mmistats") and _frame == int(_args.get("wait", "300")) - 5:
+		# test helper: which multimeshes cost the most (batches, instances, triangles by model family)
+		var st := {}
+		for c in world.get_children():
+			for m in c.get_children():
+				var mmi := m as MultiMeshInstance3D
+				if mmi == null or not mmi.is_visible_in_tree() or mmi.multimesh == null or mmi.multimesh.mesh == null:
+					continue
+				var nm: String = mmi.multimesh.mesh.resource_name
+				var fam := TreeKinds.family(nm) if nm.contains("_") else nm
+				var n := mmi.multimesh.visible_instance_count if mmi.multimesh.visible_instance_count >= 0 else mmi.multimesh.instance_count
+				var tris := 0
+				var mesh := mmi.multimesh.mesh
+				for si in mesh.get_surface_count():
+					var arr := mesh.surface_get_arrays(si)
+					tris += (arr[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3 if arr[Mesh.ARRAY_INDEX] != null else (arr[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() / 3
+				var e: Array = st.get(fam, [0, 0, 0])
+				e[0] += 1
+				e[1] += n
+				e[2] += n * tris
+				st[fam] = e
+		var keys := st.keys()
+		keys.sort_custom(func(a, b): return st[a][2] > st[b][2])
+		for k in keys.slice(0, 25):
+			print("[mmi] %-22s batches %5d  instances %7d  tris %9d" % [k, st[k][0], st[k][1], st[k][2]])
 	if _args.has("fps") and _frame % 120 == 0:
 		print("FPS %d | Chunks %d (+%d) | Distance %.0f m | Biome %s | Scale %.2f | prims %d" % [
 			Engine.get_frames_per_second(), world.loaded_count(), world.pending_count(), journey_distance,

@@ -9,9 +9,9 @@ const KINDS := {
 	# bush: often a bush at its base; crown_h / crown_r: crown center height and radius at scale 1 (leaf fall)
 	"CommonTree": {"squash": Vector3(1.34, 0.88, 1.34), "twin": true, "bush": true, "crown_h": 7.8, "crown_r": 2.2},
 	"TwistedTree": {"squash": Vector3(1.34, 0.88, 1.34), "twin": false, "bush": true, "crown_h": 16.5, "crown_r": 5.0},
-	"Birch": {"squash": Vector3(1.12, 0.96, 1.12), "twin": true, "bush": false, "crown_h": 13.0, "crown_r": 3.6},
+	"Birch": {"squash": Vector3(1.12, 0.96, 1.12), "twin": false, "bush": false, "crown_h": 13.0, "crown_r": 3.6},
 	"CherryBlossom": {"squash": Vector3(1.1, 0.92, 1.1), "twin": false, "bush": true, "crown_h": 13.0, "crown_r": 6.0},
-	"TallThick": {"squash": Vector3(1.05, 1.0, 1.05), "twin": true, "bush": true, "crown_h": 14.0, "crown_r": 4.0},
+	"TallThick": {"squash": Vector3(1.05, 1.0, 1.05), "twin": false, "bush": true, "crown_h": 14.0, "crown_r": 4.0},
 	"GiantPine": {"squash": Vector3.ONE, "twin": false, "bush": false, "crown_h": 14.0, "crown_r": 5.5},
 	"Pine": {"squash": Vector3.ONE, "twin": false, "bush": false, "crown_h": 6.0, "crown_r": 2.2},
 	"DeadTree": {"squash": Vector3.ONE, "twin": false, "bush": false, "crown_h": 6.0, "crown_r": 2.0},
