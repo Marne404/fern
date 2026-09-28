@@ -398,3 +398,19 @@ shelf fungi, a golden corner where autumn has already begun.
 - Fix across biomes: the ferns are only ~1.5 m wide at scale 1 (the earlier "9 m" came from reading the
   bounds of all accessors, not only positions). All new fern carpets were ~0.6 m tufts; they are now 1.0–1.6
   (Forest Trail, Deadwood Bog, Birch Wood with Fern_1 mixed in; bracken, rust ferns, boulder and shore ferns).
+
+## Step 3.15 – Heather Highlands
+
+Idea: Scottish moor – purple heather, granite tors on the hills, sheltered hollows with birches and rowan,
+bog cotton, low racing clouds; wild and wide.
+
+- Everywhere: tors of stacked Rock_Big on hilltops (squashed, big), broad pale moor grass tufts.
+- Patches: heather moor 40 % (as today) · tor field 20 % · sheltered hollow 25 % · cotton bog 15 %.
+  - Tor field: many granite boulders and stacks, few heather.
+  - Sheltered hollow: birches and rowan (TallThick with red-dotted crowns → orange-red tint), ferns.
+  - Cotton bog: white bog cotton tufts (Flower_6 white on tall stems → Grass_Wide with white tint?) –
+    use Flower_6_2 white, wet sedge.
+- Effect: "drizzle" already; add northern lights later in the sky step. Keep the "gusts".
+- Result: granite tors on the hillsides and tor fields near the path, sheltered hollows with pale birches and
+  orange rowans and ferns, bog patches with pale marsh flowers (Flower_6 can't be tinted pure white; it reads
+  as pale pink marsh flowers), broad moor-grass tufts. Selftest and obtest passed after all 15 biomes.

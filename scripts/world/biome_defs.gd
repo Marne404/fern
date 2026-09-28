@@ -1150,8 +1150,19 @@ static func highlands() -> Dictionary:
 	var granite := rock_style(Color(0.66, 0.66, 0.68), 0.5)
 	var crag := rock_style(Color(0.6, 0.6, 0.62), 0.55, true)
 	var pine := tree_style(Color(0.1, 0.26, 0.12), Color(0.3, 0.5, 0.22), {"tint": Color(0.85, 0.78, 0.72)}, 7.0, {"sphere_normals": 0.5})
+	var tor := rock_style(Color(0.64, 0.64, 0.66), 0.55, true, {"triplanar_scale": 0.06, "moss_color": Color(0.55, 0.62, 0.3), "top_light": 0.45})
+	var hollow_birch := birch_style(Color(0.38, 0.52, 0.12), Color(0.82, 0.88, 0.36))
+	var rowan := tree_style(Color(0.62, 0.2, 0.06), Color(0.95, 0.52, 0.18), {"tint": Color(0.9, 0.8, 0.75)}, 6.0, {"translucency": 0.9})
+	var moor_grass := [Color(0.66, 0.64, 0.4), Color(0.58, 0.58, 0.34), Color(0.72, 0.66, 0.46), Color(0.52, 0.54, 0.3)]
+	var hollow_ferns := cluster_layer(["Fern_1", "Fern_2"], 2.5, [3.0, 45.0], 4, 2.4, [0.9, 1.3], true, {"plant": {"texture_tint": Color(1.25, 0.85, 0.45)}})
+	hollow_ferns["patch"] = [2]
+	var cotton := {"kind": "cluster", "models": ["Flower_6_2", "Flower_6"], "styles": [{}], "density": 5.0, "dist": [2.5, 60.0], "count": 18,
+		"radius": 3.0, "scale": [0.9, 1.3], "tints": [Color(1.0, 1.0, 1.0), Color(0.98, 0.97, 0.94)], "vis": 60.0, "near": true, "tilt": 0.9, "patch": [3]}
 	return {
 		"name": NAMES[14],
+		# heather moor as before · tor field · sheltered hollow · cotton bog
+		"patches": [{"name": "heather moor", "share": 0.4}, {"name": "tor field", "share": 0.2},
+			{"name": "sheltered hollow", "share": 0.25}, {"name": "cotton bog", "share": 0.15}],
 		"blades": blades(0.35, Color(0.22, 0.26, 0.1), Color(0.56, 0.6, 0.28), Color(0.74, 0.62, 0.4)),
 		"terrain": terrain({"scree": 0.7, "gullies": 1.0, "hummocks": 0.9, "brooks": 0.9, "litter": 0.0, "litter_color": Color(0.5, 0.4, 0.3), "far_height": 70.0, "obstacles": ["boulders", "boulders", "mud", "river"],
 			"ponds": 0.45, "pond_size": Vector2(10.0, 22.0), "water_shallow": Color(0.42, 0.6, 0.62), "water_deep": Color(0.1, 0.22, 0.3),
@@ -1169,7 +1180,7 @@ static func highlands() -> Dictionary:
 		"layers": [
 			grass_layer([Color(0.52, 0.6, 0.24), Color(0.46, 0.54, 0.2), Color(0.62, 0.62, 0.3)],
 				[Color(0.66, 0.46, 0.56), Color(0.58, 0.4, 0.5), Color(0.72, 0.6, 0.4)], 1700.0, Vector2(0.4, 0.7)),
-			cluster_layer(["Proc_Heather"], 3.4, [2.5, 70.0], 5, 2.2, [0.8, 1.35], true),
+			thinned(cluster_layer(["Proc_Heather"], 3.4, [2.5, 70.0], 5, 2.2, [0.8, 1.35], true), {1: 0.35, 2: 0.5, 3: 0.4}),
 			{"kind": "rock", "models": ROCKS, "styles": [crag], "spacing": 42.0, "chance": 0.4, "dist": [14.0, 120.0],
 				"scale": [3.0, 6.0], "squash": Vector3(1.4, 0.8, 1.2), "sink": 0.22, "radius": 6.0, "collide": "rock"},
 			{"kind": "rock", "models": ROCKS, "styles": [granite], "spacing": 18.0, "chance": 0.45, "dist": [5.0, 90.0],
@@ -1181,5 +1192,16 @@ static func highlands() -> Dictionary:
 			small_rock_layer(granite, 5.0, [2.0, 16.0]),
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			scree_layer(rock_style(Color(0.66, 0.66, 0.68), 0.2), 45.0), erratic_layer(rock_style(Color(0.62, 0.64, 0.62), 0.75), 90.0),
+			# round 12: tors, moor grass, tor fields, sheltered hollows, cotton bogs
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [tor], "spacing": 70.0, "chance": 0.55, "dist": [25.0, 160.0],
+				"scale": [1.6, 3.2], "grow_with_dist": true, "squash": Vector3(1.2, 0.8, 1.15), "sink": 0.18, "radius": 10.0, "collide": "rock"},
+			{"kind": "grass", "models": ["Grass_Wide_Short", "Grass_Wide_Tall"], "density": 90.0, "dist": [3.0, 70.0],
+				"scale": [0.45, 0.75], "palette": moor_grass, "region_palette": moor_grass, "near": true},
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4", "Rock_Medium_3"], "styles": [tor], "spacing": 12.0,
+				"chance": 0.6, "dist": [5.0, 90.0], "patch": [1], "scale": [0.5, 1.4], "sink": 0.18, "radius": 3.5, "collide": "rock"},
+			{"kind": "tree", "models": BIRCHES + ["TallThick_2", "TallThick_4"], "styles": [hollow_birch, hollow_birch, rowan], "spacing": 9.0,
+				"chance": 0.75, "dist": [6.0, 300.0], "patch": [2], "scale": [0.5, 0.75], "radius": 2.5, "collide": "trunk", "trunk": 0.22},
+			hollow_ferns,
+			cotton,
 		],
 	}
