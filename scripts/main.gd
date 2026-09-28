@@ -519,6 +519,8 @@ func _process_inner(delta: float) -> void:
 			deer._add_deer(dp, 1.0, false)
 			deer._add_deer(dp + Vector3(1.6, 0, 1.0), 0.62, true)
 			deer.hold = _args.get("deerhold", "")
+		if _args.has("lineup"):
+			_lineup(_args["lineup"].split(","))
 		if _args.has("backpack"):
 			backpack.open.call_deferred(player)
 		if _args.has("knotui"):
@@ -721,12 +723,12 @@ func _process_inner(delta: float) -> void:
 				"trees":
 					for c in world.get_children():
 						for m in c.get_children():
-							if m is MultiMeshInstance3D and m.multimesh.mesh.resource_name.contains("Tree") or m is MultiMeshInstance3D and m.multimesh.mesh.resource_name.begins_with("Pine"):
+							if m is MultiMeshInstance3D and TreeKinds.is_tree(m.multimesh.mesh.resource_name):
 								m.visible = false
 				"treeshadows":
 					for c in world.get_children():
 						for m in c.get_children():
-							if m is MultiMeshInstance3D and (m.multimesh.mesh.resource_name.contains("Tree") or m.multimesh.mesh.resource_name.begins_with("Pine")):
+							if m is MultiMeshInstance3D and TreeKinds.is_tree(m.multimesh.mesh.resource_name):
 								m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				"grass":
 					for c in world.get_children():
@@ -1128,3 +1130,36 @@ func _update_shot() -> void:
 		img.save_png(_args["shot"])
 		print("saved: %s  FPS %d  distance %.0f m" % [_args["shot"], Engine.get_frames_per_second(), journey_distance])
 		get_tree().quit()
+
+
+## Test helper: models in a row ahead of the camera, e.g. --lineup=Birch_1,Birch_2 --lstyle=13/1/0
+## (styles of biome/layer/style index; default: a plain green tree, gray rock or the plant's own colors)
+func _lineup(models: PackedStringArray) -> void:
+	var fw := -player.global_basis.z
+	fw = Vector3(fw.x, 0, fw.z).normalized()
+	var right := fw.cross(Vector3.UP)
+	var gap := float(_args.get("lgap", "9"))
+	var ahead := float(_args.get("lahead", "22"))
+	var style := {}
+	if _args.has("lstyle"):
+		var p: PackedStringArray = _args["lstyle"].split("/")
+		var layer: Dictionary = gen.biomes[int(p[0])]["layers"][int(p[1])]
+		style = (layer.get("styles", [{}]) + layer.get("region_styles", []))[int(p[2]) if p.size() > 2 else 0]
+	for i in models.size():
+		var m: String = models[i]
+		var st := style
+		if st.is_empty():
+			if TreeKinds.is_tree(m):
+				st = BiomeDefs.tree_style(Color(0.24, 0.5, 0.08), Color(0.68, 0.9, 0.26))
+			elif m.begins_with("Rock"):
+				st = BiomeDefs.rock_style(Color(0.7, 0.72, 0.7), 0.4)
+			elif m.begins_with("Bush"):
+				st = {"leaves": BiomeDefs.leaves(Color(0.2, 0.46, 0.08), Color(0.55, 0.84, 0.2), {"sphere_normals": 0.85}), "stiffness": 6.0}
+		var pos := player.global_position + fw * ahead + right * (i - (models.size() - 1) * 0.5) * gap
+		var wp := world.local_to_world(pos)
+		pos.y = world.world_to_local(Vector3(0, gen.height(wp.x, wp.z), 0)).y
+		var mi := MeshInstance3D.new()
+		mi.mesh = lib.mesh(m, st)
+		mi.scale = Vector3.ONE * float(_args.get("lscale", "1"))
+		world.add_child(mi)
+		mi.global_position = pos

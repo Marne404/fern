@@ -637,7 +637,7 @@ func _pick_style(layer: Dictionary, x: float, z: float) -> int:
 static func cell_size(model: String) -> float:
 	if not opt_cells:
 		return SIZE
-	return 32.0 if (model.contains("Tree") or model.begins_with("Pine") or model.begins_with("Rock_Medium")) else 16.0
+	return 32.0 if (TreeKinds.is_tree(model) or model.begins_with("Rock_")) else 16.0
 
 
 func _add(base_key: String, xf: Transform3D, custom: Color) -> void:
@@ -808,10 +808,12 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 				var xf2 := _ground_xf(lx, lz, s, 0.0, 0.03)
 				var tkey := key + "@far" if (lod != 0 and opt_far_trees) else key
 				# wider, rounder crowns; often a bush at the base of broadleaf trees
-				if model.begins_with("CommonTree") or model.begins_with("TwistedTree"):
-					xf2.basis = xf2.basis.scaled(Vector3(1.34, 0.88, 1.34))
+				var tk := TreeKinds.of(model)
+				if not tk.is_empty():
+					xf2.basis = xf2.basis.scaled(tk["squash"])
+				if tk.get("twin", false) or tk.get("bush", false):
 					# in the core of a grove: a second tree right next to it – connected canopies
-					if gv > 0.8 and rng.randf() < 0.7 and model.begins_with("CommonTree"):
+					if gv > 0.8 and rng.randf() < 0.7 and tk["twin"]:
 						var na := rng.randf() * TAU
 						var nx := lx + cos(na) * 3.2 * s
 						var nz := lz + sin(na) * 3.2 * s
@@ -819,12 +821,12 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 						if nx > 0.0 and nz > 0.0 and nx < SIZE and nz < SIZE and not _wet(nx, nz, 0.6) \
 								and absf(gen.offset_in_row(corner.x + nx, nr)) > nr["half_w"] + 3.0 and surface_normal(nx, nz).y > 0.8:
 							var xf3 := _ground_xf(nx, nz, s * rng.randf_range(0.8, 1.05), 0.0, 0.03)
-							xf3.basis = xf3.basis.scaled(Vector3(1.34, 0.88, 1.34))
+							xf3.basis = xf3.basis.scaled(tk["squash"])
 							_add(tkey, xf3, Color(0, 0, 0, rng.randf_range(0.05, 1.0)))
 							_add_crown(layer, style, model, xf3)
 							if lod == 0 and layer.get("collide", "") == "trunk":
 								trunks.append([xf3.origin, layer.get("trunk", 0.3) * s, 4.0 * s, xf3, model])
-					if lod == 0 and rng.randf() < 0.55:
+					if lod == 0 and rng.randf() < 0.55 and tk["bush"]:
 						var ba := rng.randf() * TAU
 						var bx := lx + cos(ba) * 1.2 * s
 						var bz := lz + sin(ba) * 1.2 * s
@@ -852,9 +854,9 @@ func _add_crown(layer: Dictionary, style: int, model: String, xf: Transform3D) -
 	if light.r < light.g * 0.95:
 		return
 	var sc := xf.basis.get_scale()
-	var twisted := model.begins_with("TwistedTree")
-	var h := 16.5 if twisted else 7.8
-	var rad := 5.0 if twisted else 2.2
+	var tk := TreeKinds.of(model)
+	var h: float = tk.get("crown_h", 7.8)
+	var rad: float = tk.get("crown_r", 2.2)
 	var c := (lv["color_dark"] as Color).lerp(light, 0.55)
 	crowns.append_array([corner.x + xf.origin.x, xf.origin.y + h * 0.7 * sc.y, corner.y + xf.origin.z, rad * sc.x * 0.8, c.r, c.g, c.b])
 

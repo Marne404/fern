@@ -11,3 +11,36 @@ assets/music/
 
 # reference images from other games (copyrighted, local only)
 docs/vergleich_genshin.jpg
+
+# Stylized Nature MegaKit Pro: bought, only shipped inside the builds (the free kit's files stay in git)
+assets/nature/Birch_*
+assets/nature/CherryBlossom_*
+assets/nature/GiantPine_*
+assets/nature/TallThick_*
+assets/nature/Rock_Big_*
+assets/nature/Rock_Medium_4.*
+assets/nature/Bush_Large*
+assets/nature/Bush_Long_*
+assets/nature/Plant_2*
+assets/nature/Plant_3.*
+assets/nature/Plant_4.*
+assets/nature/Plant_5.*
+assets/nature/Plant_6.*
+assets/nature/Flower_1_*
+assets/nature/Flower_2_*
+assets/nature/Flower_6*
+assets/nature/Flower_7_*
+assets/nature/Grass_Wheat.*
+assets/nature/Grass_Wide_*
+assets/nature/Mushroom_Oyster.*
+assets/nature/Mushroom_RedCap.*
+assets/nature/Fern_2.*
+assets/nature/Petal_6.*
+assets/nature/Bark_BirchTree*
+assets/nature/Bark_PineTree*
+assets/nature/Leaves_Birch*
+assets/nature/Leaves_CherryBlossom*
+assets/nature/Leaves_GiantPine.png*
+assets/nature/Leaves_Square*
+assets/nature/Leaves_TallThick*
+assets/nature/PathRocks_Desert_Diffuse*

@@ -11,6 +11,19 @@ var bark_shader: Shader = preload("res://shaders/bark.gdshader")
 var rock_shader: Shader = preload("res://shaders/rock.gdshader")
 var paint_noise: Texture2D = preload("res://assets/paint_noise.tres")
 
+## Pro kit model (family or full name) → free kit model with a similar role
+const FALLBACK := {
+	"Birch": "CommonTree_2", "CherryBlossom": "TwistedTree_1", "GiantPine": "Pine_4", "TallThick": "CommonTree_4",
+	"Rock_Big": "Rock_Medium_1", "Rock_Medium_4": "Rock_Medium_2", "Bush_Large": "Bush_Common",
+	"Bush_Large_Flowers": "Bush_Common_Flowers", "Bush_Long": "Bush_Common", "Plant_2": "Plant_1", "Plant_2_Big": "Plant_1_Big",
+	"Plant_3": "Plant_7", "Plant_4": "Plant_1", "Plant_5": "Plant_7", "Plant_6": "Plant_1",
+	"Flower_1_Group": "Flower_3_Group", "Flower_1_Single": "Flower_3_Single", "Flower_2_Group": "Flower_4_Group",
+	"Flower_2_Single": "Flower_4_Single", "Flower_6": "Clover_1", "Flower_6_2": "Clover_2", "Flower_7_Group": "Flower_3_Group",
+	"Flower_7_Single": "Flower_3_Single", "Grass_Wheat": "Grass_Wispy_Tall", "Grass_Wide_Short": "Grass_Common_Short",
+	"Grass_Wide_Tall": "Grass_Common_Tall", "Mushroom_RedCap": "Mushroom_Common", "Mushroom_Oyster": "Mushroom_Laetiporus",
+	"Fern": "Fern_1", "Petal": "Petal_1",
+}
+
 var _raw := {}
 var _styled := {}
 var _tex := {}
@@ -61,7 +74,11 @@ func raw_mesh(model: String) -> ArrayMesh:
 	if model.begins_with("Proc_"):
 		_raw[model] = ProcPlants.build(model)
 		return _raw[model]
-	var scene: PackedScene = load(DIR + model + ".gltf")
+	var file := model
+	if not ResourceLoader.exists(DIR + file + ".gltf"):
+		# Pro kit models are not in git: a fresh clone uses the nearest free model instead
+		file = FALLBACK.get(TreeKinds.family(model), FALLBACK.get(model, "Bush_Common"))
+	var scene: PackedScene = load(DIR + file + ".gltf")
 	var inst := scene.instantiate()
 	var mi := _find_mesh_instance(inst)
 	var mesh: ArrayMesh = mi.mesh
@@ -201,8 +218,9 @@ func _make_material(src: ArrayMesh, s: int, mat_name: String, style: Dictionary,
 		var st: Dictionary = style.get("bark", {})
 		var mat := ShaderMaterial.new()
 		mat.shader = bark_shader
-		mat.set_shader_parameter("albedo_tex", texture(mat_name + ".png"))
-		mat.set_shader_parameter("normal_tex", texture(mat_name + "_Normal.png"))
+		var bark_file: String = {"Bark_Birch": "Bark_BirchTree", "Bark_Pine": "Bark_PineTree"}.get(mat_name, mat_name)
+		mat.set_shader_parameter("albedo_tex", texture(bark_file + ".png"))
+		mat.set_shader_parameter("normal_tex", texture(bark_file + "_Normal.png"))
 		mat.set_shader_parameter("object_height", height)
 		mat.set_shader_parameter("stiffness", style.get("stiffness", 4.0))
 		for k in st:
@@ -275,6 +293,10 @@ func _make_material(src: ArrayMesh, s: int, mat_name: String, style: Dictionary,
 		"Leaves_NormalTree": "Leaves_NormalTree_C.png",
 		"Leaves_TwistedTree": "Leaves_TwistedTree_C.png",
 		"Leaves_Pine": "Leaf_Pine_C.png",
+		"Leaves_Birch": "Leaves_Birch_C.png",
+		"Leaves_CherryBlossom": "Leaves_CherryBlossom_C.png",
+		"Leaves_GiantPine": "Leaves_GiantPine_C.png",
+		"Leaves_TallThick": "Leaves_TallThick_C.png",
 		"Leaves": "Leaves.png",
 		"Flowers": "Flowers.png",
 	}.get(mat_name, "Leaves.png")
