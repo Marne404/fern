@@ -550,3 +550,21 @@ footer .credits { max-width: 70ch; opacity: .9; }
   .emote { width: 50px; height: 50px; }
   .emote img { width: 46px; height: 46px; }
 }
+
+/* ------------------------------------------------------------ a living day */
+.day { background: linear-gradient(180deg, transparent, rgba(236, 138, 52, .1) 40%, rgba(63, 95, 174, .12) 80%, transparent); }
+.day-strip { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-top: clamp(30px, 5vw, 50px); }
+.day-card { margin: 0; border: 3px solid var(--ink); border-radius: 20px; overflow: hidden; background: var(--cream); box-shadow: 0 6px 0 var(--ink); cursor: zoom-in; transition: transform .25s ease; }
+.day-card:nth-child(odd) { transform: rotate(-1deg); }
+.day-card:nth-child(even) { transform: rotate(1deg); }
+.day-card:hover { transform: rotate(0deg) translateY(-6px); }
+.day-card img { aspect-ratio: 4 / 5; object-fit: cover; width: 100%; height: auto; display: block; border-bottom: 3px solid var(--ink); }
+.day-card figcaption { padding: 10px 12px 12px; }
+.day-card figcaption b { font-family: var(--display); font-weight: 400; font-size: 1.25rem; display: block; line-height: 1.05; }
+.day-card figcaption span { font-size: .85rem; color: var(--ink-soft); font-weight: 700; }
+.life-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(18px, 3vw, 34px); margin-top: clamp(40px, 6vw, 70px); }
+@media (max-width: 1000px) { .day-strip { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .day-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .life-grid { grid-template-columns: minmax(0, 1fr); }
+}

@@ -156,6 +156,21 @@ reasonably flat ground, grove structure with clearings, landmarks (rock arches, 
 
 ![Your scouts](scouts.png)
 
+## Round 11 – A living day
+
+- **Impostors:** distant trees are baked in the background into 8 views (albedo, normals, bark mask) and drawn as
+  billboards lit like the crowns; every tree hands over at its own distance. Ultra −6 ms, Extreme −14 ms.
+- **Times of day:** misty dawns (a height-fog pass that lies in the valleys), golden hours, dusk with fireflies in
+  every biome, short moonlit nights with stars; a sun/moon dial in the HUD, sleeping skips to the morning.
+- **Weather:** showers with rain, splashes and sound; glossy soil, puddles with raindrop rings, wet rocks and
+  leaves; a rainbow afterwards. Never in the desert, often on the moors.
+- **Sunbeams** through the tree crowns, **waterfalls** on the far mountains, **cloud shadows** racing in gusts.
+- **Wildlife:** deer at the forest edge, songbirds on fence posts, signposts and stones, butterflies landing on
+  flowers, bees in the lavender.
+- **Water:** clear brooks beside the trail, reeds with cattails, water lilies.
+- **Terrain:** erosion gullies, hummocky meadows, scree slopes, lone boulders.
+- **Mood:** color grading per biome and time of day, soft focus while resting.
+
 ---
 
 ## Ideas for later

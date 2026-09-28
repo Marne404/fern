@@ -26,8 +26,8 @@
   <img src="docs/screenshots/ui_hud.jpg" width="49%">
   <img src="docs/screenshots/autumn.jpg" width="49%">
   <img src="docs/screenshots/lavender.jpg" width="49%">
-  <img src="docs/screenshots/birch.jpg" width="49%">
-  <img src="docs/screenshots/highlands.jpg" width="49%">
+  <img src="docs/screenshots/t_golden.jpg" width="49%">
+  <img src="docs/screenshots/t_night.jpg" width="49%">
   <img src="docs/screenshots/blossom.jpg" width="49%">
   <img src="docs/screenshots/glow.jpg" width="49%">
   <img src="docs/screenshots/ui_backpack.jpg" width="49%">
@@ -69,10 +69,18 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
   Deadwood Bog, Glowing Forest and Desert Valley.
 - **A living landscape** – a winding trail with long climbs and descents, forested hills and mountain ranges,
   endless dunes with mesas, ponds, rivers, waterfalls, landmarks like rock arches and ruins.
-- **Weather and wind** – gusts roll through the grass, colorful trees drop their leaves, tumbleweeds bounce through
-  the desert, dust devils wander past, small sandstorms blur the horizon and drizzle drifts over the highlands.
+- **A living day** – the sun travels over every valley: misty dawns, golden hours, dusk with fireflies and short
+  moonlit nights under the stars; sleeping takes you to the next morning.
+- **Weather and wind** – showers come and go (glossy trail, puddles with raindrop rings, a rainbow afterwards), gusts
+  roll through the grass and chase the cloud shadows, colorful trees drop their leaves, tumbleweeds and dust devils
+  cross the desert, drizzle drifts over the highlands.
+- **Wildlife** – deer at the edge of the woods, songbirds on fence posts and stones, butterflies that land on flowers,
+  bees in the lavender.
+- **Water** – clear brooks beside the trail, reeds with cattails, water lilies, rings where you wade and fish rise.
 - **Small things** – footprints in sand, snow and mud, dust puffs, footstep sounds for every ground, fallen leaves and
-  petals on the path, wet shores, rings on the water where you wade and where fish rise.
+  petals on the path, wet shores, erosion gullies, scree slopes, hummocky meadows and lone boulders, sunbeams
+  through the crowns, waterfalls on the far mountains, color grading per biome and time of day, soft focus while
+  you rest.
 - **Body and backpack** – stamina, hunger, thirst, tiredness, felt temperature and luggage weight, shown PEAK-style
   as a stamina bar with the causes marked. 50 hand-modeled items with properties (waterproof, fragile, perishable, …)
   and effects (warm tea, sunscreen, a lantern, a kite, a harmonica, a compass …). Swimming soaks what isn't
@@ -81,7 +89,7 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
   rappelling, fall damage (water breaks your fall).
 - **Dynamic music** – 56 tracks; every biome has its own playlist, tension music near obstacles, calm music while resting.
 - **Anime-style rendering** – real grass blades, painted clouds, stylized water, film-look grading, sun shafts.
-  Presets from Low to Ultra, every optimization can be toggled individually.
+  Presets from Low to Extreme, distant trees as baked impostors, every optimization can be toggled individually.
 
 ## Controls
 
@@ -157,6 +165,7 @@ Command-line options after `--`, e.g. `godot --path . -- --play --z=-15000`:
 `--debugfx` weather state · `--biomes` / `--pois` / `--ponds` / `--landmarks` print lists · `--music` log track changes ·
 `--third` third person · `--scout` open the scout editor · `--pitch=-10 --yaw=15` camera angle at the start ·
 `--obstacles` print obstacle positions ·
+`--hour=19.5` time of day · `--rain` / `--afterrain` weather · `--deer=20` a deer ahead ·
 `--body=stamina:30,food:10` / `--give=kaese,seil` / `--drop=laterne` test states · `--emote=cheer` · `--wheel` ·
 `--backpack` · `--settings=Graphics` · `--fakevoice=-20` · `--voicetest` microphone check ·
 `--off=shadows,trees,…` profiling ·

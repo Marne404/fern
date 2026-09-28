@@ -338,6 +338,11 @@ func _test_day_cycle() -> void:
 	d.hour = 23.0
 	var n := d.apply(c)
 	check("Nights are darker and cooler", n["sun_energy"] < 0.8 and n["temperature"] < 11.0, "%.2f / %.1f °C" % [n["sun_energy"], n["temperature"]])
+	c["rainbow"] = 0.8
+	d.hour = 20.1
+	check("No rainbow at dusk", float(d.apply(c)["rainbow"]) < 0.05, "%.2f" % float(d.apply(c)["rainbow"]))
+	d.hour = 12.5
+	check("The biome's rainbow by day", float(d.apply(c)["rainbow"]) > 0.5)
 
 
 ## Weather: a whole shower cycle, wet ground, rainbow, desert stays dry

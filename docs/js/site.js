@@ -19,6 +19,14 @@ const BIOME_CARDS = [
   ['desert.jpg', 'Desert Valley', 'Endless dunes, mesas and tumbleweeds'],
   ['glow.jpg', 'Glowing Forest', 'Dusk, fireflies and glowing mushrooms'],
 ];
+const DAY_STRIP = [
+  ['t_mist.jpg', 'Dawn', 'Mist lies in the valley'],
+  ['t_golden.jpg', 'Golden hour', 'Long shadows over the lavender'],
+  ['t_dusk.jpg', 'Dusk', 'The first stars and fireflies'],
+  ['t_night.jpg', 'Night', 'A short, moonlit night'],
+  ['t_rain.jpg', 'A shower', 'Glossy trail, puddles and rain'],
+  ['t_rainbow.jpg', 'After the rain', 'A rainbow over the hills'],
+];
 const ITEMS = [["apfel", "Apple"], ["beeren", "Berries"], ["brot", "Bread"], ["muesliriegel", "Granola bar"], ["bohnen", "Can of beans"], ["wasserflasche", "Water bottle"], ["limonade", "Lemonade"], ["verband", "Bandage"], ["regenjacke", "Rain jacket"], ["pullover", "Wool sweater"], ["muetze", "Wool hat"], ["sonnenhut", "Sun hat"], ["seil", "Rope"], ["taschenlampe", "Flashlight"], ["fernglas", "Binoculars"], ["kamera", "Camera"], ["feldhandbuch", "Field guide"], ["wasserpistole", "Water pistol"], ["gummihuhn", "Rubber chicken"], ["stein", "Pretty stone"], ["kaese", "Cheese wedge"], ["pilze", "Mushrooms"], ["honig", "Jar of honey"], ["trockenobst", "Dried fruit"], ["schokolade", "Chocolate bar"], ["sandwich", "Sandwich"], ["moehre", "Carrot"], ["keks", "Cookie tin"], ["tee", "Thermos of tea"], ["kakao", "Cocoa"], ["saft", "Juice box"], ["pflaster", "Plasters"], ["erste_hilfe", "First aid kit"], ["sonnencreme", "Sunscreen"], ["schal", "Scarf"], ["handschuhe", "Gloves"], ["stiefel", "Hiking boots"], ["poncho", "Rain poncho"], ["kompass", "Compass"], ["karte", "Trail map"], ["messer", "Pocket knife"], ["stock", "Walking stick"], ["laterne", "Lantern"], ["pfeife", "Whistle"], ["mundharmonika", "Harmonica"], ["drachen", "Kite"], ["federn", "Feather"], ["muschel", "Seashell"], ["tannenzapfen", "Pinecone"], ["glueckskeks", "Fortune cookie"]];
 const EMOTE_BAR = [['wave', 'Wave'], ['cheer', 'Cheer'], ['laugh', 'Laugh'], ['thumbs', 'Thumbs up'], ['point', 'Point'], ['shrug', 'Shrug'],
   ['facepalm', 'Facepalm'], ['clap', 'Clap'], ['think', 'Think'], ['salute', 'Salute'], ['stomp', 'Stomp'], ['cower', 'Cower']];
@@ -60,6 +68,19 @@ BIOME_CARDS.forEach(([file, name, text]) => {
   f.addEventListener('keydown', (e) => { if (e.key === 'Enter') openLb(idx); });
   track.appendChild(f);
 });
+// times of day and weather: a strip of cards (click opens the lightbox)
+const dayStrip = $('#day-strip');
+DAY_STRIP.forEach(([file, name, text]) => {
+  const f = document.createElement('figure');
+  f.className = 'day-card';
+  f.tabIndex = 0;
+  f.innerHTML = `<img src="screenshots/thumb/${file}" alt="${name}: ${text}" loading="lazy" width="640" height="800"><figcaption><b>${name}</b><span>${text}</span></figcaption>`;
+  const idx = items.push({ src: `screenshots/${file}`, title: name, text }) - 1;
+  f.addEventListener('click', () => openLb(idx));
+  f.addEventListener('keydown', (e) => { if (e.key === 'Enter') openLb(idx); });
+  dayStrip.appendChild(f);
+});
+
 // items: icons from the game, a wobbly sticker grid
 const itemBox = $('#items');
 ITEMS.forEach(([id, name], i) => {

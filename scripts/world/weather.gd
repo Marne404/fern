@@ -114,7 +114,7 @@ func apply(c: Dictionary) -> Dictionary:
 	o["ambient_energy"] = float(c["ambient_energy"]) * lerpf(1.0, 1.25, k)
 	o["saturation"] = float(c.get("saturation", 1.0)) * lerpf(1.0, 0.88, k)
 	# a rainbow needs the sun: not at night
-	o["rainbow"] = maxf(float(c.get("rainbow", 0.0)), rainbow * (1.0 - float(c.get("night", 0.0))) * 1.2)
+	o["rainbow"] = maxf(float(c.get("rainbow", 0.0)), rainbow * (1.0 - float(c.get("night", 0.0))) * float(c.get("moon", 0.0) < 0.5) * 1.2)
 	o["mist"] = float(c.get("mist", 0.0)) + wet * (1.0 - k) * 0.25
 	o["temperature"] = float(c.get("temperature", 16.0)) - 3.0 * k
 	o["rain"] = rain

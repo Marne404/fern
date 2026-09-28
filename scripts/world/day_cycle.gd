@@ -169,6 +169,9 @@ func apply(c: Dictionary) -> Dictionary:
 	out["mist"] = m["mist"] * float(c.get("mist_amount", 1.0))
 	out["flies"] = m["flies"]
 	out["night"] = nightness()
+	# a rainbow needs the sun behind you and not too high or too low: gone at dusk and at night
+	var sun_up := -(out["sun_dir"] as Vector3).normalized().y
+	out["rainbow"] = float(c.get("rainbow", 0.0)) * (0.0 if moon else smoothstep(0.03, 0.15, sun_up)) * (1.0 - float(out["night"]))
 	# color grading: warmer in the golden hours, cooler and bluer at night
 	var night := float(out["night"])
 	out["grade_warm"] = lerpf(float(c.get("grade_warm", 0.0)), 0.7, float(m["glow"]) * 0.6 * (1.0 - night))
