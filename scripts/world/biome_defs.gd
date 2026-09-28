@@ -229,6 +229,7 @@ static func meadow() -> Dictionary:
 	hedges["patch"] = [2]
 	return {
 		"name": NAMES[0],
+		"under_bush": {"dark": Color(0.45, 0.4, 0.08), "light": Color(0.9, 0.7, 0.2)},
 		# meadow as before · golden birch stands · hedged stubble fields · wide meadows with lone trees
 		"patches": [{"name": "meadow", "share": 0.42}, {"name": "birch stand", "share": 0.22},
 			{"name": "hedge fields", "share": 0.2}, {"name": "lone trees", "share": 0.16}],
@@ -566,14 +567,28 @@ static func maple() -> Dictionary:
 	var maple_style := tree_style(Color(0.62, 0.08, 0.04), Color(0.98, 0.32, 0.1), {"tint": Color(0.92, 0.88, 0.85)}, 7.0, {"translucency": 1.0})
 	var orange := tree_style(Color(0.85, 0.35, 0.05), Color(1.0, 0.7, 0.22), {"tint": Color(0.95, 0.85, 0.8)}, 5.0, {"translucency": 0.9})
 	var rock := rock_style(Color(0.66, 0.64, 0.6), 0.2)
+	var gold := tree_style(Color(0.82, 0.52, 0.06), Color(1.0, 0.84, 0.3), {"tint": Color(0.95, 0.85, 0.8)}, 5.0, {"translucency": 1.0})
+	var birch_orange := birch_style(Color(0.86, 0.34, 0.05), Color(1.0, 0.66, 0.22))
+	var crimson_bush := {"leaves": leaves(Color(0.52, 0.06, 0.04), Color(0.95, 0.3, 0.1), {"sphere_normals": 0.85}), "stiffness": 6.0}
+	var amber_bush := {"leaves": leaves(Color(0.72, 0.3, 0.04), Color(1.0, 0.62, 0.18), {"sphere_normals": 0.85}), "stiffness": 6.0}
+	var mossy := rock_style(Color(0.62, 0.62, 0.56), 0.85, true, {"triplanar_scale": 0.08, "moss_color": Color(0.46, 0.6, 0.16)})
+	var rust_ferns := cluster_layer(["Fern_2"], 2.2, [3.0, 40.0], 3, 2.0, [0.3, 0.46], true, {"plant": {"texture_tint": Color(1.4, 0.62, 0.3)}})
+	rust_ferns["patch"] = [2]
+	var clearing_flowers := cluster_layer(WILDFLOWERS, 2.2, [2.5, 40.0], 8, 2.4, [0.45, 0.7])
+	clearing_flowers["tints"] = [Color(1.0, 0.72, 0.2), Color(0.7, 0.5, 1.0), Color(1.0, 0.9, 0.6)]
+	clearing_flowers["patch"] = [1]
 	return {
 		"name": NAMES[5],
+		"under_bush": {"dark": Color(0.62, 0.14, 0.05), "light": Color(0.98, 0.5, 0.16)},
+		# deep maple wood as before · golden clearing · mossy boulders · red understory
+		"patches": [{"name": "deep maple", "share": 0.4}, {"name": "golden clearing", "share": 0.25},
+			{"name": "mossy boulders", "share": 0.2}, {"name": "red understory", "share": 0.15}],
 		"blades": blades(0.45, Color(0.3, 0.22, 0.06), Color(0.95, 0.55, 0.15), Color(0.9, 0.25, 0.08)),
 		"terrain": terrain({"scree": 0, "gullies": 0.4, "hummocks": 0.3, "brooks": 0.6, "litter": 0.7, "litter_color": Color(0.9, 0.22, 0.12), "far_height": 60.0, "valley_width": 13.0, "valley_height": 14.0, "undulation": 1.3,
 			"grass_dark": Color(0.62, 0.42, 0.12), "grass_light": Color(0.78, 0.56, 0.18),
 			"region_dark": Color(0.7, 0.28, 0.1), "region_light": Color(0.86, 0.42, 0.14),
 			"path_color": Color(0.72, 0.58, 0.38), "slope_color": Color(0.55, 0.42, 0.24), "crack": 0.6}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.45, 0.38, 0.62), "grade_high": Color(1.0, 0.78, 0.5), "grade_warm": 0.5, "falls": 0.4, "deer": true, "shafts": 0.8, "temperature": 13.0, "mountain_color": Color(0.72, 0.52, 0.42), "mountain_shadow": Color(0.56, 0.46, 0.52), "mountain_snow": 0.15, "sun_dir": Vector3(0.6, -0.42, 0.65), "sun_color": Color(1.0, 0.82, 0.6), "sun_energy": 1.8,
+		"atmosphere": atmosphere({"fx": {"samara": 1.0}, "grade_shadow": Color(0.45, 0.38, 0.62), "grade_high": Color(1.0, 0.78, 0.5), "grade_warm": 0.5, "falls": 0.4, "deer": true, "shafts": 0.8, "temperature": 13.0, "mountain_color": Color(0.72, 0.52, 0.42), "mountain_shadow": Color(0.56, 0.46, 0.52), "mountain_snow": 0.15, "sun_dir": Vector3(0.6, -0.42, 0.65), "sun_color": Color(1.0, 0.82, 0.6), "sun_energy": 1.8,
 			"ambient_energy": 0.5, "ambient_color": Color(0.9, 0.7, 0.5), "fog_color": Color(0.98, 0.85, 0.7),
 			"fog_density": 0.0028, "fog_sun_scatter": 0.45, "volumetric": 0.004,
 			"zenith_color": Color(0.32, 0.58, 0.9), "horizon_color": Color(0.98, 0.9, 0.8), "cloud_coverage": 0.5,
@@ -582,10 +597,10 @@ static func maple() -> Dictionary:
 			grass_layer([Color(0.95, 0.5, 0.12), Color(0.9, 0.3, 0.08), Color(1.0, 0.7, 0.22), Color(0.6, 0.72, 0.18)],
 				[Color(0.85, 0.2, 0.06), Color(0.98, 0.6, 0.15)], 2000.0),
 			{"kind": "tree", "models": TWISTED, "styles": [maple_style], "spacing": 16.0, "chance": 0.7, "dist": [7.0, 400.0],
-				"falloff": [18.0, 140.0, 0.55], "scale": [0.5, 0.75], "radius": 5.0, "collide": "trunk", "trunk": 0.5},
+				"falloff": [18.0, 140.0, 0.55], "scale": [0.5, 0.75], "radius": 5.0, "collide": "trunk", "trunk": 0.5, "thin": {1: 0.25}},
 			hero_tree(["TwistedTree_2", "TwistedTree_5"], maple_style, Vector2(1.5, 1.9)),
 			{"kind": "tree", "models": COMMON, "styles": [orange], "spacing": 12.0, "chance": 0.55, "dist": [5.5, 300.0],
-				"scale": [1.0, 1.5], "radius": 2.6, "collide": "trunk", "trunk": 0.28},
+				"scale": [1.0, 1.5], "radius": 2.6, "collide": "trunk", "trunk": 0.28, "thin": {1: 0.3}},
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 30.0, "chance": 0.3, "dist": [6.0, 40.0],
 				"scale": [1.0, 2.6], "sink": 0.15, "radius": 2.5, "collide": "rock"},
 			cluster_layer(["Mushroom_Common"], 1.0, [2.0, 10.0], 5, 0.6, [0.9, 1.7]),
@@ -593,6 +608,21 @@ static func maple() -> Dictionary:
 				{"plant": {"texture_tint": Color(1.3, 0.7, 0.3)}}),
 			cluster_layer(PLANTS, 0.4, [2.5, 20.0], 3, 1.2, [0.6, 1.0]),
 			pebble_layer(rock_style(Color(0.7, 0.68, 0.64), 0.0, false, {"top_light": 0.3}), 22.0),
+			# round 12: golden clearings, mossy boulders, red understory
+			{"kind": "tree", "models": TALL, "styles": [gold], "spacing": 16.0, "chance": 0.7, "dist": [7.0, 300.0], "patch": [1],
+				"scale": [0.7, 0.95], "radius": 4.0, "collide": "trunk", "trunk": 0.35},
+			{"kind": "tree", "models": BIRCHES, "styles": [birch_orange], "spacing": 9.0, "chance": 0.6, "dist": [6.0, 300.0], "patch": [1],
+				"scale": [0.6, 0.85], "radius": 2.2, "collide": "trunk", "trunk": 0.2},
+			clearing_flowers,
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4"], "styles": [mossy], "spacing": 18.0, "chance": 0.55,
+				"dist": [6.0, 60.0], "patch": [2], "scale": [0.7, 1.5], "sink": 0.2, "radius": 4.5, "collide": "rock"},
+			rust_ferns,
+			{"kind": "detail", "models": ["Bush_Large", "Bush_Long_1", "Bush_Long_2", "Bush_Large"], "styles": [crimson_bush], "region_styles": [amber_bush],
+				"density": 16.0, "dist": [3.5, 40.0], "patch": [3], "scale": [0.75, 1.25], "shadows": true, "vis": 120.0, "near": true, "tilt": 0.3},
+			{"kind": "detail", "models": ["Bush_Large", "Bush_Long_1"], "styles": [crimson_bush], "region_styles": [amber_bush],
+				"density": 1.2, "dist": [4.5, 22.0], "scale": [0.6, 1.0], "shadows": true, "vis": 120.0, "near": true, "tilt": 0.3},
+			cluster_layer(["Mushroom_RedCap"], 0.5, [2.2, 14.0], 3, 0.7, [0.3, 0.55]),
+			oyster_layer(0.2),
 		],
 	}
 

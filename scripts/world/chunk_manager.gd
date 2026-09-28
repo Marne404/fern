@@ -374,8 +374,10 @@ func _mesh_for(key: String) -> Dictionary:
 		return _mesh_cache[key]
 	var parts := key.split("/")
 	if parts[0] == "under":
-		var uinfo := {"mesh": lib.mesh(parts[1], {"leaves": BiomeDefs.leaves(Color(0.2, 0.45, 0.1), Color(0.55, 0.8, 0.28), {"sphere_normals": 0.9}), "stiffness": 6.0}),
-			"kind": "detail", "shadows": true, "vis": 110.0}
+		# bushes at the base of broadleaf trees, in the biome's own colors (green by default)
+		var ub: Dictionary = gen.biomes[int(parts[2])].get("under_bush", {}) if parts.size() > 2 else {}
+		var ustyle := {"leaves": BiomeDefs.leaves(ub.get("dark", Color(0.2, 0.45, 0.1)), ub.get("light", Color(0.55, 0.8, 0.28)), {"sphere_normals": 0.9}), "stiffness": 6.0}
+		var uinfo := {"mesh": lib.mesh(parts[1], ustyle), "kind": "detail", "shadows": true, "vis": 110.0}
 		_mesh_cache[key] = uinfo
 		return uinfo
 	if parts[0] == "shore":

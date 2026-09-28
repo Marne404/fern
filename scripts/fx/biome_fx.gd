@@ -24,7 +24,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
 	# how hard the wind blows right now (1 = calm, up to ~2.6 in a strong gust)
 	var gust := clampf((WindGusts.current_strength - 1.0) / 1.2, 0.0, 1.0)
-	for name in ["gossamer", "petal_gust", "dandelion"]:
+	for name in ["gossamer", "petal_gust", "dandelion", "samara"]:
 		var w := float(fx.get(name, 0.0))
 		var at := cam.global_position + fwd * 9.0 + Vector3(0, -0.4, 0)
 		match name:
@@ -32,7 +32,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 				w *= (1.0 - night) * dry
 			"petal_gust":
 				w *= smoothstep(0.1, 0.6, gust) * dry
-			"dandelion":
+			"dandelion", "samara":
 				w *= (1.0 - night) * dry
 				at = cam.global_position + fwd * 6.0 + Vector3(0, 2.5, 0)
 		_drive(name, w, at, delta, 0.4 if name != "petal_gust" else 2.5)
@@ -155,6 +155,34 @@ func _build(name: String) -> GPUParticles3D:
 			var dq := QuadMesh.new()
 			dq.material = dm
 			p.draw_pass_1 = dq
+		"samara":
+			# winged maple seeds: they spin fast like little propellers while sinking slowly
+			p.amount = 60
+			p.lifetime = 9.0
+			p.visibility_aabb = AABB(Vector3(-40, -15, -40), Vector3(80, 30, 80))
+			pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+			pm.emission_box_extents = Vector3(20, 2.0, 20)
+			pm.emission_shape_offset = Vector3(0, 6.0, 0)
+			pm.direction = wdir
+			pm.spread = 30.0
+			pm.initial_velocity_min = 0.3
+			pm.initial_velocity_max = 0.9
+			pm.gravity = Vector3(0, -0.9, 0)
+			pm.damping_min = 0.6
+			pm.damping_max = 0.9
+			pm.scale_min = 0.05
+			pm.scale_max = 0.07
+			var gs := Gradient.new()
+			gs.set_color(0, Color(0.72, 0.22, 0.08))
+			gs.set_color(1, Color(0.88, 0.52, 0.2))
+			var gts := GradientTexture1D.new()
+			gts.gradient = gs
+			pm.color_initial_ramp = gts
+			var sm := ShaderMaterial.new()
+			sm.shader = preload("res://shaders/samara.gdshader")
+			var sq := QuadMesh.new()
+			sq.material = sm
+			p.draw_pass_1 = sq
 		"petal_gust":
 			# a gust tears petals off the cherry trees: they swirl up and away with the wind
 			p.amount = 220

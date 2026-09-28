@@ -250,3 +250,19 @@ around pastures, dandelion seeds drifting in the sun.
 - Result: flower carpets in bands of color right beside the path, a snow-white fruit-blossom orchard with
   flowering bushes, hawthorn hedgerows around pastures, tall fresh trees on the hills. Dandelion seeds use an
   own tuft shader (14 hairs, halo, seed dot) that glows against the sun.
+
+## Step 3.6 – Red Maple Wood
+
+Idea: the deep red wood of a Japanese autumn – dense crimson maples, golden clearings where the light falls in,
+mossy boulders, a red understory, maple seeds spinning down.
+
+- Everywhere: big red/orange understory bushes near the path, fly agarics, shelf fungi on trunks.
+- Patches: deep maple 40 % (as today) · golden clearing 25 % · mossy boulders 20 % · red understory 15 %.
+  - Golden clearing: maples thinned to 25 %, golden TallThick and orange birches, flowers in amber/violet.
+  - Mossy boulders: big rocks with thick moss between the maples, rust-colored ferns.
+  - Red understory: dense crimson and orange big bushes and long bushes under the trees.
+- Effect "samara": winged maple seeds spinning down around you (by day, dry).
+- Result: golden clearings (golden TallThick, orange birches, amber flowers), mossy boulder fields with
+  rust-colored ferns, crimson/amber understory lining the path. The bushes at the base of broadleaf trees were
+  always green in every biome – biomes now give them their own colors (`under_bush`; Autumn Meadow gold,
+  Red Maple red-orange). Samara seeds spin like propellers while sinking (own shader).

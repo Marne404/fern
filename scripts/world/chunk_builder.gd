@@ -851,7 +851,7 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 						var bx := lx + cos(ba) * 1.2 * s
 						var bz := lz + sin(ba) * 1.2 * s
 						if bx > 0.0 and bz > 0.0 and bx < SIZE and bz < SIZE:
-							_add("under/Bush_Common", _ground_xf(bx, bz, rng.randf_range(1.2, 2.0), 0.3, 0.05), Color(0, 0, 0, rng.randf()))
+							_add("under/Bush_Common/%d" % b, _ground_xf(bx, bz, rng.randf_range(1.2, 2.0), 0.3, 0.05), Color(0, 0, 0, rng.randf()))
 				# distant chunks: trees with thinned-out, larger leaf cards
 				tkey = key + "@far" if (lod != 0 and opt_far_trees) else key
 				_add(tkey, xf2, Color(0, 0, 0, rng.randf_range(0.05, 1.0)))
