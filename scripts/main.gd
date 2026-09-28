@@ -301,6 +301,7 @@ func start_journey() -> void:
 	player.recovered.connect(func(): hud.collapse_fade(false))
 	player.message.connect(hud.show_message)
 	player.sleep_fade.connect(func(on): hud.collapse_fade(on, "Zzz …"))
+	hud.set_player(player)
 	if _args.has("autowalk"):
 		player.autopilot = _autopilot
 	# only start walking once the ground under the feet is loaded
@@ -428,6 +429,17 @@ func _process_inner(delta: float) -> void:
 		p.y = world.ground_y(p.x, p.z) + 0.2
 		player.global_position = p
 		player.set_physics_process(true)
+		# test helpers: --body=stamina:30,food:10,warm_bonus_t:60  --give=kaese,seil
+		if _args.has("body"):
+			for pair in _args["body"].split(","):
+				var kv: PackedStringArray = pair.split(":")
+				player.body.set(kv[0], float(kv[1]))
+		if _args.has("give"):
+			for id in _args["give"].split(","):
+				player.inventory.add(ItemDefs.make(id))
+		if _args.has("drop"):
+			var fwd := -player.global_transform.basis.z
+			_spawn_dropped(ItemDefs.make(_args["drop"]), player.global_position + fwd * 1.6 + Vector3(0, 0.4, 0), Vector3.ZERO)
 		if _args.has("wheel"):
 			emote_wheel.open()
 			emote_wheel._aim = Vector2(80, -60)
@@ -541,7 +553,7 @@ func _process_inner(delta: float) -> void:
 		hud.set_distance(journey_distance)
 		player.air_temp = atmosphere.current.get("temperature", 16.0)
 		hud.update_body(player.body.stamina, player.body.state, delta)
-		hud.set_prompt(player.prompt)
+		hud.set_prompt(player.prompt, player.prompt_title, player.prompt_action)
 		hud.set_needs(player.body.needs())
 		# safety net: never fall through the ground
 		if _frame % 15 == 0 and player.fly_mode == 0:

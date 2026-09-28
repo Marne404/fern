@@ -48,6 +48,9 @@ var sleeping := false
 var swimming := false
 var in_water := false
 var prompt := ""
+## Structured prompt for the HUD: object name (may be empty), key, action
+var prompt_title := ""
+var prompt_action := ""
 var _look_target: Object = null
 var _water_target := false
 
@@ -823,6 +826,8 @@ func _update_look_target() -> void:
 	_look_target = null
 	_water_target = false
 	prompt = ""
+	prompt_title = ""
+	prompt_action = ""
 	if not can_act() or world == null:
 		return
 	var from := view_origin()
@@ -853,6 +858,8 @@ func _update_look_target() -> void:
 			_look_target = c
 			var it: Dictionary = (c as WorldItem).item
 			prompt = "E  pick up %s · %s kg" % [ItemDefs.display_name(it), _kg(ItemDefs.weight(it))]
+			prompt_title = ItemDefs.display_name(it)
+			prompt_action = "pick up · %s kg" % _kg(ItemDefs.weight(it))
 			return
 		if c.has_meta("poi_prompt"):
 			var pr = c.get_meta("poi_prompt")
@@ -860,6 +867,7 @@ func _update_look_target() -> void:
 			if text != "":
 				_look_target = c
 				prompt = "E  " + text
+				prompt_action = text
 				return
 	# water in front of the feet?
 	for i in range(1, 6):
@@ -870,6 +878,8 @@ func _update_look_target() -> void:
 			_water_target = true
 			var bottle := _find_refillable()
 			prompt = "E  drink water" + ("  ·  fill bottle" if not bottle.is_empty() else "")
+			prompt_title = "Water"
+			prompt_action = "drink" + (" · fill bottle" if not bottle.is_empty() else "")
 			return
 
 
