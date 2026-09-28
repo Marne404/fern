@@ -15,6 +15,8 @@ const FINALIZE_BUDGET_MS := 6.0
 
 var gen: WorldGen
 var lib: AssetLibrary
+## billboards for distant trees
+var impostors: Impostors
 ## World coordinates (x, z) of the local origin
 var origin := Vector2.ZERO
 ## Focus in world coordinates (x, z) and view direction
@@ -45,6 +47,11 @@ var grass_distance := 50.0
 func setup(p_gen: WorldGen, p_lib: AssetLibrary) -> void:
 	gen = p_gen
 	lib = p_lib
+	impostors = Impostors.new()
+	impostors.name = "Impostors"
+	impostors.lib = lib
+	impostors.mesh_for = func(k: String) -> Mesh: return _mesh_for(k)["mesh"]
+	add_child(impostors)
 	_read_settings()
 	Settings.changed.connect(_on_setting)
 
@@ -338,6 +345,8 @@ func _make_instances(node: Node3D, data: Dictionary) -> void:
 			mmi.visibility_range_end_margin = 12.0
 			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		node.add_child(mmi)
+		if info["kind"] == "tree" and base.ends_with("@far"):
+			impostors.attach(mmi, base.trim_suffix("@far"))
 
 
 ## Tree levels of detail with visibility ranges (they also apply to the shadow passes):
@@ -363,6 +372,7 @@ func _tree_lods(node: Node3D, mmi: MultiMeshInstance3D, mm: MultiMesh, base: Str
 		vis_far.visibility_range_begin_margin = 6.0
 		vis_far.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		node.add_child(vis_far)
+		impostors.attach(vis_far, base)
 	if shadow_lod:
 		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var sh_near := MultiMeshInstance3D.new()

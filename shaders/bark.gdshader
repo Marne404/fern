@@ -14,6 +14,8 @@ uniform float object_height = 6.0;
 uniform float stiffness = 4.0;
 uniform float ao_strength = 0.8;
 uniform float birch_marks = 0.0;
+uniform bool impostor_cut = false;
+instance uniform float bake_mask = 0.0;
 
 varying float v_ao;
 varying vec3 v_local;
@@ -24,6 +26,11 @@ void vertex() {
 	vec3 world = to_world((MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz);
 	float h = clamp(VERTEX.y / object_height, 0.0, 1.5);
 	vec3 off = wind_offset(world, origin, h * h, stiffness, 0.0, TIME);
+	if (impostor_cut) {
+		float ik = impostor_mesh_keep(MODEL_MATRIX[3].xyz, INSTANCE_CUSTOM.a);
+		VERTEX *= ik;
+		off *= ik;
+	}
 	VERTEX += world_to_model_dir(MODEL_MATRIX, off);
 	v_ao = COLOR.r;
 	v_local = VERTEX;
@@ -47,7 +54,7 @@ void fragment() {
 		c = mix(c, vec3(0.16, 0.14, 0.13), m * birch_marks);
 	}
 	float ao = mix(1.0, smoothstep(0.0, 1.0, v_ao), ao_strength);
-	ALBEDO = c * mix(0.35, 1.0, ao) * (1.0 - v_cloud * 0.45);
+	ALBEDO = bake_mask > 0.5 ? vec3(1.0) : c * mix(0.35, 1.0, ao) * (1.0 - v_cloud * 0.45);
 	NORMAL_MAP = texture(normal_tex, UV).rgb;
 	NORMAL_MAP_DEPTH = normal_strength;
 	ROUGHNESS = 0.9;

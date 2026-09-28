@@ -26,6 +26,8 @@ uniform float wrap = 0.55;
 uniform float ground_normal = 0.0; // grass: bend normals towards vertical
 uniform float near_fade = 0.0;     // fade out blades right in front of the camera
 uniform bool instance_tint = false; // blossom color per instance (INSTANCE_CUSTOM.rgb)
+uniform bool impostor_cut = false;  // distant tree meshes: hand over to the impostor inside the band
+instance uniform float bake_mask = 0.0;  // impostor baking: 1 = draw the bark mask (leaves black)
 
 
 varying float v_grad;
@@ -75,6 +77,11 @@ void vertex() {
 	// sample the gust only once (saves a texture fetch per vertex, also in all shadow passes)
 	float gust = wind_gust(origin.xz, TIME);
 	vec3 off = wind_offset_g(world, origin, weight, stiffness, flutter, TIME, gust);
+	if (impostor_cut) {
+		float ik = impostor_mesh_keep(MODEL_MATRIX[3].xyz, INSTANCE_CUSTOM.a);
+		VERTEX *= ik;
+		off *= ik;
+	}
 #ifndef OPAQUE_GRASS
 	// flowers and small plants thin out round and random like the grass
 	if (mode == 2) {
@@ -137,7 +144,7 @@ void fragment() {
 	// large-scale color variation so nothing looks tiled
 	float n = v_var;
 	col *= 0.9 + 0.2 * n;
-	ALBEDO = adjust_saturation(col, saturation);
+	ALBEDO = bake_mask > 0.5 ? vec3(0.0) : adjust_saturation(col, saturation);
 #ifndef OPAQUE_GRASS
 	// mipmaps average the leaf edges below the cutoff -> distant crowns dissolve.
 	// raise the opacity depending on the mip level (keeps the coverage in the distance).

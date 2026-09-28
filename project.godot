@@ -81,6 +81,14 @@ water_ring3={
 "type": "vec4",
 "value": Vector4(0, 0, 99, 0)
 }
+camera_world={
+"type": "vec3",
+"value": Vector3(0, 0, 0)
+}
+impostor_band={
+"type": "vec2",
+"value": Vector2(0, 0)
+}
 sand_storm={
 "type": "float",
 "value": 0.0

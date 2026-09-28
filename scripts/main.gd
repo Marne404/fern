@@ -522,6 +522,7 @@ func _process_inner(delta: float) -> void:
 	atmosphere.sky_mat.set_shader_parameter("sea_amount", _sea_open)
 	atmosphere.sky_mat.set_shader_parameter("sea_color", ((atmosphere.current.get("horizon_color", Color.WHITE) as Color) * 0.8).lerp(Color(0.1, 0.3, 0.5), 0.25))
 	RenderingServer.global_shader_parameter_set("player_pos", player.global_position if player and mode != Mode.MENU else Vector3(0, -1000, 0))
+	RenderingServer.global_shader_parameter_set("camera_world", _active_camera().global_position)
 	film.visible = Settings.values["film_look"]
 	_update_underwater(cam, delta)
 	outlines.visible = Settings.values["outlines"]
@@ -586,7 +587,7 @@ func _process_inner(delta: float) -> void:
 			RenderingServer.viewport_get_measured_render_time_gpu(vp_rid),
 			RenderingServer.viewport_get_measured_render_time_cpu(vp_rid) + RenderingServer.get_frame_setup_time_cpu(),
 			_script_ms, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
-		print("   longest frame %.0f ms | hitches >50 ms: %d" % [_max_frame_ms, _spikes])
+		print("   longest frame %.0f ms | hitches >50 ms: %d | impostors %d (+%d)" % [_max_frame_ms, _spikes, world.impostors.baked_count(), world.impostors.pending_count()])
 		_max_frame_ms = 0.0
 	_update_shot()
 	if _args.has("off") and _frame == 30:

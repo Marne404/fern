@@ -10,6 +10,21 @@ vec3 to_world(vec3 local_world) {
 
 global uniform float cloud_shadow_strength;
 
+// Distant trees change to impostors inside this band (meters from the camera, 0 = off). camera_world is the
+// camera position in local coordinates, set by the game every frame (the same in the shadow passes).
+global uniform vec3 camera_world;
+global uniform vec2 impostor_band;
+
+// 1 = the mesh draws this tree, 0 = its impostor does. Every tree switches at its own distance inside the band,
+// so there is no line where all trees change at once; mesh and impostor use the same test and never overlap.
+float impostor_mesh_keep(vec3 origin_local, float custom_a) {
+	if (impostor_band.y <= 0.0) {
+		return 1.0;
+	}
+	float keep = 1.0 - smoothstep(impostor_band.x, impostor_band.y, length(origin_local.xz - camera_world.xz));
+	return step(fract(custom_a * 7.13 + 0.37), keep);
+}
+
 // cloud shadows drifting slowly across the land with the wind (0 = sun, 1 = full shadow)
 float cloud_shadow(vec2 world_xz, float time) {
 	vec2 uv = world_xz * 0.0011 - wind_direction * time * 0.0022;

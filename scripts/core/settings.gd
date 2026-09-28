@@ -10,16 +10,16 @@ const PRESET_NAMES := ["Low", "Medium", "High", "Ultra", "Extreme"]
 
 const PRESETS := {
 	"Low": {"render_scale": 0.67, "aa": 1, "shadows": 1, "ssao": false, "volumetric": false, "glow": false, "sun_shafts": false, "lod": 6.0, "grass_blades": 0, "film_look": false, "ssil": false, "dof": false,
-		"view_distance": 4, "veg_density": 0.45, "grass_distance": 35.0, "blade_range": 1.0, "shadow_range": 1.0},
+		"view_distance": 4, "veg_density": 0.45, "grass_distance": 35.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 140.0},
 	"Medium": {"render_scale": 0.85, "aa": 1, "shadows": 2, "ssao": true, "volumetric": false, "glow": true, "sun_shafts": true, "lod": 4.0, "grass_blades": 0, "film_look": false, "ssil": false, "dof": false,
-		"view_distance": 5, "veg_density": 0.6, "grass_distance": 45.0, "blade_range": 1.0, "shadow_range": 1.0},
+		"view_distance": 5, "veg_density": 0.6, "grass_distance": 45.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 160.0},
 	"High": {"render_scale": 1.0, "aa": 2, "shadows": 3, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 2.0, "grass_blades": 1, "film_look": true, "ssil": false, "dof": false,
-		"view_distance": 7, "veg_density": 1.0, "grass_distance": 65.0, "blade_range": 1.0, "shadow_range": 1.0},
+		"view_distance": 7, "veg_density": 1.0, "grass_distance": 65.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 180.0},
 	"Ultra": {"render_scale": 1.0, "aa": 3, "shadows": 4, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 1.0, "grass_blades": 3, "film_look": true, "ssil": true, "dof": true,
-		"view_distance": 9, "veg_density": 1.3, "grass_distance": 85.0, "blade_range": 1.0, "shadow_range": 1.0},
+		"view_distance": 9, "veg_density": 1.3, "grass_distance": 85.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 240.0},
 	# for strong GPUs: everything further away and denser
 	"Extreme": {"render_scale": 1.0, "aa": 3, "shadows": 4, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 0.5, "grass_blades": 3, "film_look": true, "ssil": true, "dof": true,
-		"view_distance": 16, "veg_density": 1.7, "grass_distance": 150.0, "blade_range": 1.6, "shadow_range": 1.8},
+		"view_distance": 16, "veg_density": 1.7, "grass_distance": 150.0, "blade_range": 1.6, "shadow_range": 1.8, "impostor_distance": 320.0},
 }
 
 # aa: 0 off, 1 FXAA, 2 MSAA 2×, 3 MSAA 4×, 4 TAA
@@ -70,6 +70,8 @@ var values := {
 	"opt_music_thread": true,   # load music in the background
 	"opt_tree_shadow_lod": true, # trees farther than 45 m cast shadows with their simplified far crown
 	"opt_tree_lod": true,       # trees farther than 75 m are drawn with the simplified far crown
+	"impostors": true,          # distant trees as pre-rendered billboards (baked in the background)
+	"impostor_distance": 180.0, # from here on trees hand over to their impostors (never inside the shadows)
 	"music": true,
 	"music_volume": 0.7,
 	"sfx_volume": 0.8,
