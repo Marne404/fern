@@ -367,14 +367,31 @@ static func desert() -> Dictionary:
 	sandstone["rock"]["texture"] = "Rocks_Desert_Diffuse.png"
 	var dead := {"bark": {"tint": Color(0.62, 0.6, 0.6), "brightness": 0.95, "desaturate": 0.7, "ao_strength": 0.5}, "stiffness": 14.0}
 	var dry := [Color(0.95, 0.78, 0.3), Color(0.88, 0.66, 0.22), Color(0.98, 0.85, 0.4), Color(0.9, 0.42, 0.12), Color(0.8, 0.62, 0.25)]
+	var butte := rock_style(Color(0.9, 0.62, 0.32), 0.0, true, {"triplanar_scale": 0.035, "tint": Color(1.06, 0.9, 0.72), "brightness": 1.25,
+		"top_light": 0.4, "flatten": 0.7})
+	butte["rock"]["texture"] = "Rocks_Desert_Diffuse.png"
+	var boulder := rock_style(Color(0.9, 0.64, 0.34), 0.0, false, {"tint": Color(1.06, 0.92, 0.76), "brightness": 1.22, "flatten": 0.45})
+	boulder["rock"]["texture"] = "Rocks_Desert_Diffuse.png"
+	var paving := rock_style(Color(0.86, 0.72, 0.52), 0.0, false, {"top_light": 0.3, "flatten": 0.5, "tint": Color(1.04, 0.96, 0.86)})
+	paving["rock"]["texture"] = "PathRocks_Desert_Diffuse.png"
+	var hardy := cluster_layer(["Plant_3", "Plant_4", "Plant_5", "Plant_4"], 1.4, [3.0, 30.0], 3, 1.2, [0.5, 0.85], true,
+		{"plant": {"texture_tint": Color(1.35, 0.72, 0.4)}})
+	hardy["patch"] = [1]
+	var wash_grass := {"kind": "grass", "models": ["Grass_Wide_Short", "Grass_Wide_Tall", "Grass_Wispy_Short"], "density": 420.0,
+		"dist": [3.0, 60.0], "scale": [0.4, 0.75], "palette": dry, "region_palette": dry, "near": true, "patch": [2]}
+	var wash_pebbles := {"kind": "detail", "models": PEBBLES, "styles": [boulder], "density": 26.0, "dist": [4.0, 40.0], "patch": [2],
+		"scale": [0.6, 1.6], "small_scale_models": "RockPath", "sink": 0.03, "tilt": 1.0, "shadows": false, "vis": 55.0, "near": true}
 	return {
 		"name": NAMES[2],
+		# dunes as before · rock garden · dry wash · mesa field
+		"patches": [{"name": "dunes", "share": 0.4}, {"name": "rock garden", "share": 0.25},
+			{"name": "dry wash", "share": 0.2}, {"name": "mesa field", "share": 0.15}],
 		"blades": blades(0.0, Color(0.5, 0.4, 0.2), Color(0.9, 0.75, 0.35), Color(0.9, 0.6, 0.25)),
 		"terrain": terrain({"brooks": 0.0, "litter": 0.0, "litter_color": Color(0.6, 0.5, 0.3), "far_height": 8.0, "dunes": 1.0, "obstacles": ["fallen_tree", "cliff"], "terraces": 0.0, "path_width": 2.2, "path_depth": 0.05, "valley_width": 30.0, "valley_ramp": 70.0, "valley_height": 4.0,
 			"undulation": 1.6, "grass_dark": Color(0.86, 0.68, 0.36), "grass_light": Color(0.95, 0.8, 0.46),
 			"region_dark": Color(0.84, 0.66, 0.34), "region_light": Color(0.92, 0.76, 0.44),
 			"path_color": Color(0.84, 0.68, 0.38), "slope_color": Color(0.86, 0.66, 0.36), "crack": 0.7, "ripple": 1.0}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.52, 0.42, 0.7), "grade_high": Color(1.0, 0.84, 0.6), "grade_warm": 0.45, "grade_contrast": 0.32, "rain": 0.0, "clock": 1.0, "mist_amount": 0.1, "temperature": 34.0, "mountain_color": Color(0.86, 0.6, 0.42), "mountain_shadow": Color(0.7, 0.5, 0.48), "mountain_snow": 0.0, "mountain_scale": 0.7, "birds": false, "sun_dir": Vector3(0.3, -0.85, -0.5), "sun_color": Color(1.0, 0.93, 0.8), "sun_energy": 1.8,
+		"atmosphere": atmosphere({"fx": {"heat_haze": 1.0}, "grade_shadow": Color(0.52, 0.42, 0.7), "grade_high": Color(1.0, 0.84, 0.6), "grade_warm": 0.45, "grade_contrast": 0.32, "rain": 0.0, "clock": 1.0, "mist_amount": 0.1, "temperature": 34.0, "mountain_color": Color(0.86, 0.6, 0.42), "mountain_shadow": Color(0.7, 0.5, 0.48), "mountain_snow": 0.0, "mountain_scale": 0.7, "birds": false, "sun_dir": Vector3(0.3, -0.85, -0.5), "sun_color": Color(1.0, 0.93, 0.8), "sun_energy": 1.8,
 			"ambient_energy": 0.55, "ambient_color": Color(0.95, 0.78, 0.55), "fog_color": Color(0.96, 0.9, 0.78),
 			"fog_density": 0.0035, "fog_sun_scatter": 0.3, "saturation": 1.05,
 			"zenith_color": Color(0.42, 0.7, 0.92), "horizon_color": Color(0.9, 0.93, 0.92), "cloud_coverage": 0.56,
@@ -390,8 +407,20 @@ static func desert() -> Dictionary:
 				"sink": 0.25, "tilt": 0.7, "shadows": true, "vis": 110.0, "near": true},
 			cluster_layer(["Fern_1"], 0.08, [3.0, 20.0], 1, 0.5, [0.18, 0.26], true),
 			cluster_layer(["Plant_1_Big", "Plant_1"], 0.12, [3.0, 20.0], 2, 0.8, [0.5, 0.8], true),
-			{"kind": "path_stones", "models": PAVING, "styles": [rock_style(Color(0.7, 0.7, 0.68), 0.0, false, {"top_light": 0.3, "flatten": 0.5})],
+			{"kind": "path_stones", "models": PAVING, "styles": [paving],
 				"density": 520.0, "gap": [0.09, -0.3], "scale": [0.9, 1.3], "shadows": false, "vis": 70.0, "near": true},
+			# round 12: buttes, rock gardens, dry washes, mesa fields
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [butte], "spacing": 70.0, "chance": 0.5, "dist": [70.0, 230.0],
+				"scale": [3.0, 5.5], "grow_with_dist": true, "squash": Vector3(1.3, 1.25, 1.2), "sink": 0.2, "radius": 18.0, "collide": "rock"},
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4"], "styles": [boulder], "spacing": 16.0, "chance": 0.55,
+				"dist": [5.0, 45.0], "patch": [1], "scale": [0.7, 1.5], "sink": 0.15, "radius": 4.0, "collide": "rock"},
+			hardy,
+			{"kind": "tree", "models": DEAD, "styles": [dead], "spacing": 9.0, "chance": 0.55, "dist": [5.0, 60.0], "patch": [2],
+				"scale": [0.75, 1.2], "radius": 3.5, "collide": "trunk", "trunk": 0.3},
+			wash_grass,
+			wash_pebbles,
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [butte], "spacing": 30.0, "chance": 0.6, "dist": [18.0, 90.0], "patch": [3],
+				"scale": [2.2, 3.6], "squash": Vector3(1.5, 0.85, 1.4), "sink": 0.2, "radius": 12.0, "collide": "rock"},
 		],
 	}
 

@@ -195,3 +195,24 @@ in the shade, sunny clearings full of flowers.
   clearings open up with flowers and flowering bushes. Real birches got brighter bark (the kit's bark is
   mid-gray; ×1.95, less vertex AO) so they read white like the old painted birches.
   `scripts/tests/chunk_count.gd` counts instances per model in one chunk (headless).
+
+## Step 3.3 – Desert Valley
+
+Idea: a warm sandstone valley under a hot sun, like the kit's desert key art: golden sand, rounded
+sandstone formations, dead trees, a few hardy colorful plants, air that shimmers at noon.
+
+- Everywhere: distant buttes from Rock_Big in the desert texture (grow with distance, 15–35 m high);
+  the paving stones of the path get the kit's desert path texture.
+- Patches: dunes 40 % (as today) · rock garden 25 % · dry wash 20 % · mesa field 15 %.
+  - Rock garden: clusters of big and medium sandstone boulders beside the path, orange and red hardy plants
+    (Plant_3/4/5, warm tint) and dry tufts between them.
+  - Dry wash: a band of dead trees, pale pebbles and broad dry grass (Grass_Wide) – an old riverbed feel.
+  - Mesa field: huge flat-topped sandstone blocks (Rock_Big squashed) close to the path.
+- Effect "heat_haze": full-screen shimmer of distant ground (35–180 m and beyond) from late morning to
+  afternoon, only in clear weather; reads the screen texture, offsets it with scrolling noise, never pulls sky
+  into the ground (only far ground pixels are shifted).
+- Result: buttes line the horizon, mesa blocks and sandstone boulders stand close to the path in their
+  patches, the dry wash has its band of dead trees and broad dry grass; paving in the desert path texture.
+  Heat haze: a full-screen pass drawn *first* among the transparent things (render priority −120) –
+  impostor trees get their color only in the transparent pass, so a later screen copy had black holes there.
+  Measured: only the far horizon band moves, 1–4 px.

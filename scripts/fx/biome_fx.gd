@@ -4,7 +4,10 @@ extends Node3D
 ## borders). Every effect is built when first needed and fades with its strength; weather and time of day
 ## are applied here (gossamer only on dry days, …).
 
-var _fx := {}          # name → {"node": GPUParticles3D, "base": amount}
+var _fx := {}          # name → {"node": GPUParticles3D, "level": strength now}
+var _haze: MeshInstance3D
+var _haze_mat: ShaderMaterial
+var _haze_level := 0.0
 
 
 ## fx: blended strengths of the current biomes; shown: the atmosphere after time of day and weather
@@ -13,6 +16,11 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	var rain := float(shown.get("rain", 0.0))
 	var fwd := -cam.global_basis.z
 	fwd = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	# heat shimmer: strongest with a high sun, gone under clouds or in the rain
+	var sun_up := clampf(-(shown.get("sun_dir", Vector3.DOWN) as Vector3).normalized().y, 0.0, 1.0)
+	var heat := float(fx.get("heat_haze", 0.0)) * smoothstep(0.35, 0.75, sun_up) * (1.0 - night) \
+		* (1.0 - clampf(rain * 5.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)))
+	_update_haze(heat, delta)
 	for name in ["gossamer"]:
 		var w := float(fx.get(name, 0.0))
 		match name:
@@ -33,6 +41,28 @@ func _drive(name: String, w: float, pos: Vector3, delta: float) -> void:
 	p.emitting = float(e["level"]) > 0.01
 	p.amount_ratio = clampf(float(e["level"]), 0.0, 1.0)
 	p.global_position = pos
+
+
+func _update_haze(w: float, delta: float) -> void:
+	_haze_level = move_toward(_haze_level, w, delta * 0.3)
+	if _haze == null:
+		if _haze_level <= 0.005:
+			return
+		_haze_mat = ShaderMaterial.new()
+		_haze_mat.shader = preload("res://shaders/heat_haze.gdshader")
+		_haze_mat.set_shader_parameter("noise_tex", preload("res://assets/paint_noise.tres"))
+		# first of all transparent things: impostors and water are drawn after it and stay unshifted
+		_haze_mat.render_priority = -120
+		var q := QuadMesh.new()
+		q.size = Vector2(1, 1)
+		_haze = MeshInstance3D.new()
+		_haze.mesh = q
+		_haze.material_override = _haze_mat
+		_haze.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_haze.custom_aabb = AABB(Vector3(-1e5, -1e5, -1e5), Vector3(2e5, 2e5, 2e5))
+		add_child(_haze)
+	_haze.visible = _haze_level > 0.005 and Settings.values.get("heat_haze", true)
+	_haze_mat.set_shader_parameter("amount", _haze_level)
 
 
 ## After an origin shift the particles are in the wrong place – restart them.
