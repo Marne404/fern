@@ -93,6 +93,14 @@ daylight={
 "type": "float",
 "value": 1.0
 }
+sun_vector={
+"type": "vec3",
+"value": Vector3(0.4, 0.6, -0.7)
+}
+sun_light={
+"type": "color",
+"value": Color(1, 0.95, 0.85, 1)
+}
 wetness={
 "type": "float",
 "value": 0.0

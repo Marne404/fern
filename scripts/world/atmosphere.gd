@@ -151,6 +151,14 @@ func update(world_z: float, delta: float, force := false) -> void:
 			current[k] = (va as Color).lerp(vb, t)
 		elif va is Vector3:
 			current[k] = (va as Vector3).normalized().slerp((vb as Vector3).normalized(), t)
+		elif va is Dictionary:
+			# per-biome effects {name: strength}: fade out on one side, in on the other
+			var fx := {}
+			for n in va:
+				fx[n] = float(va[n]) * (1.0 - t)
+			for n in vb:
+				fx[n] = float(fx.get(n, 0.0)) + float(vb[n]) * t
+			current[k] = fx
 		else:
 			current[k] = va if t < 0.5 else vb
 	_apply()
@@ -212,6 +220,8 @@ func _apply() -> void:
 		sky_mat.set_shader_parameter(k, c[k])
 	# water and waterfalls brighten themselves a little (anime look): not in the dark
 	RenderingServer.global_shader_parameter_set("daylight", 1.0 - float(c["night"]) * 0.75)
+	RenderingServer.global_shader_parameter_set("sun_vector", -(c["sun_dir"] as Vector3).normalized())
+	RenderingServer.global_shader_parameter_set("sun_light", c["sun_color"])
 	RenderingServer.global_shader_parameter_set("wetness", float(c.get("wet", 0.0)))
 	RenderingServer.global_shader_parameter_set("rain_amount", float(c.get("rain", 0.0)))
 	env.ambient_light_energy = c["ambient_energy"]

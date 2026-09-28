@@ -171,3 +171,8 @@ Idea: late September, gossamer summer. Golden birch stands, hedged stubble field
 - Effect "gossamer": silk threads drifting slowly in the air (Altweibersommer), almost invisible, glinting
   when you look towards the sun; only by day and when it's dry. New `BiomeFx` node for per-biome effects
   (atmosphere key `fx` = {name: strength}, blended across borders), globals `sun_vector`/`sun_light`.
+- Result: birch stands read as golden groves with white trunks; hedgerows (27 m apart, green-olive) follow the
+  hills with stubble fields between them; lone TallThick trees in amber. Patch cells made smaller (130 m) so a
+  kilometer shows more of them. Gossamer: 110 threads around the camera, subdivided quads that sag a little
+  (a `pow()` with a negative base had made them vanish), axis billboards in world space, ≥1 px wide with the
+  brightness spread out, bright only against the sun. `--patchinfo=z0,z1` prints the patches along the path.

@@ -30,6 +30,14 @@ const PAVING := ["RockPath_Round_Small_1", "RockPath_Round_Small_2", "RockPath_R
 	"RockPath_Round_Wide", "Pebble_Round_1", "Pebble_Round_2", "Pebble_Round_3"]
 const FLOWERS := ["Flower_3_Group", "Flower_3_Single", "Flower_4_Single"]
 const PLANTS := ["Plant_1", "Plant_1_Big", "Plant_7", "Plant_7_Big"]
+# Pro kit
+const BIRCHES := ["Birch_1", "Birch_2", "Birch_3", "Birch_4", "Birch_5"]
+const CHERRIES := ["CherryBlossom_1", "CherryBlossom_2", "CherryBlossom_3", "CherryBlossom_4", "CherryBlossom_5"]
+const GIANT_PINES := ["GiantPine_1", "GiantPine_2", "GiantPine_3", "GiantPine_4", "GiantPine_5"]
+const TALL := ["TallThick_1", "TallThick_2", "TallThick_3", "TallThick_4", "TallThick_5"]
+const BIG_ROCKS := ["Rock_Big_1", "Rock_Big_2"]
+const HEDGE := ["Bush_Long_1", "Bush_Long_2"]
+const WILDFLOWERS := ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flower_1_Single", "Flower_2_Single", "Flower_7_Single"]
 
 
 static func all() -> Array[Dictionary]:
@@ -115,6 +123,8 @@ static func atmosphere(values: Dictionary) -> Dictionary:
 		"falls": 0.0,
 		# color grading: tint of the shadows and highlights, warmth (−1 cool … 1 warm), contrast
 		"grade_shadow": Color(0.35, 0.55, 0.75), "grade_high": Color(1.0, 0.86, 0.62), "grade_warm": 0.0, "grade_contrast": 0.25,
+		# the biome's own small effects (BiomeFx): {name: strength}
+		"fx": {},
 	}
 	a.merge(values, true)
 	return a
@@ -165,6 +175,31 @@ static func cluster_layer(models: Array, density: float, dist: Array, count: int
 		"radius": radius, "scale": scale, "shadows": shadows, "vis": 60.0, "near": true, "tilt": 0.8}
 
 
+## A layer thinned out in some patches (keeps its index and scatter otherwise)
+static func thinned(layer: Dictionary, thin: Dictionary) -> Dictionary:
+	layer["thin"] = thin
+	return layer
+
+
+## Real birches of the Pro kit: the kit's white bark, only a little warmer
+static func birch_style(dark: Color, light: Color, extra := {}) -> Dictionary:
+	var e := {"translucency": 1.0}
+	e.merge(extra, true)
+	return tree_style(dark, light, {"tint": Color(1.04, 1.0, 0.94), "brightness": 1.12}, 4.5, e)
+
+
+## Hedgerows: lines of long bushes parallel to the path, with gaps (fields between them)
+static func hedge_layer(style: Dictionary, row_spacing := 18.0, dist := [7.0, 90.0]) -> Dictionary:
+	return {"kind": "rows", "models": HEDGE, "styles": [style], "row_spacing": row_spacing, "step": 1.25,
+		"dist": dist, "scale": [1.15, 1.6], "shadows": true, "vis": 150.0, "near": true}
+
+
+## Shelf fungi on the trunks near the path
+static func oyster_layer(chance := 0.25) -> Dictionary:
+	return {"kind": "detail", "models": ["Mushroom_Oyster"], "styles": [{}], "density": 0.0, "on_trunks": chance,
+		"scale": [0.35, 0.55], "shadows": false, "vis": 60.0, "near": true}
+
+
 # ================================================================ 1 Autumn Meadow
 
 static func meadow() -> Dictionary:
@@ -177,21 +212,39 @@ static func meadow() -> Dictionary:
 	var bush_autumn := {"leaves": leaves(Color(0.7, 0.25, 0.05), Color(0.98, 0.6, 0.15), {"sphere_normals": 0.85}), "stiffness": 6.0}
 	var rock := rock_style(Color(0.62, 0.64, 0.6))
 	var cliff := rock_style(Color(0.64, 0.66, 0.62), 0.5, true)
+	var birch_gold := birch_style(Color(0.78, 0.5, 0.06), Color(1.0, 0.85, 0.28))
+	var birch_orange := birch_style(Color(0.84, 0.3, 0.05), Color(1.0, 0.64, 0.2))
+	var birch_late := birch_style(Color(0.5, 0.56, 0.1), Color(0.92, 0.9, 0.36))
+	var lone_amber := tree_style(Color(0.8, 0.36, 0.06), Color(1.0, 0.7, 0.26), {"tint": Color(0.95, 0.85, 0.78)}, 6.0, {"translucency": 0.9})
+	var lone_rust := tree_style(Color(0.62, 0.18, 0.05), Color(0.96, 0.46, 0.16), {"tint": Color(0.95, 0.85, 0.78)}, 6.0, {"translucency": 0.9})
+	var hedge := {"leaves": leaves(Color(0.16, 0.34, 0.06), Color(0.58, 0.7, 0.18), {"sphere_normals": 0.8}), "stiffness": 7.0}
+	var stubble := [Color(0.94, 0.8, 0.42), Color(0.88, 0.72, 0.34), Color(0.98, 0.86, 0.5), Color(0.84, 0.66, 0.3)]
+	var asters := cluster_layer(WILDFLOWERS, 0.8, [2.5, 30.0], 7, 1.8, [0.4, 0.7])
+	asters["tints"] = [Color(0.62, 0.45, 1.0), Color(0.75, 0.55, 1.0), Color(1.0, 0.86, 0.2), Color(1.0, 0.95, 0.85)]
+	var bracken := cluster_layer(["Fern_2"], 0.9, [3.0, 40.0], 3, 2.0, [0.22, 0.34], true, {"plant": {"texture_tint": Color(1.35, 0.72, 0.32)}})
+	bracken["patch"] = [1, 3]
+	var agarics := cluster_layer(["Mushroom_RedCap"], 0.7, [2.5, 30.0], 3, 0.8, [0.35, 0.6])
+	agarics["patch"] = [1]
+	var hedges := hedge_layer(hedge, 27.0)
+	hedges["patch"] = [2]
 	return {
 		"name": NAMES[0],
+		# meadow as before · golden birch stands · hedged stubble fields · wide meadows with lone trees
+		"patches": [{"name": "meadow", "share": 0.42}, {"name": "birch stand", "share": 0.22},
+			{"name": "hedge fields", "share": 0.2}, {"name": "lone trees", "share": 0.16}],
 		"blades": blades(0.5, Color(0.16, 0.32, 0.05), Color(0.55, 0.82, 0.18), Color(0.98, 0.6, 0.16)),
 		"terrain": terrain({"scree": 0, "gullies": 0.4, "hummocks": 0.8, "brooks": 0.6, "litter": 0.55, "litter_color": Color(0.92, 0.5, 0.16), "far_height": 60.0, "ponds": 0.3, "terraces": 7.0, "valley_height": 20.0,
 			"obstacles": ["river", "fallen_tree", "cliff", "stile"]}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.42, 0.45, 0.72), "grade_high": Color(1.0, 0.82, 0.55), "grade_warm": 0.35, "deer": true, "shafts": 0.35, "mountain_color": Color(0.52, 0.56, 0.44), "mountain_snow": 0.2, "particles": "leaves", "particle_color": Color(1.0, 0.5, 0.12), "butterflies": 10, "gusts": 0.85}),
+		"atmosphere": atmosphere({"fx": {"gossamer": 1.0}, "grade_shadow": Color(0.42, 0.45, 0.72), "grade_high": Color(1.0, 0.82, 0.55), "grade_warm": 0.35, "deer": true, "shafts": 0.35, "mountain_color": Color(0.52, 0.56, 0.44), "mountain_snow": 0.2, "particles": "leaves", "particle_color": Color(1.0, 0.5, 0.12), "butterflies": 10, "gusts": 0.85}),
 		"layers": [
-			grass_layer([Color(0.42, 0.74, 0.1), Color(0.34, 0.64, 0.08), Color(0.55, 0.8, 0.14), Color(0.48, 0.72, 0.12)],
-				[Color(0.98, 0.55, 0.14), Color(0.95, 0.35, 0.1), Color(1.0, 0.75, 0.25), Color(0.85, 0.22, 0.08), Color(0.7, 0.85, 0.2)]),
+			thinned(grass_layer([Color(0.42, 0.74, 0.1), Color(0.34, 0.64, 0.08), Color(0.55, 0.8, 0.14), Color(0.48, 0.72, 0.12)],
+				[Color(0.98, 0.55, 0.14), Color(0.95, 0.35, 0.1), Color(1.0, 0.75, 0.25), Color(0.85, 0.22, 0.08), Color(0.7, 0.85, 0.2)]), {2: 0.45}),
 			{"kind": "tree", "models": COMMON, "styles": [green], "region_styles": [orange, orange, red, yellow],
 				"spacing": 8.0, "chance": 0.85, "dist": [6.0, 400.0], "falloff": [12.0, 160.0, 0.6], "grove": [0.022, -0.05],
-				"scale": [1.1, 1.8], "radius": 2.8, "collide": "trunk", "trunk": 0.3},
+				"scale": [1.1, 1.8], "radius": 2.8, "collide": "trunk", "trunk": 0.3, "thin": {1: 0.3, 2: 0.25, 3: 0.12}},
 			hero_tree(["CommonTree_1", "CommonTree_3"], green, Vector2(4.0, 5.0)),
 			{"kind": "tree", "models": TWISTED, "styles": [maple_style], "spacing": 45.0, "chance": 0.35, "region_only": true,
-				"dist": [14.0, 400.0], "scale": [0.55, 0.75], "radius": 5.0, "collide": "trunk", "trunk": 0.5},
+				"dist": [14.0, 400.0], "scale": [0.55, 0.75], "radius": 5.0, "collide": "trunk", "trunk": 0.5, "thin": {1: 0.2, 2: 0.3}},
 			{"kind": "rock", "models": ROCKS, "styles": [cliff], "spacing": 40.0, "chance": 0.3, "dist": [15.0, 70.0],
 				"scale": [2.5, 5.0], "squash": Vector3(1.3, 1.0, 1.1), "sink": 0.18, "radius": 6.0, "collide": "rock"},
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 26.0, "chance": 0.3, "dist": [6.0, 45.0],
@@ -207,6 +260,18 @@ static func meadow() -> Dictionary:
 			small_rock_layer(rock),
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			erratic_layer(rock_style(Color(0.66, 0.67, 0.64), 0.7), 150.0),
+			# round 12: birch stands, hedged stubble fields, lone trees
+			{"kind": "tree", "models": BIRCHES, "styles": [birch_gold, birch_gold, birch_orange, birch_late], "spacing": 6.5, "chance": 0.8,
+				"dist": [5.5, 400.0], "patch": [1], "scale": [0.6, 0.95], "radius": 2.2, "collide": "trunk", "trunk": 0.2},
+			hedges,
+			{"kind": "grass", "models": ["Grass_Wheat", "Grass_Wheat", "Grass_Wispy_Short"], "density": 1100.0, "dist": [5.0, 95.0],
+				"scale": [0.32, 0.5], "palette": stubble, "region_palette": stubble, "near": true, "patch": [2]},
+			{"kind": "tree", "models": TALL, "styles": [lone_amber, lone_amber, lone_rust], "spacing": 42.0, "chance": 0.75,
+				"dist": [9.0, 400.0], "patch": [3], "scale": [0.72, 1.0], "radius": 4.0, "collide": "trunk", "trunk": 0.35},
+			asters,
+			bracken,
+			agarics,
+			oyster_layer(0.2),
 		],
 	}
 

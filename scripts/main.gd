@@ -27,6 +27,7 @@ var menus: Menus
 var streaks: WindStreaks
 var butterflies: Butterflies
 var particles: AmbientParticles
+var biome_fx: BiomeFx
 ## fireflies at dusk and night in every biome
 var night_flies: AmbientParticles
 var rain_fx: RainFx
@@ -124,6 +125,18 @@ func _ready() -> void:
 				print("Obstacle %d: %s at z=%.0f (%s)" % [k, ob["type"], ob["z"], gen.biomes[gen.dominant_biome(ob["z"])]["name"]])
 		get_tree().quit()
 		return
+	if _args.has("patchinfo"):
+		# test helper: --patchinfo=z0,z1 prints the patch left/right of the path every 40 m
+		var pr: PackedFloat64Array = _args["patchinfo"].split_floats(",")
+		var zz := pr[0]
+		while zz > pr[1]:
+			var bi := gen.dominant_biome(zz)
+			var names: Array = gen.biomes[bi].get("patches", [{"name": "-"}]).map(func(p): return p["name"])
+			var px := gen.path_x(zz)
+			print("z=%6.0f %-16s L %-14s R %s" % [zz, gen.biomes[bi]["name"], names[gen.patch_at(px - 30.0, zz, bi)], names[gen.patch_at(px + 30.0, zz, bi)]])
+			zz -= 40.0
+		get_tree().quit()
+		return
 	if _args.has("biomes"):
 		for k in 30:
 			print("Segment %d: %s from %.0f m" % [k, gen.biomes[gen._segment_biome[k]]["name"], gen._segment_start[k]])
@@ -195,6 +208,8 @@ func _ready() -> void:
 	particles = AmbientParticles.new()
 	night_flies = AmbientParticles.new()
 	add_child(night_flies)
+	biome_fx = BiomeFx.new()
+	add_child(biome_fx)
 	rain_fx = RainFx.new()
 	rain_fx.world = world
 	add_child(rain_fx)
@@ -579,6 +594,7 @@ func _process_inner(delta: float) -> void:
 	particles.set_kind(atmosphere.current.get("particles", "motes"), atmosphere.current.get("particle_color", Color.WHITE))
 	particles.follow(cam.global_position, fwd)
 	_update_night_flies(cam, fwd)
+	biome_fx.update(cam, delta, atmosphere.current.get("fx", {}), atmosphere.shown)
 	_update_brook_sound(cam)
 	var sh := atmosphere.shown
 	var beams: float = float(sh.get("shafts", 0.0)) * float(sh.get("shaft_time", 1.0)) * (1.0 - atmosphere.weather.clouds) * (1.0 - atmosphere.underwater)
@@ -771,6 +787,7 @@ func _on_origin_shifted(shift: Vector3) -> void:
 	songbirds.shift(shift)
 	deer.shift(shift)
 	particles.restart()
+	biome_fx.restart()
 	leaf_fall.restart()
 	desert_fx.shift(shift)
 

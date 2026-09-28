@@ -38,7 +38,7 @@ var _mesa := FastNoiseLite.new()
 var _gully := FastNoiseLite.new()
 var _humm := FastNoiseLite.new()
 var _border := FastNoiseLite.new()     # warps biome borders into tongues and groves
-var _patch := FastNoiseLite.new()      # cells of ~170 m: the patches (variants) inside a biome
+var _patch := FastNoiseLite.new()      # cells of ~130 m: the patches (variants) inside a biome
 
 var _segment_biome := PackedInt32Array()
 var _segment_start := PackedFloat32Array()
@@ -82,7 +82,7 @@ func _init(p_seed: int) -> void:
 	_setup_noise(_border, 23, 0.0085, 3)
 	_patch.seed = p_seed + 24
 	_patch.noise_type = FastNoiseLite.TYPE_CELLULAR
-	_patch.frequency = 1.0 / 170.0
+	_patch.frequency = 1.0 / 130.0
 	_patch.fractal_type = FastNoiseLite.FRACTAL_NONE
 	_patch.cellular_distance_function = FastNoiseLite.DISTANCE_EUCLIDEAN
 	_patch.cellular_return_type = FastNoiseLite.RETURN_CELL_VALUE
