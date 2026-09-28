@@ -567,3 +567,20 @@ Test: renders at 15:30 in Wheat Fields (towers), 7:30 in Golden Birch Slopes (ma
   shelters (26 in the first 100 km of seed 1; shingle roof with moss, bench, lantern; stay dry under the
   roof; rain particles stop at the roof via a particle collision box). Selftests for snow, fog and heat
   lightning. Debug `--weatherstate=fog|snow|rain|flash`, `--findspots=type`.
+
+## Step 7 – Special places (plan)
+
+Three new landmark types, chosen by an extra hash (so the old landmarks of every world stay where they are):
+- **Ancient tree** (`uralt`): the biome's own tree at ~30 m (giant pine, birch, cherry, twisted glow tree, a
+  bleached dead giant in desert and bog), a ring of mossy boulders around its roots, ferns, fungi, flowers,
+  a bench facing it, perches for birds. A landmark you see from far away.
+- **Fallen giant** (`riese`): a 24 m trunk (1.1 m thick) lying diagonally on the ground, one end resting on its
+  root plate so you can walk up onto it; moss on top, shelf fungi, ferns below and young trees growing out of
+  it (a nurse log).
+- **Grove circle** (`hain`): a ring of the biome's trees around a small clearing with a big flat stone, flowers
+  and mushrooms – a quiet room in the landscape.
+- Result: ancient trees (the biome's living tree at ~36 m, a bleached giant only where nothing lives; mossy
+  boulder ring, ferns, fungi on the trunk, flowers, a bench facing it), fallen giants (24 m nurse log you can
+  walk up onto, moss, shelf fungi, young trees growing from it, root plate), grove circles (6–8 trees sized
+  to leave gaps, a flat mossy stone in the middle). 45 % of the landmark cells use the new types via an own
+  hash, the others keep their old landmark.

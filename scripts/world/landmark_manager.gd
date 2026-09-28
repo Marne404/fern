@@ -50,6 +50,12 @@ static func plan(gen: WorldGen, k: int) -> Dictionary:
 	var type: String = TYPES[rng.randi() % TYPES.size()]
 	if biome == 2 and type == "steinkreis":
 		type = "bogen"
+	# round 12: ancient trees, fallen giants and grove circles (an own hash, the rest of the plan stays)
+	var roll := hash([gen.seed_value, k, 808]) % 100
+	if roll < 45:
+		type = ["uralt", "uralt", "riese", "hain"][roll % 4]
+		if biome == 2 and type == "hain":
+			type = "uralt"
 	var r := gen.row(z)
 	var side := -1.0 if rng.randf() < 0.5 else 1.0
 	var off: float = r["half_w"] + rng.randf_range(18.0, 38.0)
@@ -241,6 +247,12 @@ func _build(p: Dictionary, corner: Vector2, lod: int) -> Node3D:
 			tree.scale = Vector3.ONE * 1.6
 			root.add_child(tree)
 			_flowers(root, rng, ground, 4.0)
+		"uralt":
+			_ancient_tree(root, rng, ground, int(p["biome"]), lod)
+		"riese":
+			_fallen_giant(root, rng, ground, int(p["biome"]), lod)
+		"hain":
+			_grove_circle(root, rng, ground, int(p["biome"]), lod)
 	return root
 
 
@@ -286,3 +298,212 @@ func _flowers(root: Node3D, rng: RandomNumberGenerator, ground: Callable, radius
 		mi.scale = Vector3.ONE * rng.randf_range(0.5, 0.8)
 		mi.rotation.y = rng.randf() * TAU
 		root.add_child(mi)
+
+
+# ================================================================ round 12: ancient tree, fallen giant, grove circle
+
+## The biome's typical tree: [model, style] (its landmark tree if it has one, else its first tree layer)
+func _biome_tree(biome: int, rng: RandomNumberGenerator) -> Array:
+	var best: Dictionary = {}
+	for layer: Dictionary in gen.biomes[biome]["layers"]:
+		if layer["kind"] != "tree":
+			continue
+		# a living tree if the biome has one; its landmark tree if it has one
+		var dead := TreeKinds.family(layer["models"][0]) == "DeadTree"
+		var best_dead: bool = not best.is_empty() and TreeKinds.family(best["models"][0]) == "DeadTree"
+		if best.is_empty() or (best_dead and not dead) or (not dead and float(layer.get("spacing", 10.0)) >= 300.0):
+			best = layer
+	if best.is_empty():
+		return ["CommonTree_3", BiomeDefs.tree_style(Color(0.24, 0.5, 0.08), Color(0.68, 0.9, 0.26))]
+	var models: Array = best["models"]
+	var styles: Array = best.get("styles", [{}])
+	return [models[rng.randi() % models.size()], styles[0]]
+
+
+func _moss_style() -> Dictionary:
+	return BiomeDefs.rock_style(Color(0.66, 0.68, 0.64), 0.9, true, {"triplanar_scale": 0.08})
+
+
+func _add_mesh(root: Node3D, mesh: Mesh, xf: Transform3D, shadow := true) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.mesh = mesh
+	mi.transform = xf
+	if not shadow:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	root.add_child(mi)
+	return mi
+
+
+func _ancient_tree(root: Node3D, rng: RandomNumberGenerator, ground: Callable, biome: int, lod: int) -> void:
+	var pick := _biome_tree(biome, rng)
+	var model: String = pick[0]
+	var style: Dictionary = pick[1]
+	var raw := lib.raw_mesh(model).get_aabb()
+	var dead := TreeKinds.family(model) == "DeadTree"
+	var target := 20.0 if dead else 36.0
+	var s := target / maxf(raw.end.y, 1.0)
+	var squash: Vector3 = TreeKinds.of(model).get("squash", Vector3.ONE)
+	var gy: float = ground.call(0.0, 0.0)
+	var trunk_r := clampf(0.3 * s, 0.9, 2.2)
+	_add_mesh(root, lib.mesh(model, style), Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(squash * s), Vector3(0, gy - 0.3, 0)))
+	if lod == 0:
+		var body := StaticBody3D.new()
+		var cs := CollisionShape3D.new()
+		var cap := CapsuleShape3D.new()
+		cap.radius = trunk_r
+		cap.height = 10.0
+		cs.shape = cap
+		cs.position = Vector3(0, gy + 4.0, 0)
+		body.add_child(cs)
+		root.add_child(body)
+	# a ring of mossy boulders around the roots, ferns and fungi between them
+	var ms := _moss_style()
+	var n := rng.randi_range(6, 9)
+	for i in n:
+		var a := i * TAU / n + rng.randf_range(-0.25, 0.25)
+		var d := rng.randf_range(3.6, 5.2) * clampf(s / 3.0, 0.8, 1.4)
+		var x := cos(a) * d
+		var z := sin(a) * d
+		var m := lib.mesh(["Rock_Medium_4", "Rock_Medium_1", "Rock_Big_1", "Rock_Medium_3"][i % 4], ms)
+		var sc := rng.randf_range(0.5, 1.0) * (0.55 if i % 4 == 2 else 1.0)
+		var xf := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * sc), Vector3(x, ground.call(x, z) - 0.25 * sc, z))
+		_piece(root, m, xf, null, _rock_shape(m, Vector3.ONE * sc) if lod == 0 else null, lod)
+	for i in 10:
+		var a2 := rng.randf() * TAU
+		var d2 := rng.randf_range(2.0, 7.0)
+		var fx := cos(a2) * d2
+		var fz := sin(a2) * d2
+		var fm: String = ["Fern_2", "Fern_1", "Mushroom_RedCap", "Mushroom_Common", "Clover_2"][i % 5]
+		var fsc := rng.randf_range(0.9, 1.3) if fm.begins_with("Fern") else rng.randf_range(0.4, 0.7)
+		_add_mesh(root, lib.mesh(fm), Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * fsc), Vector3(fx, ground.call(fx, fz), fz)), false)
+	# shelf fungi climbing the trunk
+	for i in 5:
+		var a3 := rng.randf() * TAU
+		var py := gy + rng.randf_range(0.8, 3.5)
+		_add_mesh(root, lib.mesh("Mushroom_Oyster"), Transform3D(Basis(Vector3.UP, -a3 + PI * 0.5).scaled(Vector3.ONE * rng.randf_range(0.5, 0.8)), Vector3(cos(a3) * trunk_r * 0.9, py, sin(a3) * trunk_r * 0.9)), false)
+	_flowers(root, rng, ground, 8.0)
+	# a bench facing the tree
+	var bz := 9.0
+	var by: float = ground.call(0.0, bz)
+	_add_mesh(root, StructureModels.bench(), Transform3D(Basis(Vector3.UP, PI), Vector3(0, by, bz)))
+	if lod == 0:
+		var bb := StaticBody3D.new()
+		var bcs := CollisionShape3D.new()
+		var bsh := BoxShape3D.new()
+		bsh.size = Vector3(1.6, 0.5, 0.45)
+		bcs.shape = bsh
+		bb.add_child(bcs)
+		bb.position = Vector3(0, by + 0.25, bz)
+		root.add_child(bb)
+		Songbirds.mark(root, Vector3(0.55, by + 0.92, bz + 0.28))
+
+
+func _fallen_giant(root: Node3D, rng: RandomNumberGenerator, ground: Callable, biome: int, lod: int) -> void:
+	var radius := 1.1
+	var length := 24.0
+	# one end rests on the ground, the root plate lifts the other a little: you can walk up onto it
+	var y0: float = ground.call(-length * 0.5, 0.0) + radius * 0.55
+	var y1: float = ground.call(length * 0.5, 0.0) + radius * 1.35
+	var center := Vector3(0, (y0 + y1) * 0.5, 0)
+	var tilt := atan2(y1 - y0, length)
+	var basis := Basis(Vector3.BACK, tilt) * Basis(Quaternion(Vector3.UP, Vector3.RIGHT))
+	var bark := StandardMaterial3D.new()
+	bark.albedo_texture = lib.texture("Bark_PineTree.png")
+	bark.albedo_color = Color(1.35, 1.2, 1.05)
+	bark.normal_enabled = true
+	bark.normal_texture = lib.texture("Bark_PineTree_Normal.png")
+	bark.uv1_scale = Vector3(2.0, 6.0, 1.0)
+	bark.roughness = 0.95
+	var cm := CylinderMesh.new()
+	cm.top_radius = radius * 0.78
+	cm.bottom_radius = radius
+	cm.height = length
+	cm.radial_segments = 24
+	cm.rings = 10
+	var log_mi := _add_mesh(root, cm, Transform3D(basis, center))
+	log_mi.material_override = bark
+	if lod == 0:
+		var body := StaticBody3D.new()
+		var cs := CollisionShape3D.new()
+		var cap := CapsuleShape3D.new()
+		cap.radius = radius * 0.9
+		cap.height = length
+		cs.shape = cap
+		cs.transform = Transform3D(basis, center)
+		body.add_child(cs)
+		root.add_child(body)
+	# moss blanket on top
+	var mm := CylinderMesh.new()
+	mm.top_radius = radius * 0.62
+	mm.bottom_radius = radius * 0.74
+	mm.height = length * 0.85
+	var mmat := StandardMaterial3D.new()
+	mmat.albedo_color = Color(0.4, 0.62, 0.16)
+	mmat.roughness = 1.0
+	var moss := _add_mesh(root, mm, Transform3D(basis.scaled(Vector3(1.0, 1.0, 0.55)), center + Vector3(0, radius * 0.48, 0)))
+	moss.material_override = mmat
+	# root plate at the lifted end, the broken top at the low end
+	var axis := basis.y.normalized()
+	_add_mesh(root, StructureModels.root_plate(3.2, rng.randi() % 3), Transform3D(basis, center + axis * length * 0.5))
+	_add_mesh(root, StructureModels.log_cap(radius * 0.8), Transform3D(basis * Basis(Vector3.RIGHT, PI), center - axis * length * 0.5))
+	# young trees growing out of it (a nurse log), fungi, ferns and flowers along it
+	var pick := _biome_tree(biome, rng)
+	var raw := lib.raw_mesh(pick[0]).get_aabb()
+	var young := 4.0 / maxf(raw.end.y, 1.0)
+	for i in 3:
+		var t := rng.randf_range(-0.35, 0.35)
+		_add_mesh(root, lib.mesh(pick[0], pick[1]), Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * young), center + axis * length * t + Vector3(0, radius * 0.9, 0)))
+	for i in 16:
+		var t2 := rng.randf_range(-0.45, 0.45)
+		var a := rng.randf_range(-1.2, 1.2)
+		var on := center + axis * length * t2 + Vector3(0, cos(a) * radius * 0.95, sin(a) * radius * 0.95)
+		var fm: String = ["Mushroom_Oyster", "Fern_2", "Clover_1", "Mushroom_RedCap", "Flower_7_Single"][i % 5]
+		var fsc := 0.45 if fm == "Mushroom_Oyster" else (0.7 if fm == "Fern_2" else 0.5)
+		_add_mesh(root, lib.mesh(fm), Transform3D(Basis(Vector3.RIGHT, a).scaled(Vector3.ONE * fsc), on), false)
+	for i in 8:
+		var gx := rng.randf_range(-length * 0.5, length * 0.5)
+		var gz := rng.randf_range(-3.5, 3.5)
+		if absf(gz) < radius + 0.4:
+			gz = signf(gz + 0.01) * (radius + 0.6)
+		_add_mesh(root, lib.mesh("Fern_1" if i % 2 == 0 else "Fern_2"), Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.9, 1.3)), Vector3(gx, ground.call(gx, gz), gz)), false)
+	if lod == 0:
+		Songbirds.mark(root, center + Vector3(0, radius + 0.05, 0))
+
+
+func _grove_circle(root: Node3D, rng: RandomNumberGenerator, ground: Callable, biome: int, lod: int) -> void:
+	var pick := _biome_tree(biome, rng)
+	var model: String = pick[0]
+	var raw := lib.raw_mesh(model).get_aabb()
+	# about 14 m tall, but narrow enough that the ring keeps gaps between the crowns
+	var s := minf(14.0 / maxf(raw.end.y, 1.0), 6.0 / maxf(maxf(raw.size.x, raw.size.z), 1.0))
+	var squash: Vector3 = TreeKinds.of(model).get("squash", Vector3.ONE)
+	var n := rng.randi_range(6, 8)
+	for i in n:
+		var a := i * TAU / n + rng.randf_range(-0.12, 0.12)
+		var d := rng.randf_range(10.0, 11.5)
+		var x := cos(a) * d
+		var z := sin(a) * d
+		_add_mesh(root, lib.mesh(model, pick[1]), Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(squash * s * rng.randf_range(0.85, 1.1)), Vector3(x, ground.call(x, z) - 0.1, z)))
+		if lod == 0:
+			var body := StaticBody3D.new()
+			var cs := CollisionShape3D.new()
+			var cyl := CylinderShape3D.new()
+			cyl.radius = 0.45
+			cyl.height = 4.0
+			cs.shape = cyl
+			cs.position = Vector3(x, ground.call(x, z) + 2.0, z)
+			body.add_child(cs)
+			root.add_child(body)
+	# the big flat stone in the middle and a carpet of flowers and mushrooms
+	var stone := lib.mesh("Rock_Big_2", _moss_style())
+	var ssc := Vector3(0.8, 0.28, 0.7)
+	_piece(root, stone, Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(ssc), Vector3(0, ground.call(0.0, 0.0) - 0.15, 0)), null, _rock_shape(stone, ssc) if lod == 0 else null, lod)
+	_flowers(root, rng, ground, 7.0)
+	for i in 8:
+		var a2 := rng.randf() * TAU
+		var d2 := rng.randf_range(3.0, 7.5)
+		var fx := cos(a2) * d2
+		var fz := sin(a2) * d2
+		_add_mesh(root, lib.mesh(["Mushroom_Common", "Clover_1", "Flower_6", "Clover_2"][i % 4]), Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3.ONE * rng.randf_range(0.6, 1.0)), Vector3(fx, ground.call(fx, fz), fz)), false)
+	if lod == 0:
+		Songbirds.mark(root, Vector3(0, ground.call(0.0, 0.0) + 0.9, 0))
