@@ -32,6 +32,7 @@ var night_flies: AmbientParticles
 var rain_fx: RainFx
 var canopy_shafts: CanopyShafts
 var songbirds: Songbirds
+var deer: Deer
 var _soaked_hint := false
 var gusts: WindGusts
 var leaf_fall: LeafFall
@@ -194,6 +195,9 @@ func _ready() -> void:
 	songbirds = Songbirds.new()
 	songbirds.world = world
 	add_child(songbirds)
+	deer = Deer.new()
+	deer.world = world
+	add_child(deer)
 	birds = Birds.new()
 	birds.world = world
 	mountains = Mountains.new()
@@ -498,6 +502,14 @@ func _process_inner(delta: float) -> void:
 			emote_wheel._sel = 1
 		if _args.has("pitch"):
 			player.set_look(player.rotation.y + deg_to_rad(float(_args.get("yaw", "0"))), deg_to_rad(float(_args["pitch"])))
+		if _args.has("deer"):
+			# test helper: a deer (and fawn) right ahead
+			var fw := -player.global_basis.z
+			var dp := player.global_position + Vector3(fw.x, 0, fw.z).normalized() * float(_args["deer"] if _args["deer"] != "1" else "12")
+			deer.camera = _active_camera()
+			deer._add_deer(dp, 1.0, false)
+			deer._add_deer(dp + Vector3(1.6, 0, 1.0), 0.62, true)
+			deer.hold = _args.get("deerhold", "")
 		if _args.has("backpack"):
 			backpack.open.call_deferred(player)
 		if _args.has("knotui"):
@@ -568,6 +580,10 @@ func _process_inner(delta: float) -> void:
 	streaks.enabled = Settings.values["wind_fx"]
 	butterflies.camera = cam
 	songbirds.camera = cam
+	deer.camera = cam
+	deer.allowed = atmosphere.current.get("deer", false) and mode == Mode.PLAYING
+	# deer like dawn and dusk, but not the dark night or heavy rain
+	deer.activity = (1.0 - float(atmosphere.shown.get("night", 0.0)) * 0.8) * (1.0 - clampf(atmosphere.weather.rain * 1.5, 0.0, 1.0))
 	songbirds.allowed = atmosphere.current.get("birds", true)
 	songbirds.activity = (1.0 - float(atmosphere.shown.get("night", 0.0))) * (1.0 - clampf(atmosphere.weather.rain * 3.0, 0.0, 1.0))
 	# butterflies and bees hide at night and in the rain
@@ -735,6 +751,7 @@ func _on_origin_shifted(shift: Vector3) -> void:
 	footprints.shift(shift)
 	canopy_shafts.shift(shift)
 	songbirds.shift(shift)
+	deer.shift(shift)
 	particles.restart()
 	leaf_fall.restart()
 	desert_fx.shift(shift)

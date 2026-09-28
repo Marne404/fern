@@ -216,7 +216,10 @@ var _last_cam := Vector3.ZERO
 
 func _physics_process(delta: float) -> void:
 	if camera:
-		_cam_speed = lerpf(_cam_speed, camera.global_position.distance_to(_last_cam) / maxf(delta, 1e-4), 0.2)
+		var v := camera.global_position.distance_to(_last_cam) / maxf(delta, 1e-4)
+		# teleports (start, respawn, origin shifts) are not running
+		if v < 25.0:
+			_cam_speed = lerpf(_cam_speed, v, 0.2)
 		_last_cam = camera.global_position
 
 

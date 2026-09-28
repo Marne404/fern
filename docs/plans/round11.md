@@ -82,6 +82,13 @@ that competes with the scout; motion slow and calm.
   meadows and woods, raises its head when you come closer and bounds away.
 - **Butterflies on flowers:** butterflies land on flower clusters, fold their wings, and take off again.
 - **Bees in the lavender:** little bees buzz around lavender rows (and flower meadows), soft buzz nearby.
+- **Result:** near chunks record flower spots (every flower cluster, 12 % of lavender bushes); butterflies pick
+  flowers, land and rest 3–9 s with slowly opening wings, fly off when you come within 2 m; 22 bees in lavender,
+  6 at flower meadows, opaque striped body + glassy blurred wings, buzz loop. Songbirds (4 kinds) on perch markers
+  registered by fence/stile posts, signposts, benches, standing stones, plus rock tops (ray onto the rock collider)
+  and the ground by the trail; peck, hop, look, tail flick, synthesized calls; fly off at 5.5 m (9 m running).
+  Deer (doe, sometimes a fawn with spots) 38–72 m away just outside a tree crown towards the trail, in 10 biomes;
+  graze → alert at 30 m → bound away at 18 m (26 m running). Teleports don't count as running.
 
 ## 6. Distant silhouettes
 
