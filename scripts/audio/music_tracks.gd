@@ -84,6 +84,7 @@ const BIOMES := [
 	["Eldertide", "Hidden Springs", "Sunblade Horizon", "Light Ambient 2", "Ambient 1", "Sapphire Glade", "Ambient 5"],   # Wheat Fields
 	["Sapphire Glade", "Moonshadow", "Hidden Springs", "Light Ambient 4", "Dreamspire", "Pale Waters", "Moonlight (quiet)"],   # Cherry Valley
 	["Hollow Vale", "Eldertide", "Silent Reach", "Ambient 2", "Light Ambient 5", "Frostfire", "Ambient 6"],   # Golden Birch Slopes
+	["Canyon Echoes", "Silent Reach", "Hidden Springs", "Ambient 8", "Forgotten Waters", "Frozen Hollow", "Light Ambient 3"],   # Rock Gorge
 ]
 
 ## Situations that override the biome playlist

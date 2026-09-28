@@ -661,8 +661,10 @@ func brook_center(b: Dictionary, r: Dictionary) -> Vector2:
 		strength *= clampf(1.0 - (z - z0), 0.0, 1.0)
 	var off: float = b["off"] + sin(z * 0.06 + float(b["phase"])) * 1.3 + sin(z * 0.17 + float(b["phase"]) * 2.0) * 0.4
 	# the end: it turns away from the trail and disappears between the hills
+	# (in narrow gorges there is no room to turn: there it seeps away beside the path)
+	var turn := lerpf(float(r["a"].get("brook_turn", 1.0)), float(r["b"].get("brook_turn", 1.0)), r["t"])
 	var away := smoothstep(z1 + 12.0, z1 - 28.0, z)
-	off += away * 26.0
+	off += away * 26.0 * turn
 	strength *= 1.0 - smoothstep(z1 - 18.0, z1 - 28.0, z)
 	return Vector2(r["px"] + float(b["side"]) * off / r["inv_len"], strength)
 

@@ -16,7 +16,7 @@ extends RefCounted
 
 const NAMES := ["Autumn Meadow", "Forest Trail", "Desert Valley", "Blossom Grove", "Spring Meadow", "Red Maple Wood", "Mountain Pines", "Deadwood Bog",
 	"Sunset Coast", "Cliff Lands", "Glowing Forest", "Lake Country", "Lavender Hills", "Birch Wood", "Heather Highlands",
-	"Giants' Old Forest", "Mushroom Wood", "Wheat Fields", "Cherry Valley", "Golden Birch Slopes"]
+	"Giants' Old Forest", "Mushroom Wood", "Wheat Fields", "Cherry Valley", "Golden Birch Slopes", "Rock Gorge"]
 
 const GRASS := ["Grass_Common_Tall", "Grass_Common_Short", "Grass_Wispy_Tall", "Grass_Wispy_Short"]
 const SHORT_GRASS := ["Grass_Common_Short", "Grass_Wispy_Short"]
@@ -43,7 +43,7 @@ const WILDFLOWERS := ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flo
 
 static func all() -> Array[Dictionary]:
 	return [meadow(), forest(), desert(), blossom(), spring(), maple(), alpine(), bog(), coast(), cliffs(), glow(), lakes(),
-		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood(), wheat_fields(), cherry_valley(), golden_slopes()]
+		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood(), wheat_fields(), cherry_valley(), golden_slopes(), rock_gorge()]
 
 
 # ================================================================ Style building blocks
@@ -1510,5 +1510,63 @@ static func golden_slopes() -> Dictionary:
 				"patch": [3], "scale": [0.35, 0.55], "radius": 1.5, "collide": "trunk", "trunk": 0.12},
 			pebble_layer(rock_style(Color(0.76, 0.76, 0.76), 0.0, false, {"top_light": 0.3}), 18.0),
 			scree_layer(rock_style(Color(0.72, 0.72, 0.74), 0.1), 40.0),
+		],
+	}
+
+
+# ================================================================ 21 Rock Gorge
+
+static func rock_gorge() -> Dictionary:
+	var wall := rock_style(Color(0.62, 0.64, 0.7), 0.55, true, {"triplanar_scale": 0.05, "moss_color": Color(0.42, 0.62, 0.2), "top_light": 0.55})
+	var boulder := rock_style(Color(0.68, 0.7, 0.74), 0.6, false, {"moss_color": Color(0.42, 0.62, 0.2)})
+	var pine := tree_style(Color(0.08, 0.3, 0.12), Color(0.36, 0.62, 0.22), {"tint": Color(0.9, 0.78, 0.7)}, 8.0, {"sphere_normals": 0.55})
+	var birch := birch_style(Color(0.3, 0.54, 0.1), Color(0.76, 0.92, 0.34))
+	var ferns := cluster_layer(["Fern_1", "Fern_2"], 3.0, [2.5, 40.0], 5, 2.4, [0.9, 1.4], true)
+	var ledge_ferns := cluster_layer(["Fern_1", "Fern_2"], 5.0, [2.5, 45.0], 6, 2.8, [1.0, 1.5], true)
+	ledge_ferns["patch"] = [2]
+	return {
+		"name": NAMES[20],
+		# narrows · boulder bed · fern ledge · open basin
+		"patches": [{"name": "narrows", "share": 0.4}, {"name": "boulder bed", "share": 0.25},
+			{"name": "fern ledge", "share": 0.2}, {"name": "open basin", "share": 0.15}],
+		"blades": blades(0.35, Color(0.08, 0.26, 0.06), Color(0.46, 0.74, 0.18), Color(0.66, 0.78, 0.26)),
+		"terrain": terrain({"brook_turn": 0.0, "scree": 1.0, "gullies": 0.8, "hummocks": 0.2, "brooks": 1.0, "litter": 0.3, "litter_color": Color(0.56, 0.44, 0.28),
+			"far_height": 110.0, "obstacles": ["cliff", "river", "boulders", "fallen_tree"], "path_width": 2.7,
+			"valley_width": 15.0, "valley_ramp": 32.0, "valley_height": 34.0, "undulation": 1.1, "roughness": 1.4, "terraces": 7.0,
+			"grass_dark": Color(0.26, 0.48, 0.12), "grass_light": Color(0.46, 0.66, 0.2),
+			"region_dark": Color(0.36, 0.52, 0.16), "region_light": Color(0.52, 0.64, 0.24),
+			"slope_color": Color(0.56, 0.58, 0.64), "path_color": Color(0.7, 0.64, 0.52), "crack": 0.4,
+			"ponds": 0.5, "pond_size": Vector2(9.0, 16.0), "water_shallow": Color(0.34, 0.84, 0.82), "water_deep": Color(0.06, 0.36, 0.52)}),
+		"atmosphere": atmosphere({"fx": {"crystal_motes": 0.35, "swallows": 0.5}, "grade_shadow": Color(0.3, 0.48, 0.74), "grade_high": Color(0.98, 0.94, 0.82),
+			"grade_warm": -0.05, "grade_contrast": 0.3, "shafts": 0.6, "falls": 1.3, "rainbow": 0.7, "rain": 1.1, "mist_amount": 1.3,
+			"temperature": 11.0, "sun_dir": Vector3(-0.3, -0.72, 0.62), "sun_color": Color(1.0, 0.95, 0.86), "sun_energy": 1.9,
+			"ambient_energy": 0.56, "ambient_color": Color(0.6, 0.72, 0.84), "fog_color": Color(0.84, 0.9, 0.96),
+			"fog_density": 0.0026, "fog_sun_scatter": 0.3, "volumetric": 0.006, "saturation": 1.1,
+			"zenith_color": Color(0.16, 0.46, 0.9), "horizon_color": Color(0.8, 0.9, 1.0), "cloud_coverage": 0.46, "cirrus_amount": 0.7,
+			"particles": "motes", "butterflies": 5,
+			"mountain_color": Color(0.52, 0.58, 0.68), "mountain_shadow": Color(0.38, 0.44, 0.62), "mountain_snow": 0.6, "mountain_scale": 1.6}),
+		"layers": [
+			grass_layer([Color(0.46, 0.74, 0.16), Color(0.38, 0.64, 0.12), Color(0.56, 0.78, 0.22)],
+				[Color(0.6, 0.76, 0.24), Color(0.5, 0.7, 0.2)], 1800.0, Vector2(0.4, 0.75)),
+			# the walls: big rocks close to the path, growing with distance
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [wall], "spacing": 16.0, "chance": 0.75, "dist": [14.0, 120.0],
+				"scale": [2.2, 4.0], "grow_with_dist": true, "squash": Vector3(1.2, 1.5, 1.1), "sink": 0.15, "radius": 9.0, "collide": "rock",
+				"thin": {3: 0.3}},
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4", "Rock_Medium_1"], "styles": [boulder], "spacing": 14.0,
+				"chance": 0.5, "dist": [5.0, 40.0], "scale": [0.5, 1.3], "sink": 0.2, "radius": 3.0, "collide": "rock", "thin": {1: 1.0, 3: 0.5}},
+			{"kind": "tree", "models": PINES, "styles": [pine], "spacing": 13.0, "chance": 0.45, "dist": [8.0, 300.0],
+				"scale": [1.1, 1.7], "radius": 2.5, "collide": "trunk", "trunk": 0.3},
+			{"kind": "tree", "models": BIRCHES, "styles": [birch], "spacing": 18.0, "chance": 0.45, "dist": [7.0, 200.0],
+				"scale": [0.55, 0.8], "radius": 2.2, "collide": "trunk", "trunk": 0.2},
+			ferns,
+			cluster_layer(["Plant_1", "Plant_7", "Plant_7_Big"], 0.8, [2.5, 30.0], 3, 1.2, [0.6, 1.0], true),
+			{"kind": "cluster", "models": ["Flower_2_Single", "Flower_7_Single", "Flower_6"], "styles": [{}], "density": 1.4, "dist": [2.5, 40.0],
+				"count": 10, "radius": 2.0, "scale": [0.35, 0.55], "tints": [Color(0.35, 0.5, 1.0), Color(1.0, 1.0, 1.0), Color(1.0, 0.85, 0.3)],
+				"vis": 60.0, "near": true, "tilt": 0.9},
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4", "Rock_Medium_2"], "styles": [boulder], "spacing": 9.0,
+				"chance": 0.6, "dist": [5.0, 50.0], "patch": [1], "scale": [0.5, 1.2], "sink": 0.2, "radius": 3.0, "collide": "rock"},
+			ledge_ferns,
+			pebble_layer(rock_style(Color(0.72, 0.72, 0.76), 0.0, false, {"top_light": 0.3}), 30.0),
+			scree_layer(rock_style(Color(0.68, 0.68, 0.72), 0.1), 70.0),
 		],
 	}

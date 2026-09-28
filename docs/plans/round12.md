@@ -495,3 +495,6 @@ bog cotton, low racing clouds; wild and wide.
 - 4.5 result: real birches in gold, orange, yellow and some still green on steep golden hills, big grey
   rocks, rock slopes, young-birch thickets, asters and rust ferns, orange bushes, a crisp blue sky with high
   clouds; gossamer. The first grading was too warm (everything orange); warmth 0.12 and calmer grass colors.
+- 4.6 result: a narrow valley (floor 15 m, ramp 32 m, 34 m high) makes real grey rock walls; brooks always,
+  the brook seeps away at its end instead of turning into the wall (terrain key `brook_turn`), boulder beds,
+  fern ledges, pines and birches, blue/white alpine flowers, swallows, spray glitter, many far waterfalls.
