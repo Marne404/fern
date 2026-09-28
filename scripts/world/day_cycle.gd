@@ -144,6 +144,7 @@ func nightness() -> float:
 func apply(c: Dictionary) -> Dictionary:
 	var m := mood()
 	var out := c.duplicate()
+	out["hour"] = hour
 	var aff: float = lerpf(float(c.get("clock", 1.0)), 1.0, nightness())
 	var ld: Array = light_dir(c["sun_dir"])
 	var moon: bool = ld[1]

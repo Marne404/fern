@@ -635,8 +635,18 @@ static func alpine() -> Dictionary:
 	var cliff := rock_style(Color(0.74, 0.76, 0.8), 0.55, true, {"triplanar_scale": 0.07, "moss_color": Color(0.94, 0.96, 1.0), "top_light": 0.5})
 	var rock := rock_style(Color(0.78, 0.79, 0.8), 0.35)
 	var tints := [Color(0.3, 0.45, 1.0), Color(1.0, 1.0, 1.0), Color(1.0, 0.9, 0.3), Color(0.75, 0.45, 1.0), Color(0.35, 0.55, 1.0)]
+	var giant := tree_style(Color(0.05, 0.22, 0.1), Color(0.26, 0.52, 0.2), {"tint": Color(0.9, 0.78, 0.7)}, 9.0, {"sphere_normals": 0.5, "translucency": 0.45})
+	var granite := rock_style(Color(0.76, 0.77, 0.8), 0.35, true, {"triplanar_scale": 0.07, "moss_color": Color(0.94, 0.96, 1.0), "top_light": 0.5})
+	var alpine := {"kind": "cluster", "models": ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flower_2_Single", "Flower_7_Single"],
+		"styles": [{}], "density": 4.2, "dist": [2.5, 70.0], "count": 30, "radius": 4.0, "scale": [0.36, 0.56], "tints": tints,
+		"vis": 75.0, "near": true, "tilt": 0.9, "patch": [1]}
+	var edelweiss := {"kind": "cluster", "models": ["Flower_6", "Flower_6_2"], "styles": [{}], "density": 2.4, "dist": [2.2, 60.0],
+		"count": 10, "radius": 2.0, "scale": [0.6, 0.9], "vis": 55.0, "near": true, "tilt": 0.9, "patch": [1, 2]}
 	return {
 		"name": NAMES[6],
+		# pine forest as before · alpine meadow · rock field · giant grove
+		"patches": [{"name": "pine forest", "share": 0.4}, {"name": "alpine meadow", "share": 0.25},
+			{"name": "rock field", "share": 0.2}, {"name": "giant grove", "share": 0.15}],
 		"blades": blades(0.3, Color(0.1, 0.3, 0.08), Color(0.45, 0.75, 0.2), Color(0.7, 0.78, 0.3)),
 		"terrain": terrain({"scree": 1.0, "gullies": 0.8, "hummocks": 0, "brooks": 0.85, "litter": 0.7, "litter_color": Color(0.66, 0.36, 0.2), "far_height": 120.0, "obstacles": ["cliff", "cliff", "river", "boulders"], "valley_width": 16.0, "valley_ramp": 80.0, "valley_height": 58.0, "undulation": 1.6, "roughness": 1.2,
 			"grass_dark": Color(0.24, 0.48, 0.14), "grass_light": Color(0.44, 0.66, 0.2),
@@ -644,7 +654,7 @@ static func alpine() -> Dictionary:
 			"slope_color": Color(0.56, 0.58, 0.6), "path_color": Color(0.7, 0.6, 0.44), "crack": 0.3,
 			"snow": 22.0, "ponds": 0.75, "terraces": 9.0, "pond_size": Vector2(14.0, 30.0),
 			"water_shallow": Color(0.3, 0.84, 0.86), "water_deep": Color(0.04, 0.32, 0.58)}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.3, 0.48, 0.82), "grade_high": Color(0.96, 0.94, 0.88), "grade_warm": -0.2, "grade_contrast": 0.3, "falls": 1.0, "deer": true, "shafts": 0.85, "rain": 1.2, "temperature": 5.0, "sun_dir": Vector3(-0.5, -0.55, 0.65), "sun_color": Color(1.0, 0.97, 0.92), "sun_energy": 1.95,
+		"atmosphere": atmosphere({"fx": {"crystal_motes": 1.0}, "grade_shadow": Color(0.3, 0.48, 0.82), "grade_high": Color(0.96, 0.94, 0.88), "grade_warm": -0.2, "grade_contrast": 0.3, "falls": 1.0, "deer": true, "shafts": 0.85, "rain": 1.2, "temperature": 5.0, "sun_dir": Vector3(-0.5, -0.55, 0.65), "sun_color": Color(1.0, 0.97, 0.92), "sun_energy": 1.95,
 			"ambient_energy": 0.5, "ambient_color": Color(0.6, 0.72, 0.9), "fog_color": Color(0.78, 0.88, 0.98),
 			"fog_density": 0.0014, "saturation": 1.12, "zenith_color": Color(0.12, 0.42, 0.9), "horizon_color": Color(0.8, 0.9, 1.0),
 			"cloud_coverage": 0.46, "cirrus_amount": 0.95, "particles": "motes", "butterflies": 4,
@@ -653,7 +663,8 @@ static func alpine() -> Dictionary:
 			grass_layer([Color(0.36, 0.66, 0.14), Color(0.46, 0.72, 0.2), Color(0.3, 0.58, 0.12), Color(0.52, 0.76, 0.22)],
 				[Color(0.62, 0.74, 0.28), Color(0.46, 0.68, 0.2)], 2200.0, Vector2(0.35, 0.65)),
 			{"kind": "tree", "models": PINES, "styles": [pine, pine, pine_light], "spacing": 10.0, "chance": 0.65, "dist": [8.0, 400.0],
-				"falloff": [20.0, 150.0, 0.6], "grove": [0.02, -0.15], "scale": [1.4, 2.4], "radius": 3.0, "collide": "trunk", "trunk": 0.35},
+				"falloff": [20.0, 150.0, 0.6], "grove": [0.02, -0.15], "scale": [1.4, 2.4], "radius": 3.0, "collide": "trunk", "trunk": 0.35,
+				"thin": {1: 0.15, 2: 0.4, 3: 0.35}},
 			{"kind": "rock", "models": ROCKS, "styles": [cliff], "spacing": 30.0, "chance": 0.6, "dist": [14.0, 110.0],
 				"scale": [3.5, 9.0], "grow_with_dist": true, "squash": Vector3(1.3, 1.25, 1.1), "sink": 0.2, "radius": 8.0, "collide": "rock"},
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 18.0, "chance": 0.4, "dist": [5.0, 45.0],
@@ -666,6 +677,17 @@ static func alpine() -> Dictionary:
 			small_rock_layer(rock, 9.0, [2.0, 24.0]),
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			scree_layer(rock_style(Color(0.7, 0.7, 0.72), 0.1), 70.0),
+			# round 12: lone giants, outcrops, alpine meadows, rock fields, giant groves
+			{"kind": "tree", "models": GIANT_PINES, "styles": [giant], "spacing": 70.0, "chance": 0.5, "dist": [10.0, 400.0],
+				"scale": [1.5, 2.1], "radius": 5.0, "collide": "trunk", "trunk": 0.45},
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [granite], "spacing": 60.0, "chance": 0.45, "dist": [9.0, 90.0],
+				"scale": [1.0, 2.0], "sink": 0.2, "radius": 7.0, "collide": "rock"},
+			alpine,
+			edelweiss,
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4", "Rock_Medium_2"], "styles": [granite], "spacing": 12.0,
+				"chance": 0.6, "dist": [5.0, 80.0], "patch": [2], "scale": [0.5, 1.3], "sink": 0.18, "radius": 3.5, "collide": "rock"},
+			{"kind": "tree", "models": GIANT_PINES, "styles": [giant, pine_light], "spacing": 14.0, "chance": 0.75, "dist": [8.0, 400.0],
+				"patch": [3], "scale": [1.4, 1.9], "radius": 4.5, "collide": "trunk", "trunk": 0.45},
 		],
 	}
 

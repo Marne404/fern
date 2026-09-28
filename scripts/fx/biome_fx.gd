@@ -24,7 +24,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
 	# how hard the wind blows right now (1 = calm, up to ~2.6 in a strong gust)
 	var gust := clampf((WindGusts.current_strength - 1.0) / 1.2, 0.0, 1.0)
-	for name in ["gossamer", "petal_gust", "dandelion", "samara"]:
+	for name in ["gossamer", "petal_gust", "dandelion", "samara", "crystal_motes"]:
 		var w := float(fx.get(name, 0.0))
 		var at := cam.global_position + fwd * 9.0 + Vector3(0, -0.4, 0)
 		match name:
@@ -34,6 +34,10 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 				w *= smoothstep(0.1, 0.6, gust) * dry
 			"dandelion", "samara":
 				w *= (1.0 - night) * dry
+			"crystal_motes":
+				# cold, clear mornings: the air glitters in the low sun
+				var hour := float(shown.get("hour", 12.0))
+				w *= smoothstep(5.0, 6.5, hour) * (1.0 - smoothstep(10.5, 12.5, hour)) * dry * (1.0 - float(shown.get("overcast", 0.0)))
 				at = cam.global_position + fwd * 6.0 + Vector3(0, 2.5, 0)
 		_drive(name, w, at, delta, 0.4 if name != "petal_gust" else 2.5)
 
@@ -155,6 +159,34 @@ func _build(name: String) -> GPUParticles3D:
 			var dq := QuadMesh.new()
 			dq.material = dm
 			p.draw_pass_1 = dq
+		"crystal_motes":
+			# fine ice crystals in cold morning air: tiny sparks that flash when they catch the sun
+			p.amount = 260
+			p.lifetime = 8.0
+			p.visibility_aabb = AABB(Vector3(-30, -10, -30), Vector3(60, 20, 60))
+			pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+			pm.emission_box_extents = Vector3(14, 3, 14)
+			pm.emission_shape_offset = Vector3(0, 1.5, 0)
+			pm.direction = wdir
+			pm.spread = 60.0
+			pm.initial_velocity_min = 0.1
+			pm.initial_velocity_max = 0.3
+			pm.gravity = Vector3(0, -0.03, 0)
+			pm.scale_min = 0.012
+			pm.scale_max = 0.025
+			var gc := Gradient.new()
+			gc.set_color(0, Color(1, 1, 1, 0))
+			gc.set_color(1, Color(1, 1, 1, 0))
+			gc.add_point(0.3, Color(1, 1, 1, 1))
+			gc.add_point(0.7, Color(1, 1, 1, 1))
+			var gtc := GradientTexture1D.new()
+			gtc.gradient = gc
+			pm.color_ramp = gtc
+			var cm := ShaderMaterial.new()
+			cm.shader = preload("res://shaders/crystal.gdshader")
+			var cq := QuadMesh.new()
+			cq.material = cm
+			p.draw_pass_1 = cq
 		"samara":
 			# winged maple seeds: they spin fast like little propellers while sinking slowly
 			p.amount = 60

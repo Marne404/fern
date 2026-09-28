@@ -266,3 +266,20 @@ mossy boulders, a red understory, maple seeds spinning down.
   rust-colored ferns, crimson/amber understory lining the path. The bushes at the base of broadleaf trees were
   always green in every biome – biomes now give them their own colors (`under_bush`; Autumn Meadow gold,
   Red Maple red-orange). Samara seeds spin like propellers while sinking (own shader).
+
+## Step 3.7 – Mountain Pines
+
+Idea: high alpine country – dark pines, rare ancient giant pines, rock outcrops, alpine meadows full of
+gentians and edelweiss, cold clear air.
+
+- Everywhere: rare giant pines standing alone (spacing 70 m), big granite outcrops (Rock_Big) near the path.
+- Patches: pine forest 40 % (as today) · alpine meadow 25 % · rock field 20 % · giant grove 15 %.
+  - Alpine meadow: pines thinned to 15 %, blue/white/yellow alpine flowers in carpets (new families),
+    daisy ground cover, short grass.
+  - Rock field: big and medium granite blocks strewn over the slope, small plants between them.
+  - Giant grove: a grove of giant pines (spacing 14 m), normal pines thinned.
+- Effect "alpine_glow": none needed as particles; the cold air is in the grading already. Instead
+  "crystal_motes": tiny glittering ice crystals in the sunlight at dawn/morning (cold biomes), dry weather.
+- Result: giant groves and lone giant pines, granite outcrops and rock fields, alpine meadows with blue/white/
+  yellow flowers and edelweiss (Flower_6) between the scree. Ice-crystal glitter on clear cold mornings
+  (`hour` and `overcast` are now part of the shown atmosphere for effects).

@@ -94,6 +94,7 @@ func is_raining() -> bool:
 
 ## The (time-of-day-adjusted) atmosphere bent to the weather: grayer, more clouds, weaker sun.
 func apply(c: Dictionary) -> Dictionary:
+	c["overcast"] = clouds
 	if clouds <= 0.001 and rainbow <= 0.001 and wet <= 0.001:
 		c["rain"] = 0.0
 		c["wet"] = 0.0
