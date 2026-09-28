@@ -4,6 +4,7 @@ extends Node3D
 ## borders). Every effect is built when first needed and fades with its strength; weather and time of day
 ## are applied here (gossamer only on dry days, …).
 
+var world: ChunkManager
 var _fx := {}          # name → {"node": GPUParticles3D, "level": strength now}
 var _haze: MeshInstance3D
 var _haze_mat: ShaderMaterial
@@ -15,6 +16,10 @@ var _gull_data: Array = []       # per gull: [radius, height, speed, angle]
 var _swallows: Node3D
 var _sw_level := 0.0
 var _sw_data: Array = []         # per swallow: phase offsets for its looping path
+var _flies: Node3D
+var _fly_level := 0.0
+var _fly_data: Array = []        # per dragonfly: {pos, target, wait}
+var _fly_rng := RandomNumberGenerator.new()
 
 
 ## fx: blended strengths of the current biomes; shown: the atmosphere after time of day and weather
@@ -23,6 +28,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	var rain := float(shown.get("rain", 0.0))
 	var fwd := -cam.global_basis.z
 	fwd = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
 	# heat shimmer: strongest with a high sun, gone under clouds or in the rain
 	var sun_up := clampf(-(shown.get("sun_dir", Vector3.DOWN) as Vector3).normalized().y, 0.0, 1.0)
 	var heat := float(fx.get("heat_haze", 0.0)) * smoothstep(0.35, 0.75, sun_up) * (1.0 - night) \
@@ -30,7 +36,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	_update_haze(heat, delta)
 	_update_gulls(float(fx.get("gulls", 0.0)) * (1.0 - night) * (1.0 - clampf(rain * 3.0, 0.0, 1.0)), cam, delta)
 	_update_swallows(float(fx.get("swallows", 0.0)) * (1.0 - night) * (1.0 - clampf(rain * 3.0, 0.0, 1.0)), cam, delta)
-	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
+	_update_dragonflies(float(fx.get("dragonflies", 0.0)) * (1.0 - night) * dry, cam, delta)
 	# how hard the wind blows right now (1 = calm, up to ~2.6 in a strong gust)
 	var gust := clampf((WindGusts.current_strength - 1.0) / 1.2, 0.0, 1.0)
 	for name in ["gossamer", "petal_gust", "dandelion", "samara", "crystal_motes", "wisps", "spores"]:
@@ -134,6 +140,8 @@ func _update_gulls(w: float, cam: Camera3D, delta: float) -> void:
 			_gulls.add_child(mi)
 			_gull_data.append([rng.randf_range(7.0, 18.0), rng.randf_range(-4.0, 6.0), rng.randf_range(0.18, 0.3) * (1.0 if i % 3 else -1.0), rng.randf() * TAU])
 		_gull_center = Vector3(INF, INF, INF)
+	for d in _fly_data:
+		d["pos"] = Vector3.INF
 	_gulls.visible = _gull_level > 0.01
 	if not _gulls.visible:
 		return
@@ -222,6 +230,131 @@ func _update_swallows(w: float, cam: Camera3D, delta: float) -> void:
 			# banking into the curve
 			var bank := clampf((p2 - p).cross(Vector3.UP).dot(fwd) * 8.0, -0.8, 0.8)
 			mi.global_transform = Transform3D(Basis.looking_at(dir, Vector3.UP).rotated(dir, bank), p).scaled_local(Vector3.ONE * 0.28)
+
+
+## Dragonflies over the nearest pond: they dart from spot to spot along the shore and hover in between
+func _update_dragonflies(w: float, cam: Camera3D, delta: float) -> void:
+	var pond := _near_pond(cam)
+	if pond.z <= 0.0:
+		w = 0.0
+	_fly_level = move_toward(_fly_level, w, delta * 0.5)
+	if _flies == null:
+		if _fly_level <= 0.01:
+			return
+		_flies = Node3D.new()
+		_flies.top_level = true
+		add_child(_flies)
+		_fly_rng.randomize()
+		var mesh := _dragonfly_mesh()
+		for i in 5:
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.scale = Vector3.ONE * 0.2
+			mi.set_instance_shader_parameter("phase", _fly_rng.randf() * 10.0)
+			_flies.add_child(mi)
+			_fly_data.append({"pos": Vector3.INF, "target": Vector3.ZERO, "wait": 0.0})
+	_flies.visible = _fly_level > 0.01
+	if not _flies.visible:
+		for d in _fly_data:
+			d["pos"] = Vector3.INF
+		return
+	var n := _flies.get_child_count()
+	for i in n:
+		var d: Dictionary = _fly_data[i]
+		var mi := _flies.get_child(i) as MeshInstance3D
+		mi.visible = i < int(ceil(_fly_level * n))
+		if not (d["pos"] as Vector3).is_finite():
+			d["pos"] = _shore_spot(pond, cam)
+			d["target"] = d["pos"]
+		d["wait"] = float(d["wait"]) - delta
+		var pos: Vector3 = d["pos"]
+		var tgt: Vector3 = d["target"]
+		if float(d["wait"]) <= 0.0 and pos.distance_to(tgt) < 0.1:
+			d["target"] = _shore_spot(pond, cam)
+			d["wait"] = _fly_rng.randf_range(0.8, 3.0)
+			tgt = d["target"]
+		var to := tgt - pos
+		var step := minf(to.length(), delta * 5.5)
+		var dir := to.normalized() if to.length() > 0.001 else -mi.global_basis.z
+		pos += dir * step
+		# while hovering: tiny jitter
+		var hover := Vector3(sin(Time.get_ticks_msec() * 0.011 + i), sin(Time.get_ticks_msec() * 0.017 + i * 2.0) * 0.5, cos(Time.get_ticks_msec() * 0.013 + i)) * 0.02
+		d["pos"] = pos
+		var look := Vector3(dir.x, 0.0, dir.z)
+		if look.length() < 0.01:
+			look = -mi.global_basis.z
+		mi.global_transform = Transform3D(Basis.looking_at(look.normalized(), Vector3.UP).scaled(Vector3.ONE * 0.2), pos + hover)
+
+
+## Nearest pond (local x, level y, local z in the result: Vector4(x, level, z, radius)); radius 0 if none near
+func _near_pond(cam: Camera3D) -> Vector4:
+	if world == null:
+		return Vector4.ZERO
+	var wp := world.local_to_world(cam.global_position)
+	var best := Vector4.ZERO
+	var bd := 70.0
+	for p: Vector4 in world.gen.ponds_near(wp.z):
+		var dd := Vector2(p.x - wp.x, p.y - wp.z).length() - p.z
+		if dd < bd:
+			bd = dd
+			var lp := world.world_to_local(Vector3(p.x, p.w, p.y))
+			best = Vector4(lp.x, lp.y, lp.z, p.z)
+	return best
+
+
+## A spot just above the water near the shore, preferring the side towards the camera
+func _shore_spot(pond: Vector4, cam: Camera3D) -> Vector3:
+	var c := Vector3(pond.x, pond.y, pond.z)
+	var toward := Vector3(cam.global_position.x - c.x, 0.0, cam.global_position.z - c.z).normalized()
+	var a := atan2(toward.z, toward.x) + _fly_rng.randf_range(-0.45, 0.45)
+	var r := pond.w * _fly_rng.randf_range(0.82, 0.99)
+	return c + Vector3(cos(a) * r, 0.35 + 0.35 + _fly_rng.randf_range(0.0, 0.9), sin(a) * r)
+
+
+func _dragonfly_mesh() -> ArrayMesh:
+	# body: a slim tapering stick with a round head (opaque, iridescent); wings: four glassy blades
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var ring := func(z: float, r: float) -> PackedVector3Array:
+		var pts := PackedVector3Array()
+		for k in 6:
+			var a := k * TAU / 6.0
+			pts.append(Vector3(cos(a) * r, 0.22 + sin(a) * r, z))
+		return pts
+	var prof := [[-0.62, 0.0], [-0.55, 0.11], [-0.42, 0.12], [-0.3, 0.1], [-0.15, 0.09], [0.1, 0.05], [0.8, 0.035], [0.95, 0.0]]
+	for i in prof.size() - 1:
+		var a: PackedVector3Array = ring.call(prof[i][0], prof[i][1])
+		var b: PackedVector3Array = ring.call(prof[i + 1][0], prof[i + 1][1])
+		for k in 6:
+			var k2 := (k + 1) % 6
+			st.add_vertex(a[k]); st.add_vertex(b[k]); st.add_vertex(b[k2])
+			st.add_vertex(a[k]); st.add_vertex(b[k2]); st.add_vertex(a[k2])
+	st.generate_normals()
+	var body := st.commit()
+	var bm := StandardMaterial3D.new()
+	bm.albedo_color = Color(0.1, 0.45, 0.7)
+	bm.metallic = 0.6
+	bm.roughness = 0.35
+	bm.emission_enabled = true
+	bm.emission = Color(0.05, 0.3, 0.35)
+	body.surface_set_material(0, bm)
+	var sw := SurfaceTool.new()
+	sw.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for zc: float in [-0.36, -0.18]:
+		for side: float in [-1.0, 1.0]:
+			var r0 := Vector3(side * 0.05, 0.22, zc - 0.05)
+			var r1 := Vector3(side * 0.05, 0.22, zc + 0.05)
+			var t0 := Vector3(side * 0.95, 0.22, zc - 0.02)
+			var t1 := Vector3(side * 0.9, 0.22, zc + 0.12)
+			sw.add_vertex(r0); sw.add_vertex(t0); sw.add_vertex(t1)
+			sw.add_vertex(r0); sw.add_vertex(t1); sw.add_vertex(r1)
+	sw.generate_normals()
+	sw.commit(body)
+	var wm := ShaderMaterial.new()
+	wm.shader = preload("res://shaders/bee.gdshader")
+	body.surface_set_material(1, wm)
+	return body
 
 
 ## After an origin shift the particles are in the wrong place – restart them.

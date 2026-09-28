@@ -955,8 +955,23 @@ static func lakes() -> Dictionary:
 	var birch := tree_style(Color(0.35, 0.6, 0.12), Color(0.85, 0.95, 0.4), birch_bark(), 4.5, {"translucency": 1.0})
 	var willow := tree_style(Color(0.2, 0.45, 0.12), Color(0.6, 0.82, 0.3), {"tint": Color(0.9, 0.85, 0.8)}, 5.0)
 	var rock := rock_style(Color(0.62, 0.66, 0.72), 0.5)
+	var real_birch := birch_style(Color(0.3, 0.56, 0.1), Color(0.8, 0.94, 0.36))
+	var real_birch_gold := birch_style(Color(0.62, 0.6, 0.1), Color(0.98, 0.9, 0.34))
+	var tall_dark := tree_style(Color(0.1, 0.36, 0.08), Color(0.46, 0.76, 0.22), {"tint": Color(0.95, 0.85, 0.8)}, 6.0, {"translucency": 0.9})
+	var shore_grass := [Color(0.52, 0.72, 0.2), Color(0.6, 0.76, 0.26), Color(0.46, 0.66, 0.18), Color(0.7, 0.74, 0.34)]
+	var shore_ferns := cluster_layer(["Fern_2"], 2.0, [3.0, 40.0], 3, 2.0, [0.3, 0.46], true)
+	shore_ferns["patch"] = [1]
+	var white_fl := cluster_layer(["Flower_6", "Flower_1_Single", "Flower_1_Group"], 1.8, [2.5, 40.0], 8, 2.2, [0.45, 0.75])
+	white_fl["tints"] = [Color(1.0, 1.0, 0.96), Color(0.94, 0.96, 1.0)]
+	white_fl["patch"] = [1]
+	var marsh := cluster_layer(["Flower_7_Group", "Flower_7_Single", "Flower_2_Single"], 1.6, [2.5, 50.0], 6, 2.0, [0.5, 0.8])
+	marsh["tints"] = [Color(1.0, 0.85, 0.2), Color(0.75, 0.45, 1.0), Color(1.0, 0.6, 0.8)]
+	marsh["patch"] = [2]
 	return {
 		"name": NAMES[11],
+		# lake meadow as before · birch shore · reed bay · tall wood
+		"patches": [{"name": "lake meadow", "share": 0.4}, {"name": "birch shore", "share": 0.25},
+			{"name": "reed bay", "share": 0.15}, {"name": "tall wood", "share": 0.2}],
 		"blades": blades(0.55, Color(0.14, 0.34, 0.08), Color(0.6, 0.85, 0.24), Color(0.8, 0.88, 0.4)),
 		"terrain": terrain({"scree": 0, "gullies": 0.3, "hummocks": 0.7, "brooks": 0.8, "litter": 0.3, "litter_color": Color(0.78, 0.62, 0.3), "far_height": 30.0, "obstacles": ["river", "river", "fallen_tree"], "valley_width": 30.0, "valley_ramp": 90.0, "valley_height": 10.0, "undulation": 1.2,
 			"ponds": 1.0, "pond_size": Vector2(22.0, 42.0),
@@ -964,7 +979,7 @@ static func lakes() -> Dictionary:
 			"region_dark": Color(0.45, 0.6, 0.18), "region_light": Color(0.62, 0.74, 0.26),
 			"path_color": Color(0.76, 0.68, 0.5), "crack": 0.3,
 			"water_shallow": Color(0.4, 0.82, 0.8), "water_deep": Color(0.08, 0.35, 0.52)}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.3, 0.55, 0.8), "grade_high": Color(0.98, 0.94, 0.8), "grade_warm": -0.05, "falls": 0.8, "deer": true, "shafts": 0.35, "mist_amount": 1.2, "sun_dir": Vector3(0.45, -0.45, 0.75), "sun_color": Color(1.0, 0.92, 0.82), "sun_energy": 1.7,
+		"atmosphere": atmosphere({"fx": {"dragonflies": 1.0}, "grade_shadow": Color(0.3, 0.55, 0.8), "grade_high": Color(0.98, 0.94, 0.8), "grade_warm": -0.05, "falls": 0.8, "deer": true, "shafts": 0.6, "mist_amount": 1.2, "sun_dir": Vector3(0.45, -0.45, 0.75), "sun_color": Color(1.0, 0.92, 0.82), "sun_energy": 1.7,
 			"ambient_energy": 0.55, "ambient_color": Color(0.65, 0.78, 0.85), "fog_color": Color(0.85, 0.92, 0.98),
 			"fog_density": 0.0025, "volumetric": 0.003, "saturation": 1.08, "zenith_color": Color(0.3, 0.58, 0.92),
 			"horizon_color": Color(0.85, 0.93, 1.0), "cloud_coverage": 0.5, "particles": "motes", "butterflies": 8,
@@ -973,7 +988,7 @@ static func lakes() -> Dictionary:
 			grass_layer([Color(0.5, 0.78, 0.18), Color(0.42, 0.7, 0.14), Color(0.6, 0.84, 0.22)],
 				[Color(0.8, 0.85, 0.35), Color(0.6, 0.8, 0.2)], 2400.0),
 			{"kind": "tree", "models": COMMON, "styles": [birch, birch, willow], "spacing": 11.0, "chance": 0.7, "dist": [7.0, 400.0],
-				"grove": [0.024, -0.1], "scale": [1.1, 1.7], "radius": 2.8, "collide": "trunk", "trunk": 0.28},
+				"grove": [0.024, -0.1], "scale": [1.1, 1.7], "radius": 2.8, "collide": "trunk", "trunk": 0.28, "thin": {1: 0.3, 2: 0.4, 3: 0.35}},
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 34.0, "chance": 0.3, "dist": [6.0, 50.0],
 				"scale": [1.0, 2.6], "sink": 0.2, "radius": 2.5, "collide": "rock"},
 			cluster_layer(["Flower_3_Group", "Flower_3_Single"], 1.0, [2.5, 30.0], 6, 1.8, [0.45, 0.75]),
@@ -981,6 +996,18 @@ static func lakes() -> Dictionary:
 			pebble_layer(rock_style(Color(0.74, 0.74, 0.74), 0.0, false, {"top_light": 0.3}), 18.0),
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			erratic_layer(rock_style(Color(0.64, 0.68, 0.72), 0.7), 140.0),
+			# round 12: real birches, birch shores, reed bays, tall woods
+			{"kind": "tree", "models": BIRCHES, "styles": [real_birch], "spacing": 22.0, "chance": 0.6, "dist": [7.0, 400.0],
+				"scale": [0.6, 0.9], "radius": 2.2, "collide": "trunk", "trunk": 0.2},
+			{"kind": "tree", "models": BIRCHES, "styles": [real_birch, real_birch, real_birch_gold], "spacing": 6.5, "chance": 0.8,
+				"dist": [6.0, 400.0], "patch": [1], "scale": [0.6, 0.95], "radius": 2.2, "collide": "trunk", "trunk": 0.2},
+			shore_ferns,
+			white_fl,
+			{"kind": "grass", "models": ["Grass_Wide_Tall", "Grass_Wide_Tall", "Grass_Wispy_Tall", "Proc_Reeds"], "density": 900.0, "dist": [3.0, 70.0],
+				"scale": [0.6, 1.0], "palette": shore_grass, "region_palette": shore_grass, "near": true, "patch": [2]},
+			marsh,
+			{"kind": "tree", "models": TALL, "styles": [tall_dark, tall_dark, real_birch], "spacing": 9.0, "chance": 0.8,
+				"dist": [7.0, 400.0], "patch": [3], "scale": [0.72, 1.0], "radius": 3.5, "collide": "trunk", "trunk": 0.33},
 		],
 	}
 

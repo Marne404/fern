@@ -349,3 +349,20 @@ luminous plants, spores drifting upwards.
   dark, breathing slowly), crystal groves of teal giant pines with glowing moss rocks, rising spores (own
   shader, colors from the ramp). Kit colors checked in a lineup: Plant_2 blue, Plant_3 orange, Plant_4
   magenta, Plant_5 dark red, Plant_6 pink.
+
+## Step 3.12 – Lake Country
+
+Idea: Scandinavian lake country – real birches on the shores, reed bays, tall trees mirrored in calm water,
+wide meadows, dragonflies over the water.
+
+- Everywhere: real birches mixed into the shore woods, TallThick groups, broad grass (Grass_Wide) near water.
+- Patches: lake meadow 40 % (as today) · birch shore 25 % · reed bay 15 % · tall wood 20 %.
+  - Birch shore: dense real birches (fresh green, some yellow), ferns, white flowers.
+  - Reed bay: tall broad grass and reeds (Proc_Reeds) in wide belts, marsh flowers.
+  - Tall wood: TallThick in dark green, a high airy canopy with light shafts.
+- Effect "dragonflies": a few dragonflies darting and hovering near the water (ponds/lakes near the camera),
+  iridescent blue-green, by day and dry.
+- Result: real birches in the shore woods and dense birch shores with ferns and white flowers, reed bays of
+  tall broad grass with cattails and marsh flowers, tall airy woods with more light shafts. Dragonflies:
+  five iridescent blue-green ones (own body mesh + glassy wings) darting between spots along the shore of the
+  nearest pond on your side and hovering in between; small, a detail you find when you walk by the water.

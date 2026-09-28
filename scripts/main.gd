@@ -209,6 +209,7 @@ func _ready() -> void:
 	night_flies = AmbientParticles.new()
 	add_child(night_flies)
 	biome_fx = BiomeFx.new()
+	biome_fx.world = world
 	add_child(biome_fx)
 	rain_fx = RainFx.new()
 	rain_fx.world = world
