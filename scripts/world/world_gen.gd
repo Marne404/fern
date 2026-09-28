@@ -37,6 +37,8 @@ var _dune := FastNoiseLite.new()
 var _mesa := FastNoiseLite.new()
 var _gully := FastNoiseLite.new()
 var _humm := FastNoiseLite.new()
+var _border := FastNoiseLite.new()     # warps biome borders into tongues and groves
+var _patch := FastNoiseLite.new()      # cells of ~170 m: the patches (variants) inside a biome
 
 var _segment_biome := PackedInt32Array()
 var _segment_start := PackedFloat32Array()
@@ -77,6 +79,14 @@ func _init(p_seed: int) -> void:
 	_setup_noise(_mesa, 20, 0.0048, 2)
 	_setup_noise(_gully, 21, 0.018, 2)
 	_setup_noise(_humm, 22, 0.16, 1)
+	_setup_noise(_border, 23, 0.0085, 3)
+	_patch.seed = p_seed + 24
+	_patch.noise_type = FastNoiseLite.TYPE_CELLULAR
+	_patch.frequency = 1.0 / 170.0
+	_patch.fractal_type = FastNoiseLite.FRACTAL_NONE
+	_patch.cellular_distance_function = FastNoiseLite.DISTANCE_EUCLIDEAN
+	_patch.cellular_return_type = FastNoiseLite.RETURN_CELL_VALUE
+	_patch.cellular_jitter = 0.9
 	_build_biome_table()
 
 
@@ -265,6 +275,33 @@ func biome_blend(z: float) -> Vector3:
 		var w2 := smoothstep(half, -half, left)
 		return Vector3(cur, _segment_biome[k + 1], w2)
 	return Vector3(cur, cur, 0.0)
+
+
+## Weight of biome B at a point inside a transition: the straight border (t along z) is warped by a noise,
+## so the next biome reaches in as tongues and groves. 0 and 1 stay exact at the ends of the transition.
+func border_t(x: float, z: float, t: float) -> float:
+	if t <= 0.0 or t >= 1.0:
+		return t
+	return clampf(t + _border.get_noise_2d(x, z) * 0.62 * sin(PI * t), 0.0, 1.0)
+
+
+## Patch (variant) of a biome at a point: index into the biome's "patches" by their shares, frayed edges.
+func patch_at(x: float, z: float, biome: int) -> int:
+	var patches: Array = biomes[biome].get("patches", [])
+	if patches.size() < 2:
+		return 0
+	var wx := x + (paint(x * 2.3, z * 2.3) - 0.5) * 40.0
+	var wz := z + (paint(x * 2.3 + 91.0, z * 2.3 - 37.0) - 0.5) * 40.0
+	var v := clampf(_patch.get_noise_2d(wx, wz) * 0.5 + 0.5, 0.0, 0.9999)
+	var total := 0.0
+	for pt in patches:
+		total += float(pt["share"])
+	var acc := 0.0
+	for i in patches.size():
+		acc += float(patches[i]["share"]) / total
+		if v < acc:
+			return i
+	return patches.size() - 1
 
 
 func dominant_biome(z: float) -> int:
@@ -962,7 +999,7 @@ func paint(x: float, z: float) -> float:
 
 ## Base ground color (without path). slope = 1 - normal.y, rel_h = height above the path
 func ground_color(x: float, z: float, r: Dictionary, slope: float, rel_h := 0.0) -> Color:
-	var t: float = r["t"]
+	var t: float = border_t(x, z, r["t"])
 	var c := _ground_color_for(r["a"], x, z, slope, rel_h)
 	if t > 0.001:
 		c = c.lerp(_ground_color_for(r["b"], x, z, slope, rel_h), t)

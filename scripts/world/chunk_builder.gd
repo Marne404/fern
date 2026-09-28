@@ -503,14 +503,32 @@ func _scatter() -> void:
 				_scatter_layer(b, li, layer)
 
 
-func _biome_weight(b: int, r: Dictionary) -> float:
+## How strongly biome b grows at x in this row (warped border in transitions)
+func _biome_weight(b: int, r: Dictionary, x := INF) -> float:
 	var bb: Vector3 = r["blend"]
+	var t := bb.z if x == INF else gen.border_t(x, r["z"], bb.z)
 	var w := 0.0
 	if int(bb.x) == b:
-		w += 1.0 - bb.z
+		w += 1.0 - t
 	if int(bb.y) == b:
-		w += bb.z
+		w += t
 	return w
+
+
+## Patches: "patch": [i, …] grows only in those patches of its biome, "thin": {i: keep} thins it out there.
+## Decided by position (no random numbers used), so the scatter of everything else stays the same.
+func _patch_ok(b: int, layer: Dictionary, x: float, z: float) -> bool:
+	if not layer.has("patch") and not layer.has("thin"):
+		return true
+	var pi := gen.patch_at(x, z, b)
+	if layer.has("patch") and not (layer["patch"] as Array).has(pi):
+		return false
+	var keep: float = (layer.get("thin", {}) as Dictionary).get(pi, 1.0)
+	return keep >= 1.0 or _hash01(x, z) < keep
+
+
+static func _hash01(x: float, z: float) -> float:
+	return float(hash(Vector2i(roundi(x * 8.0), roundi(z * 8.0))) % 10007) / 10007.0
 
 
 func _scatter_layer(b: int, li: int, layer: Dictionary) -> void:
@@ -538,7 +556,7 @@ func _scatter_layer(b: int, li: int, layer: Dictionary) -> void:
 		var x := corner.x + lx
 		var z := corner.y + lz
 		var r := row_at(z)
-		if rng.randf() > _biome_weight(b, r):
+		if rng.randf() > _biome_weight(b, r, x) or not _patch_ok(b, layer, x, z):
 			continue
 		var off := gen.offset_in_row(x, r)
 		var d := absf(off)
@@ -605,6 +623,8 @@ func _scatter_rows(b: int, li: int, layer: Dictionary) -> void:
 					if rng.randf() > w or rng.randf() > lerpf(0.55, 1.0, clampf(veg, 0.0, 1.0)):
 						continue
 					var x: float = r["px"] + side * here / r["inv_len"] + rng.randf_range(-0.1, 0.1)
+					if not _patch_ok(b, layer, x, z):
+						continue
 					var lx := x - corner.x
 					var lz := z - corner.y + rng.randf_range(-0.15, 0.15)
 					if lx < 0.0 or lx >= SIZE or lz < 0.0 or lz >= SIZE:
@@ -751,7 +771,7 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 			if roll > chance:
 				continue
 			var r := row_at(z)
-			if rng.randf() > _biome_weight(b, r):
+			if rng.randf() > _biome_weight(b, r, x) or not _patch_ok(b, layer, x, z):
 				continue
 			# boulders for quiet meadows: never at an obstacle (they would get in the way of the puzzles)
 			if layer.get("calm", false) and not gen.calm(z):

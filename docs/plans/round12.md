@@ -131,3 +131,43 @@ macOS export (universal, unsigned; the website explains how to open it the first
 (new biomes gallery, what's new), release.
 
 Later (own rounds, not now): hiking journal, photo mode, new sounds from a bought SFX pack.
+
+---
+
+# Detailed plans and results
+
+## Step 1 – kit import (done)
+
+Result: 114 files copied (models, textures), gitignored by name; `TreeKinds` table replaces the name checks
+(CommonTree/TwistedTree squash, twins, base bushes, crown height, tree detection for cells and debug toggles),
+placing is identical for old worlds. Bark/leaf texture names mapped (Bark_Birch → Bark_BirchTree, …).
+`--lineup=Model,Model --lstyle=b/l/s` renders models in a row in the game world. Selftest passed.
+
+## Step 2 – patches and soft borders
+
+- `WorldGen.patch_at(x, z, biome)`: cellular noise (cells ~170 m, jitter 0.9), sampled at a position warped by
+  the paint noise (±20 m, frayed edges); the cell value picks a patch by the biome's `"patches"` shares.
+- Layers: `"patch": [i]` / `"thin": {i: keep}`. The decision uses a position hash, not the random stream, so
+  every other object keeps its place.
+- `WorldGen.border_t(x, z, t)`: in a transition the blend weight gets a noise offset × sin(πt) (0.62 at most):
+  tongues and islands of the next biome, exact at both ends. Used by the scatter (all layers), the ground
+  colors and the grass blade colors (per tile).
+- Test: borders Heather Highlands → Birch Wood and Deadwood Bog → Forest Trail from 30 m above.
+- Result: birch groves reach into the moor, dead trees stand among the first birches; no hard edges, no seams
+  in the ground colors.
+
+## Step 3.1 – Autumn Meadow
+
+Idea: late September, gossamer summer. Golden birch stands, hedged stubble fields, lone trees in wide meadows.
+
+- Patches: meadow 42 % (as today) · birch stand 22 % · hedge fields 20 % · lone trees 16 %.
+- Birch stand: Birch_1–5 in gold, orange and a few still yellow-green (white bark from the kit), spacing 7 m;
+  the broadleaf trees thinned to 30 % there; fly agarics and bracken turning rust-brown (Fern_2) below;
+  oyster shelves on some trunks.
+- Hedge fields: hedgerows of Bush_Long along the path at ~18 m spacing with gaps; between them golden wheat
+  stubble (Grass_Wheat, low, pale gold) instead of half of the grass; trees thinned to 25 %.
+- Lone trees: few, big TallThick trees in orange/amber standing alone; other trees thinned to 12 %.
+- Everywhere: asters (violet) and tansy-yellow flower groups from the new flower families.
+- Effect "gossamer": silk threads drifting slowly in the air (Altweibersommer), almost invisible, glinting
+  when you look towards the sun; only by day and when it's dry. New `BiomeFx` node for per-biome effects
+  (atmosphere key `fx` = {name: strength}, blended across borders), globals `sun_vector`/`sun_light`.

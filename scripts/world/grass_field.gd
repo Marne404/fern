@@ -184,8 +184,8 @@ func _build_tile(t: Vector2i, lod: int) -> MultiMeshInstance3D:
 		for i in n:
 			hs[j * n + i] = gen.height_in_row(wx + i * PATCH, r)
 	var center_row: Dictionary = rows[n / 2]
-	var blades := _blend_blades(rows[0])
-	var blades_b := _blend_blades(rows[n - 1])
+	var blades := _blend_blades(rows[0], wx + TILE * 0.5)
+	var blades_b := _blend_blades(rows[n - 1], wx + TILE * 0.5)
 	if blades["height"] < 0.03 and blades_b["height"] < 0.03:
 		return null
 
@@ -270,11 +270,11 @@ func _build_tile(t: Vector2i, lod: int) -> MultiMeshInstance3D:
 	return mmi
 
 
-func _blend_blades(r: Dictionary) -> Dictionary:
+func _blend_blades(r: Dictionary, x: float) -> Dictionary:
 	var bb: Vector3 = r["blend"]
 	var a: Dictionary = gen.biomes[int(bb.x)]["blades"]
 	var b: Dictionary = gen.biomes[int(bb.y)]["blades"]
-	var t := bb.z
+	var t := gen.border_t(x, r["z"], bb.z)
 	return {
 		"height": lerpf(a["height"], b["height"], t),
 		"root": (a["root"] as Color).lerp(b["root"], t),
