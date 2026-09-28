@@ -303,6 +303,30 @@ Candidates: Lavender fields (Provence, purple rows), Birch wood with ferns, Rain
 Canyon (red rock, arches, dry river), Bamboo grove, Autumn swamp; obstacles: scree field, fording stones,
 suspension bridge (broken planks), mud, fallen rockslide, fence with stile, thicket.
 
+### 7a – three new biomes
+- **Procedural plants:** AssetLibrary accepts `Proc_*` model names (class ProcPlants builds the ArrayMesh; surface
+  "Proc" → foliage shader mode 3 = vertex colors with wind and the usual light). Lavender bush (40 stalks with
+  purple spikes), heather cushion (low mound of pink tufts), broom bush (yellow).
+- **New layer kind `rows`:** instances in lines parallel to the path (spacing between rows, step along a row,
+  jitter), for lavender fields.
+- **Lavender Hills** (Provence): gentle hills, lavender rows beside the path, silver-green olive trees
+  (TwistedTree), cypress-like slim pines, poppies, pale limestone path, warm golden light, purple petals litter,
+  butterflies; obstacles fallen tree, stile.
+- **Birch Wood:** dense white birches, fern carpet, golden-green light with volumetric haze and shafts,
+  mushrooms, yellow leaf litter; obstacles fallen tree, river, mud.
+- **Heather Highlands:** wide rolling moor, heather cushions, granite boulders, cool grey-blue light, low clouds,
+  mist, a light drizzle (new particle kind); obstacles boulders, mud, river.
+- Music playlists, loot, website list, biome count everywhere. **Test:** screenshots of each biome (path, wide
+  view), FPS, selftest/obtest.
+
+### 7b – three new obstacles
+- **Stile fence:** a pasture fence across the valley (posts, rails, ends in bushes/rocks), a wooden stile with
+  steps at the path; climb it or jump.
+- **Mud hollow:** the path sinks into a wide mud patch (glossy dark mud surface following the terrain, puddles);
+  walking in it is slow and tiring and makes the boots wet; a few planks/stepping stones make a faster line.
+- **Boulder field:** a rockslide across the valley: big boulders to weave through and small ones to hop over.
+- World gen, obstacle manager, autopilot, obstacle test checks (crossing possible), music tension.
+
 ## 8. Performance (research + configurable options)
 
 Research, then build what gives the most without visible loss, each as a toggle.

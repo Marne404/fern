@@ -106,7 +106,7 @@ func _ready() -> void:
 		get_tree().quit()
 		return
 	if _args.has("biomes"):
-		for k in 12:
+		for k in 30:
 			print("Segment %d: %s from %.0f m" % [k, gen.biomes[gen._segment_biome[k]]["name"], gen._segment_start[k]])
 	start_z = float(_args.get("z", "0"))
 

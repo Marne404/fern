@@ -76,6 +76,9 @@ const BIOMES := [
 	["Silent Reach", "Eldertide", "Canyon Echoes", "Ambient 2", "Hollow Vale", "Starforge", "Ambient 4"],   # Cliff Lands
 	["Moonlight", "Moonshadow", "Beyond Mist", "Night Ambient 2", "Night Ambient 5", "White Moss (quiet)", "Wraithsong"],   # Glowing Forest
 	["Forgotten Waters", "Pale Waters", "Hidden Springs", "Light Ambient 4", "Ambient 10", "Sapphire Glade", "Shrouded Waters"],   # Lake Country
+	["Sapphire Glade", "Dreamspire", "Hidden Springs", "Light Ambient 2", "Ambient 1", "Eldertide", "Sunblade Horizon"],   # Lavender Hills
+	["White Moss", "Whispering Pines", "Hollow Vale", "Light Ambient 1", "Ambient 3", "Ambient 7", "Light Ambient 5"],   # Birch Wood
+	["Silent Reach", "Frozen Hollow", "Beyond Mist", "Ambient 8", "Light Ambient 3", "Canyon Echoes", "Night Ambient 3"],   # Heather Highlands
 ]
 
 ## Situations that override the biome playlist

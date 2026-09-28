@@ -36,6 +36,18 @@ func clear_styled() -> void:
 	_styled.clear()
 
 
+var _white_tex: ImageTexture
+
+
+func _white() -> ImageTexture:
+	if _white_tex == null:
+		var img := Image.create(4, 4, true, Image.FORMAT_RGBA8)
+		img.fill(Color.WHITE)
+		img.generate_mipmaps()
+		_white_tex = ImageTexture.create_from_image(img)
+	return _white_tex
+
+
 func texture(file: String) -> Texture2D:
 	if not _tex.has(file):
 		_tex[file] = load(DIR + file)
@@ -45,6 +57,9 @@ func texture(file: String) -> Texture2D:
 ## Original mesh from the glTF scene
 func raw_mesh(model: String) -> ArrayMesh:
 	if _raw.has(model):
+		return _raw[model]
+	if model.begins_with("Proc_"):
+		_raw[model] = ProcPlants.build(model)
 		return _raw[model]
 	var scene: PackedScene = load(DIR + model + ".gltf")
 	var inst := scene.instantiate()
@@ -204,6 +219,24 @@ func _make_material(src: ArrayMesh, s: int, mat_name: String, style: Dictionary,
 			if k != "texture":
 				mat.set_shader_parameter(k, st[k])
 		return mat
+
+	if mat_name == "Proc":
+		# procedural plants: colors from the vertices, wind and light like the other plants
+		var st: Dictionary = style.get("plant", {})
+		var pm := ShaderMaterial.new()
+		pm.shader = foliage_shader
+		pm.set_shader_parameter("mode", 3)
+		pm.set_shader_parameter("albedo_tex", _white())
+		pm.set_shader_parameter("object_height", height)
+		pm.set_shader_parameter("alpha_cut", 0.05)
+		pm.set_shader_parameter("stiffness", st.get("stiffness", 2.5))
+		pm.set_shader_parameter("flutter", 0.03)
+		pm.set_shader_parameter("translucency", 0.45)
+		pm.set_shader_parameter("wrap", 0.5)
+		for k in st:
+			if k != "stiffness":
+				pm.set_shader_parameter(k, st[k])
+		return pm
 
 	if mat_name == "Mushrooms":
 		var mat := StandardMaterial3D.new()

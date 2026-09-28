@@ -73,9 +73,9 @@ static func _weighted(rng: RandomNumberGenerator) -> String:
 
 
 static func _loot(type: String, biome: int, rng: RandomNumberGenerator) -> Array:
-	var cold := biome in [6, 7]          # Mountain Pines, Deadwood Bog
-	var hot := biome == 2                # Desert Valley
-	var forest := biome in [1, 5, 10]    # Forest Trail, Red Maple Wood, Glowing Forest
+	var cold := biome in [6, 7, 14]      # Mountain Pines, Deadwood Bog, Heather Highlands
+	var hot := biome in [2, 12]          # Desert Valley, Lavender Hills
+	var forest := biome in [1, 5, 10, 13] # Forest Trail, Red Maple Wood, Glowing Forest, Birch Wood
 	var coast := biome == 8              # Sunset Coast
 	var food := ["apfel", "apfel", "brot", "muesliriegel", "bohnen", "beeren", "kaese", "sandwich", "schokolade",
 		"trockenobst", "moehre", "keks", "honig", "glueckskeks"]
@@ -84,6 +84,8 @@ static func _loot(type: String, biome: int, rng: RandomNumberGenerator) -> Array
 	var drink := ["wasserflasche", "limonade", "saft"]
 	if hot:
 		drink += ["wasserflasche", "saft", "wasserflasche"]
+	if biome == 12:
+		food += ["honig", "honig"]
 	if cold:
 		drink += ["tee", "kakao", "tee"]
 	var gear := ["verband", "seil", "taschenlampe", "fernglas", "feldhandbuch", "kamera", "kompass", "karte", "messer",

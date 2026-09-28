@@ -365,7 +365,7 @@ func _scatter() -> void:
 		present[int(bb.x)] = true
 		present[int(bb.y)] = true
 	# large objects first, so trees avoid rocks
-	var passes := [["rock"], ["tree"], ["grass", "detail", "cluster", "path_stones"]]
+	var passes := [["rock"], ["tree"], ["grass", "detail", "cluster", "path_stones", "rows"]]
 	if lod == 2:
 		passes = [["rock"], ["tree"]]
 	for pass_kind in passes:
@@ -394,6 +394,9 @@ func _scatter_layer(b: int, li: int, layer: Dictionary) -> void:
 	var kind: String = layer["kind"]
 	if kind == "tree" or kind == "rock":
 		_scatter_grid(b, li, layer)
+		return
+	if kind == "rows":
+		_scatter_rows(b, li, layer)
 		return
 	var density: float = layer.get("density", 0.0)
 	if density <= 0.0:
@@ -447,6 +450,45 @@ func _scatter_layer(b: int, li: int, layer: Dictionary) -> void:
 				_place_cluster(b, li, layer, lx, lz)
 			_:
 				_place_simple(b, li, layer, lx, lz, x, z)
+
+
+## Plants in lines parallel to the path (lavender fields): row_spacing between the rows, step along them.
+## Fields come in patches (region noise), rows start at dist[0] and end at dist[1] beside the path.
+func _scatter_rows(b: int, li: int, layer: Dictionary) -> void:
+	rng.seed = hash([gen.seed_value, coord.x, coord.y, b, li, 7])
+	var row_spacing: float = layer["row_spacing"]
+	var step: float = layer["step"]
+	var dist: Array = layer["dist"]
+	var sc: Array = layer["scale"]
+	var models: Array = layer["models"]
+	var z := ceilf(corner.y / step) * step
+	while z < corner.y + SIZE:
+		var r := row_at(z)
+		var w := _biome_weight(b, r)
+		if w > 0.02:
+			for side: float in [-1.0, 1.0]:
+				var off: float = dist[0] + row_spacing * 0.5
+				while off < dist[1]:
+					var here := off
+					off += row_spacing
+					if rng.randf() > w or rng.randf() > lerpf(0.55, 1.0, clampf(veg, 0.0, 1.0)):
+						continue
+					var x: float = r["px"] + side * here / r["inv_len"] + rng.randf_range(-0.1, 0.1)
+					var lx := x - corner.x
+					var lz := z - corner.y + rng.randf_range(-0.15, 0.15)
+					if lx < 0.0 or lx >= SIZE or lz < 0.0 or lz >= SIZE:
+						continue
+					# fields in patches, a few bushes missing
+					if gen.region(x * 0.6 + 300.0, z * 0.6) < 0.42 or rng.randf() < 0.06:
+						continue
+					if gen.path_value(gen.offset_in_row(x, r), r["half_w"]) > 0.2:
+						continue
+					if _wet(lx, lz, 0.1) or _in_clearing(lx, lz) or _in_rock(lx, lz) or _below_sea(lx, lz, r) or surface_normal(lx, lz).y < 0.8:
+						continue
+					var model: String = models[rng.randi() % models.size()]
+					var xf := _ground_xf(lx, lz, rng.randf_range(sc[0], sc[1]), 0.4, 0.0)
+					_add(layer_key(b, li, 0, model), xf, Color(0, 0, 0, rng.randf()))
+		z += step
 
 
 func _pick_style(layer: Dictionary, x: float, z: float) -> int:

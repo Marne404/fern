@@ -2,7 +2,7 @@
 #include "res://shaders/wind.gdshaderinc"
 global uniform vec2 grass_fade;   // grass tufts: start and end of the thinning (m)
 
-// 0 = tree crown, 1 = grass (colors per instance), 2 = plant with texture color
+// 0 = tree crown, 1 = grass (colors per instance), 2 = plant with texture color, 3 = plant with vertex colors
 uniform int mode = 0;
 
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap;
@@ -36,6 +36,7 @@ varying float v_gust;
 varying float v_var;
 varying float v_cloud;
 varying vec4 v_custom;
+varying vec3 v_vcol;
 
 vec3 adjust_saturation(vec3 c, float s) {
 	float l = dot(c, vec3(0.299, 0.587, 0.114));
@@ -64,9 +65,10 @@ void vertex() {
 	} else {
 		weight = clamp(VERTEX.y / object_height, 0.0, 1.0);
 		v_grad = weight;
-		v_shade = 0.0;
+		v_shade = mode == 3 ? INSTANCE_CUSTOM.a : 0.0;
 		v_tip = vec3(0.0);
 	}
+	v_vcol = COLOR.rgb;
 	if (ground_normal > 0.0) {
 		NORMAL = normalize(mix(NORMAL, vec3(0.0, 1.0, 0.0), ground_normal));
 	}
@@ -112,7 +114,9 @@ void vertex() {
 void fragment() {
 	vec4 tex = texture(albedo_tex, UV);
 	vec3 col;
-	if (mode == 1) {
+	if (mode == 3) {
+		col = v_vcol * (0.82 + 0.3 * v_grad) * (0.92 + 0.16 * fract(v_shade * 17.31));
+	} else if (mode == 1) {
 		vec3 tip = v_tip;
 		vec3 root = mix(pow(tip, vec3(1.5)) * 0.42, tip * 0.6, 0.5);
 		col = mix(root, tip, smoothstep(0.0, 0.95, v_grad));
@@ -145,7 +149,7 @@ void fragment() {
 #endif
 	ROUGHNESS = 1.0;
 	// soft normals shouldn't be mirrored on back faces
-	if (mode != 2) {
+	if (mode != 2 && mode != 3) {
 		NORMAL = FRONT_FACING ? NORMAL : -NORMAL;
 	}
 }

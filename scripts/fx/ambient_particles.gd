@@ -51,6 +51,44 @@ func set_kind(p_kind: String, p_color: Color) -> void:
 		gt.gradient = g
 		pm.color_initial_ramp = gt
 		mat.shader = preload("res://shaders/leaf_particle.gdshader")
+	elif kind == "drizzle":
+		# light highland drizzle: thin streaks that fall slanted in the wind
+		particles.amount = 700
+		particles.lifetime = 1.6
+		pm.emission_box_extents = Vector3(22, 3, 22)
+		pm.direction = (Vector3.DOWN * 3.0 + wdir).normalized()
+		pm.spread = 4.0
+		pm.initial_velocity_min = 7.0
+		pm.initial_velocity_max = 9.0
+		pm.gravity = Vector3(0, -2.0, 0)
+		pm.scale_min = 1.0
+		pm.scale_max = 1.0
+		pm.particle_flag_align_y = true
+		var gd := Gradient.new()
+		gd.set_color(0, Color(1, 1, 1, 0))
+		gd.set_color(1, Color(1, 1, 1, 0))
+		gd.add_point(0.15, Color(1, 1, 1, 1))
+		gd.add_point(0.85, Color(1, 1, 1, 1))
+		var gtd := GradientTexture1D.new()
+		gtd.gradient = gd
+		pm.color_ramp = gtd
+		var sm := StandardMaterial3D.new()
+		sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		sm.vertex_color_use_as_albedo = true
+		sm.albedo_color = Color(color, 0.2)
+		sm.billboard_mode = BaseMaterial3D.BILLBOARD_FIXED_Y
+		sm.billboard_keep_scale = true
+		sm.disable_receive_shadows = true
+		var streak := QuadMesh.new()
+		streak.size = Vector2(0.01, 0.3)
+		streak.material = sm
+		particles.process_material = pm
+		particles.draw_pass_1 = streak
+		particles.preprocess = particles.lifetime
+		pm.emission_shape_offset = Vector3(0, 6, 0)
+		add_child(particles)
+		return
 	elif kind == "fireflies":
 		particles.amount = 160
 		particles.lifetime = 10.0
