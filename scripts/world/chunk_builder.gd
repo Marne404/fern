@@ -564,6 +564,8 @@ func _scatter_layer(b: int, li: int, layer: Dictionary) -> void:
 				continue
 		if _wet(lx, lz, 0.05) or _in_clearing(lx, lz) or _below_sea(lx, lz, r) or _in_rock(lx, lz):
 			continue
+		if layer.get("calm", false) and not gen.calm(z):
+			continue
 		if layer.has("slope"):
 			# scree: only on the steeper flanks, in the tongues of loose stones
 			var sl := 1.0 - surface_normal(lx, lz).y
@@ -750,6 +752,9 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 				continue
 			var r := row_at(z)
 			if rng.randf() > _biome_weight(b, r):
+				continue
+			# boulders for quiet meadows: never at an obstacle (they would get in the way of the puzzles)
+			if layer.get("calm", false) and not gen.calm(z):
 				continue
 			var soff := gen.offset_in_row(x, r)
 			var d := absf(soff)

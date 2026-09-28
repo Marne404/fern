@@ -149,13 +149,13 @@ static func small_rock_layer(style: Dictionary, density := 3.0, dist := [2.0, 12
 static func scree_layer(style: Dictionary, density := 60.0) -> Dictionary:
 	return {"kind": "detail", "models": ["Rock_Medium_1", "Rock_Medium_2", "Rock_Medium_3", "Pebble_Round_2", "Pebble_Round_4"],
 		"styles": [style], "density": density, "dist": [5.0, 110.0], "slope": [0.18, 0.64], "scale": [0.12, 0.42],
-		"sink": 0.08, "tilt": 1.0, "shadows": false, "vis": 100.0, "near": true}
+		"sink": 0.08, "tilt": 1.0, "shadows": false, "vis": 100.0, "near": true, "calm": true}
 
 
 ## Big lone boulders the glaciers left behind, mossy on top
 static func erratic_layer(style: Dictionary, spacing := 110.0) -> Dictionary:
 	return {"kind": "rock", "models": ROCKS, "styles": [style], "spacing": spacing, "chance": 0.45, "dist": [16.0, 170.0],
-		"scale": [3.4, 6.2], "squash": Vector3(1.25, 0.95, 1.1), "sink": 0.24, "radius": 6.0, "collide": "rock"}
+		"scale": [3.4, 6.2], "squash": Vector3(1.25, 0.95, 1.1), "sink": 0.24, "radius": 6.0, "collide": "rock", "calm": true}
 
 
 static func cluster_layer(models: Array, density: float, dist: Array, count: int, radius: float, scale: Array, shadows := false, style := {}) -> Dictionary:
@@ -182,7 +182,6 @@ static func meadow() -> Dictionary:
 			"obstacles": ["river", "fallen_tree", "cliff", "stile"]}),
 		"atmosphere": atmosphere({"deer": true, "shafts": 0.35, "mountain_color": Color(0.52, 0.56, 0.44), "mountain_snow": 0.2, "particles": "leaves", "particle_color": Color(1.0, 0.5, 0.12), "butterflies": 10, "gusts": 0.85}),
 		"layers": [
-			erratic_layer(rock_style(Color(0.66, 0.67, 0.64), 0.7), 150.0),
 			grass_layer([Color(0.42, 0.74, 0.1), Color(0.34, 0.64, 0.08), Color(0.55, 0.8, 0.14), Color(0.48, 0.72, 0.12)],
 				[Color(0.98, 0.55, 0.14), Color(0.95, 0.35, 0.1), Color(1.0, 0.75, 0.25), Color(0.85, 0.22, 0.08), Color(0.7, 0.85, 0.2)]),
 			{"kind": "tree", "models": COMMON, "styles": [green], "region_styles": [orange, orange, red, yellow],
@@ -204,6 +203,8 @@ static func meadow() -> Dictionary:
 			cluster_layer(["Mushroom_Common"], 0.6, [2.0, 5.0], 4, 0.5, [0.9, 1.6]),
 			pebble_layer(rock_style(Color(0.7, 0.71, 0.68), 0.0, false, {"top_light": 0.3})),
 			small_rock_layer(rock),
+			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
+			erratic_layer(rock_style(Color(0.66, 0.67, 0.64), 0.7), 150.0),
 		],
 	}
 
@@ -357,7 +358,6 @@ static func spring() -> Dictionary:
 			"particles": "motes", "particle_color": Color(1.0, 1.0, 0.85), "butterflies": 16,
 			"mountain_color": Color(0.46, 0.6, 0.56), "mountain_shadow": Color(0.4, 0.5, 0.64), "mountain_snow": 0.45, "mountain_scale": 1.25}),
 		"layers": [
-			erratic_layer(rock_style(Color(0.7, 0.7, 0.68), 0.7), 130.0),
 			grass_layer([Color(0.42, 0.76, 0.12), Color(0.34, 0.66, 0.1), Color(0.56, 0.84, 0.18), Color(0.48, 0.8, 0.14)],
 				[Color(0.62, 0.86, 0.2), Color(0.9, 0.9, 0.35), Color(0.5, 0.8, 0.16)], 2400.0, Vector2(0.28, 0.52), SHORT_GRASS + ["Grass_Common_Tall"]),
 			{"kind": "tree", "models": COMMON, "styles": [oak, oak, fresh], "spacing": 24.0, "chance": 0.6, "dist": [9.0, 400.0],
@@ -378,6 +378,8 @@ static func spring() -> Dictionary:
 			cluster_layer(["Fern_1"], 0.25, [4.0, 30.0], 1, 0.8, [0.26, 0.36], true),
 			pebble_layer(rock_style(Color(0.74, 0.74, 0.72), 0.0, false, {"top_light": 0.3}), 16.0),
 			small_rock_layer(rock, 1.5),
+			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
+			erratic_layer(rock_style(Color(0.7, 0.7, 0.68), 0.7), 130.0),
 		],
 	}
 
@@ -442,7 +444,6 @@ static func alpine() -> Dictionary:
 			"cloud_coverage": 0.46, "cirrus_amount": 0.95, "particles": "motes", "butterflies": 4,
 			"mountain_color": Color(0.56, 0.62, 0.72), "mountain_shadow": Color(0.4, 0.48, 0.66), "mountain_snow": 0.75, "mountain_scale": 1.7}),
 		"layers": [
-			scree_layer(rock_style(Color(0.7, 0.7, 0.72), 0.1), 70.0),
 			grass_layer([Color(0.36, 0.66, 0.14), Color(0.46, 0.72, 0.2), Color(0.3, 0.58, 0.12), Color(0.52, 0.76, 0.22)],
 				[Color(0.62, 0.74, 0.28), Color(0.46, 0.68, 0.2)], 2200.0, Vector2(0.35, 0.65)),
 			{"kind": "tree", "models": PINES, "styles": [pine, pine, pine_light], "spacing": 10.0, "chance": 0.65, "dist": [8.0, 400.0],
@@ -457,6 +458,8 @@ static func alpine() -> Dictionary:
 			cluster_layer(["Clover_1", "Clover_2"], 0.6, [2.5, 25.0], 8, 1.4, [0.5, 0.9]),
 			pebble_layer(rock_style(Color(0.76, 0.77, 0.78), 0.0, false, {"top_light": 0.3}), 45.0),
 			small_rock_layer(rock, 9.0, [2.0, 24.0]),
+			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
+			scree_layer(rock_style(Color(0.7, 0.7, 0.72), 0.1), 70.0),
 		],
 	}
 
@@ -564,7 +567,6 @@ static func cliffs() -> Dictionary:
 			"saturation": 1.12, "rainbow": 0.5, "particles": "motes", "butterflies": 10, "temperature": 18.0,
 			"mountain_color": Color(0.5, 0.6, 0.72), "mountain_shadow": Color(0.38, 0.46, 0.66), "mountain_snow": 0.55, "mountain_scale": 1.4}),
 		"layers": [
-			scree_layer(rock_style(Color(0.72, 0.7, 0.66), 0.1), 50.0),
 			grass_layer([Color(0.5, 0.82, 0.16), Color(0.42, 0.74, 0.12), Color(0.62, 0.88, 0.22)],
 				[Color(0.75, 0.9, 0.25), Color(0.55, 0.82, 0.18)], 2800.0, Vector2(0.55, 1.0)),
 			{"kind": "tree", "models": COMMON, "styles": [round_tree, round_tree, deep], "spacing": 8.0, "chance": 0.85, "dist": [7.0, 400.0],
@@ -578,6 +580,8 @@ static func cliffs() -> Dictionary:
 				"dist": [2.5, 45.0], "count": 24, "radius": 4.0, "scale": [0.45, 0.8],
 				"tints": [Color(1.0, 1.0, 1.0), Color(1.0, 0.9, 0.3), Color(0.5, 0.65, 1.0)], "vis": 75.0, "near": true, "tilt": 0.8},
 			pebble_layer(rock_style(Color(0.74, 0.76, 0.8), 0.0, false, {"top_light": 0.3}), 18.0),
+			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
+			scree_layer(rock_style(Color(0.72, 0.7, 0.66), 0.1), 50.0),
 		],
 	}
 
@@ -642,7 +646,6 @@ static func lakes() -> Dictionary:
 			"horizon_color": Color(0.85, 0.93, 1.0), "cloud_coverage": 0.5, "particles": "motes", "butterflies": 8,
 			"temperature": 16.0, "mountain_color": Color(0.5, 0.62, 0.7), "mountain_snow": 0.4}),
 		"layers": [
-			erratic_layer(rock_style(Color(0.64, 0.68, 0.72), 0.7), 140.0),
 			grass_layer([Color(0.5, 0.78, 0.18), Color(0.42, 0.7, 0.14), Color(0.6, 0.84, 0.22)],
 				[Color(0.8, 0.85, 0.35), Color(0.6, 0.8, 0.2)], 2400.0),
 			{"kind": "tree", "models": COMMON, "styles": [birch, birch, willow], "spacing": 11.0, "chance": 0.7, "dist": [7.0, 400.0],
@@ -652,6 +655,8 @@ static func lakes() -> Dictionary:
 			cluster_layer(["Flower_3_Group", "Flower_3_Single"], 1.0, [2.5, 30.0], 6, 1.8, [0.45, 0.75]),
 			cluster_layer(["Clover_1", "Clover_2"], 0.8, [2.5, 25.0], 8, 1.5, [0.6, 1.0]),
 			pebble_layer(rock_style(Color(0.74, 0.74, 0.74), 0.0, false, {"top_light": 0.3}), 18.0),
+			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
+			erratic_layer(rock_style(Color(0.64, 0.68, 0.72), 0.7), 140.0),
 		],
 	}
 
@@ -680,7 +685,6 @@ static func lavender() -> Dictionary:
 			"temperature": 25.0, "mountain_color": Color(0.62, 0.58, 0.74), "mountain_shadow": Color(0.5, 0.46, 0.68),
 			"mountain_snow": 0.1, "sun_glow": 0.5}),
 		"layers": [
-			erratic_layer(rock_style(Color(0.88, 0.84, 0.74), 0.3), 160.0),
 			grass_layer([Color(0.56, 0.66, 0.32), Color(0.5, 0.6, 0.28), Color(0.64, 0.7, 0.38)],
 				[Color(0.76, 0.74, 0.44), Color(0.68, 0.64, 0.36)], 900.0, Vector2(0.3, 0.52)),
 			{"kind": "rows", "models": ["Proc_Lavender"], "styles": [{"plant": {"stiffness": 2.5}}], "row_spacing": 1.9, "step": 1.1,
@@ -696,6 +700,8 @@ static func lavender() -> Dictionary:
 			poppies,
 			pebble_layer(rock_style(Color(0.86, 0.83, 0.76), 0.0, false, {"top_light": 0.3}), 26.0),
 			small_rock_layer(rock),
+			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
+			erratic_layer(rock_style(Color(0.88, 0.84, 0.74), 0.3), 160.0),
 		],
 	}
 
@@ -766,7 +772,6 @@ static func highlands() -> Dictionary:
 			"temperature": 9.0, "mountain_color": Color(0.44, 0.5, 0.56), "mountain_shadow": Color(0.36, 0.42, 0.52),
 			"mountain_snow": 0.35, "gusts": 0.9, "rainbow": 0.5}),
 		"layers": [
-			scree_layer(rock_style(Color(0.66, 0.66, 0.68), 0.2), 45.0), erratic_layer(rock_style(Color(0.62, 0.64, 0.62), 0.75), 90.0),
 			grass_layer([Color(0.52, 0.6, 0.24), Color(0.46, 0.54, 0.2), Color(0.62, 0.62, 0.3)],
 				[Color(0.66, 0.46, 0.56), Color(0.58, 0.4, 0.5), Color(0.72, 0.6, 0.4)], 1700.0, Vector2(0.4, 0.7)),
 			cluster_layer(["Proc_Heather"], 3.4, [2.5, 70.0], 5, 2.2, [0.8, 1.35], true),
@@ -779,5 +784,7 @@ static func highlands() -> Dictionary:
 			cluster_layer(["Fern_1"], 0.6, [3.0, 30.0], 2, 1.2, [0.3, 0.42], true),
 			pebble_layer(rock_style(Color(0.66, 0.66, 0.66), 0.0, false, {"top_light": 0.3}), 20.0),
 			small_rock_layer(granite, 5.0, [2.0, 16.0]),
+			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
+			scree_layer(rock_style(Color(0.66, 0.66, 0.68), 0.2), 45.0), erratic_layer(rock_style(Color(0.62, 0.64, 0.62), 0.75), 90.0),
 		],
 	}

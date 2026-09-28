@@ -124,6 +124,9 @@ that competes with the scout; motion slow and calm.
   sides carved up to ~2.5 m (more on higher hills), a moist darker green in them. Hummocks: small positive bumps
   (≤ 1.1 m) off the trail in meadows. Scree: gray stone tongues on 10–40° flanks (ground color) plus loose stones
   of the scree layer. Erratic boulders: big mossy rocks every 90–160 m in meadows, highlands and lavender hills.
+  Lesson: new scatter layers must go at the END of a biome's list (the layer index seeds the scatter; inserting
+  one reshuffled every tree and rock after it, and the river log test hit a new tree). Variety stays away from
+  obstacles (`calm(z)`).
 
 ## 9. Mood
 

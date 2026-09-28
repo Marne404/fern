@@ -310,8 +310,8 @@ func row(z: float, with_ponds := true) -> Dictionary:
 		"depth": lerpf(a["path_depth"], b["path_depth"], t),
 		"rough": lerpf(a["roughness"], b["roughness"], t),
 		"scree": lerpf(a["scree"], b["scree"], t),
-		"gully": lerpf(a["gullies"], b["gullies"], t),
-		"humm": lerpf(a["hummocks"], b["hummocks"], t),
+		"gully": lerpf(a["gullies"], b["gullies"], t) * _calm(z),
+		"humm": lerpf(a["hummocks"], b["hummocks"], t) * _calm(z),
 		"terr": lerpf(a["terraces"], b["terraces"], t),
 		"coast": lerpf(a.get("coast", 0.0), b.get("coast", 0.0), t),
 		"sea": coast_info(z).x,
@@ -932,6 +932,18 @@ func _cliff_term(z: float, c: Dictionary, off: float, x: float) -> float:
 
 func height(x: float, z: float) -> float:
 	return height_in_row(x, row(z))
+
+
+## 1 far from every obstacle (rivers, cliffs, pools, fallen trees…), 0 near them: the puzzles keep their
+## hand-tuned ground, the variety (hummocks, gullies, boulders) stays away.
+func _calm(z: float) -> float:
+	if not rivers_near(z).is_empty() or not cliffs_near(z).is_empty() or not pools_near(z).is_empty():
+		return 0.0
+	return 0.0 if obstacle_zone(z, 90.0) else 1.0
+
+
+func calm(z: float) -> bool:
+	return _calm(z) > 0.5
 
 
 ## 0..1: how deep in an erosion gully a point lies (before strength and slope)
