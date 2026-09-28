@@ -38,6 +38,14 @@ that competes with the scout; motion slow and calm.
   mist banks (large camera-facing sheets with noise, fading near the camera and at the edges) in hollows.
 - **Fireflies** at dusk and night in all biomes (warm yellow-green; teal in the Glowing Forest; fewer in the desert).
 - Stars and a moon in the sky shader at night.
+- **Result:** DayCycle (key moods at 0, 4.6, 5.25, 6.1, 7.6, 9.8–15.4, 17.6, 19.25, 20.05, 21 h), sun path relative
+  to the biome's own sun direction (±55° azimuth), moon from 20:03 to 5:15 (switch where the light is 0),
+  `clock` affinity (Sunset Coast 0.35, Glowing Forest 0.3; nights still get dark), `mist_amount` per biome.
+  Godot's height fog only depends on height (whiteout next to you), so the valley mist is an own full-screen pass:
+  analytic exponential height fog along the view ray with drifting patches (faded out far away, where they alias).
+  Stars (two layers + faint band), moon disc with halo, fireflies everywhere at dusk/night (few in the desert),
+  nights 6 °C cooler, water emission scaled by `daylight`, HUD sun/moon dial, sleeping skips to 6:24, title screen
+  at 17:12. Mist pass: no measurable GPU cost.
 
 ## 3. Weather
 

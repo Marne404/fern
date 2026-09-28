@@ -27,12 +27,17 @@ var menus: Menus
 var streaks: WindStreaks
 var butterflies: Butterflies
 var particles: AmbientParticles
+## fireflies at dusk and night in every biome
+var night_flies: AmbientParticles
 var gusts: WindGusts
 var leaf_fall: LeafFall
 var desert_fx: DesertFx
 var mountains: Mountains
 var birds: Birds
 var shafts: MeshInstance3D
+## valley mist in the mornings (full-screen pass)
+var mist: MeshInstance3D
+var _mist_mat: ShaderMaterial
 var outlines: MeshInstance3D
 var film: ColorRect
 var underwater_fx: ColorRect
@@ -160,6 +165,8 @@ func _ready() -> void:
 	menu_cam.far = 4000.0
 	add_child(menu_cam)
 	menu_cam.start_z = start_z + 30.0
+	# the title screen shows the golden hour (the clock only runs while hiking)
+	atmosphere.day.hour = 17.2
 	menu_scout = Scout.new(Settings.values.get("scout", {}))
 	menu_scout.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(menu_scout)
@@ -172,6 +179,8 @@ func _ready() -> void:
 	butterflies = Butterflies.new()
 	butterflies.world = world
 	particles = AmbientParticles.new()
+	night_flies = AmbientParticles.new()
+	add_child(night_flies)
 	birds = Birds.new()
 	birds.world = world
 	mountains = Mountains.new()
@@ -304,7 +313,13 @@ func start_journey() -> void:
 		music.stinger("kollaps"))
 	player.recovered.connect(func(): hud.collapse_fade(false))
 	player.message.connect(hud.show_message)
-	player.sleep_fade.connect(func(on): hud.collapse_fade(on, "Zzz …"))
+	player.sleep_fade.connect(func(on):
+		hud.collapse_fade(on, "Zzz …")
+		# sleeping through the night: you wake up in the morning (the clock jumps while the screen is dark)
+		if on:
+			get_tree().create_timer(1.3).timeout.connect(func():
+				atmosphere.day.sleep()
+				atmosphere.update(world.local_to_world(player.global_position).z, 0.0, true)))
 	hud.set_player(player)
 	if _args.has("autowalk"):
 		player.autopilot = _autopilot
@@ -315,6 +330,10 @@ func start_journey() -> void:
 	_last_biome = -1
 	music.start_biome(gen.dominant_biome(start_z))
 	mode = Mode.PLAYING
+	# a journey begins in the morning (test helper: --hour=19.5)
+	atmosphere.day.hour = float(_args.get("hour", "7.0"))
+	atmosphere.day.advance(0.0)
+	atmosphere.update(start_z, 0.0, true)
 	hud.set_playing(true)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -480,6 +499,10 @@ func _process_inner(delta: float) -> void:
 	world.maybe_shift_origin(cam.global_position)
 
 	var wpos := world.local_to_world(cam.global_position)
+	# the clock runs while you hike (not in the menu, not while paused)
+	if mode == Mode.PLAYING and not get_tree().paused:
+		atmosphere.day.advance(delta)
+	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
 	# test helpers for tuning the lighting
 	if _args.has("tm"):
@@ -491,6 +514,7 @@ func _process_inner(delta: float) -> void:
 	var fwd := -cam.global_basis.z
 	particles.set_kind(atmosphere.current.get("particles", "motes"), atmosphere.current.get("particle_color", Color.WHITE))
 	particles.follow(cam.global_position, fwd)
+	_update_night_flies(cam, fwd)
 	gusts.strength = atmosphere.current.get("gusts", 0.5)
 	leaf_fall.update(cam, delta)
 	desert_fx.update(cam, delta, atmosphere.current.get("dust", 0.0))
@@ -528,6 +552,7 @@ func _process_inner(delta: float) -> void:
 	outlines.visible = Settings.values["outlines"]
 	mountains.follow(cam.global_position, world.height_local(cam.global_position.x, cam.global_position.z) - 30.0)
 	_update_shafts(cam)
+	_update_mist()
 
 	var biome := atmosphere.dominant
 	if mode != Mode.MENU:
@@ -556,7 +581,8 @@ func _process_inner(delta: float) -> void:
 				hud.show_message("Made it!")
 		journey_distance = maxf(journey_distance, gen.arc_length(pw.z) - gen.arc_length(start_z))
 		hud.set_distance(journey_distance)
-		player.air_temp = atmosphere.current.get("temperature", 16.0)
+		hud.set_hour(atmosphere.day.hour)
+		player.air_temp = atmosphere.shown.get("temperature", 16.0)
 		hud.update_body(player.body.stamina, player.body.state, delta)
 		hud.set_prompt(player.prompt, player.prompt_title, player.prompt_action)
 		hud.set_needs(player.body.needs())
@@ -675,6 +701,16 @@ func _setup_shafts() -> void:
 	shafts.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	shafts.custom_aabb = AABB(Vector3(-1e5, -1e5, -1e5), Vector3(2e5, 2e5, 2e5))
 	add_child(shafts)
+	_mist_mat = ShaderMaterial.new()
+	_mist_mat.shader = preload("res://shaders/mist.gdshader")
+	_mist_mat.set_shader_parameter("noise_tex", preload("res://assets/paint_noise.tres"))
+	_mist_mat.render_priority = 100
+	mist = MeshInstance3D.new()
+	mist.mesh = quad
+	mist.material_override = _mist_mat
+	mist.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mist.custom_aabb = AABB(Vector3(-1e5, -1e5, -1e5), Vector3(2e5, 2e5, 2e5))
+	add_child(mist)
 
 
 ## What's happening decides the music: obstacle ahead / on the rope / in the current → tension,
@@ -741,6 +777,38 @@ func _setup_post() -> void:
 	underwater_fx.material = um
 	underwater_fx.visible = false
 	layer.add_child(underwater_fx)
+
+
+func _update_night_flies(cam: Camera3D, fwd: Vector3) -> void:
+	var flies: float = atmosphere.shown.get("flies", 0.0)
+	# the Glowing Forest has its own fireflies; in the dry desert there are only a few
+	if atmosphere.current.get("particles", "") == "fireflies":
+		flies = 0.0
+	elif gen.biomes[atmosphere.dominant]["terrain"].get("dunes", 0.0) > 0.5:
+		flies *= 0.15
+	if flies <= 0.01:
+		if night_flies.particles:
+			night_flies.particles.emitting = false
+		return
+	night_flies.set_kind("fireflies", Color(0.86, 1.0, 0.42))
+	if night_flies.particles:
+		night_flies.particles.emitting = true
+		night_flies.particles.amount_ratio = flies
+	night_flies.follow(cam.global_position, fwd)
+
+
+func _update_mist() -> void:
+	var sh := atmosphere.shown
+	var amount: float = sh.get("mist", 0.0)
+	mist.visible = amount > 0.01 and atmosphere.underwater < 0.01
+	if not mist.visible:
+		return
+	_mist_mat.set_shader_parameter("amount", amount)
+	_mist_mat.set_shader_parameter("base_y", atmosphere.valley_y)
+	var fc: Color = sh["fog_color"]
+	_mist_mat.set_shader_parameter("mist_color", fc.lerp(Color(1, 1, 1), 0.25))
+	_mist_mat.set_shader_parameter("sun_color", sh["sun_color"])
+	_mist_mat.set_shader_parameter("to_sun", -(sh["sun_dir"] as Vector3).normalized())
 
 
 ## Project the sun onto the screen; shafts only when it is roughly in view

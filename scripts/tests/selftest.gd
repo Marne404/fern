@@ -143,6 +143,7 @@ func run() -> void:
 	await _test_voice(p)
 	await _test_backpack(p)
 	await _test_steps(p)
+	_test_day_cycle()
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -309,6 +310,32 @@ func _test_steps(p: Wanderer) -> void:
 	check("A step on the path leaves a print", after == before + 1 or kind in ["grass", "wood", "water"], "%s %d→%d" % [kind, before, after])
 	await frames(40)
 	check("Step sound players are freed", p.get_children().filter(func(c): return c is AudioStreamPlayer and not c.playing).size() == 0)
+
+
+## Times of day: moods, sun/moon, sleep, speed
+func _test_day_cycle() -> void:
+	var d := DayCycle.new()
+	d.hour = 23.0
+	check("Night has stars and fireflies", d.mood()["stars"] > 0.9 and d.mood()["flies"] > 0.9)
+	check("At night the light is the moon", d.light_dir(Vector3(0.4, -0.6, 0.7))[1] == true)
+	d.hour = 12.5
+	var sun: Vector3 = d.light_dir(Vector3(0.4, -0.6, 0.7))[0]
+	check("At midday the sun keeps the biome's direction", sun.normalized().dot(Vector3(0.4, -0.6, 0.7).normalized()) > 0.99, str(sun))
+	d.hour = 6.3
+	check("Morning mist", d.mood()["mist"] > 0.8)
+	d.hour = 21.0
+	d.sleep()
+	check("Sleeping through the night: morning", absf(d.hour - 6.4) < 0.01, "%.2f" % d.hour)
+	d.hour = 12.0
+	d.day_minutes = 36.0
+	d.advance(60.0)
+	check("A day minute passes at the right speed", absf((d.hour - 12.0) - (DayCycle.SUNSET - DayCycle.SUNRISE) / (36.0 * 0.8)) < 0.001, "%.3f h" % (d.hour - 12.0))
+	var c := {"sun_dir": Vector3(0.4, -0.6, 0.7), "sun_color": Color(1, 0.9, 0.8), "sun_energy": 1.8, "zenith_color": Color(0.3, 0.6, 0.9),
+		"horizon_color": Color(0.8, 0.9, 1.0), "ambient_energy": 0.5, "ambient_color": Color(0.6, 0.7, 0.5), "fog_color": Color(0.8, 0.9, 0.95),
+		"cloud_shadow": Color(0.6, 0.7, 0.9), "exposure": 0.9, "sun_glow": 0.35, "temperature": 16.0}
+	d.hour = 23.0
+	var n := d.apply(c)
+	check("Nights are darker and cooler", n["sun_energy"] < 0.8 and n["temperature"] < 11.0, "%.2f / %.1f °C" % [n["sun_energy"], n["temperature"]])
 
 
 func _test_voice(p: Wanderer) -> void:

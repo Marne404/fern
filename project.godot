@@ -89,6 +89,10 @@ impostor_band={
 "type": "vec2",
 "value": Vector2(0, 0)
 }
+daylight={
+"type": "float",
+"value": 1.0
+}
 sand_storm={
 "type": "float",
 "value": 0.0

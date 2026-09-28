@@ -2,6 +2,7 @@
 // sky reflection via Fresnel and sparkling sun glints.
 shader_type spatial;
 render_mode blend_mix, depth_draw_always, cull_disabled, specular_schlick_ggx, shadows_disabled;
+global uniform float daylight;
 
 global uniform vec2 world_origin;
 global uniform vec2 wind_direction;
@@ -125,7 +126,7 @@ void fragment() {
 	body = mix(body, foam_color, clamp(rings, 0.0, 1.0) * 0.4);
 
 	ALBEDO = body * 0.25;
-	EMISSION = body * 0.62;
+	EMISSION = body * 0.62 * daylight;
 	NORMAL_MAP = vec3(nmap.x * 0.5 + 0.5, nmap.z * 0.5 + 0.5, 1.0);
 	NORMAL_MAP_DEPTH = 0.9;
 	// ring crests break up the mirror image (otherwise they vanish in the bright reflection)

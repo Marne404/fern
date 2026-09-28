@@ -5,6 +5,7 @@ extends CanvasLayer
 
 var player: Wanderer
 var _distance: Label
+var _dial: DayDial
 var _biome_box: VBoxContainer
 var _biome_toast: Label
 var _biome_sub: Label
@@ -42,6 +43,13 @@ func _ready() -> void:
 	_distance.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_distance.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_distance)
+	_dial = DayDial.new()
+	_dial.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_dial.offset_left = -34
+	_dial.offset_right = 34
+	_dial.offset_top = 58
+	_dial.offset_bottom = 80
+	add_child(_dial)
 
 	# biome name: big sticker under the distance
 	_biome_box = VBoxContainer.new()
@@ -187,7 +195,7 @@ func set_player(p: Wanderer) -> void:
 
 
 func set_playing(on: bool) -> void:
-	for c: CanvasItem in [_mic, _distance, _bar, _prompt, _pack, get_node("Crosshair"), _overlay]:
+	for c: CanvasItem in [_mic, _distance, _dial, _bar, _prompt, _pack, get_node("Crosshair"), _overlay]:
 		c.visible = on
 	if on:
 		var t := create_tween()
@@ -198,6 +206,10 @@ func set_playing(on: bool) -> void:
 		_hint.modulate.a = 0.0
 		_black.color.a = 0.0
 		_message.modulate.a = 0.0
+
+
+func set_hour(h: float) -> void:
+	_dial.hour = h
 
 
 func set_distance(meters: float) -> void:
@@ -355,3 +367,36 @@ class PackSlot extends Control:
 		var kr := Rect2(Vector2(x - kw - 8, pos.y), Vector2(kw, 20))
 		draw_style_box(UiTheme._box(UiTheme.CREAM, UiTheme.INK, 2, 5, 2, Vector4.ZERO), kr)
 		draw_string(font, Vector2(kr.position.x + 7, pos.y + 15), key, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, UiTheme.INK)
+
+
+## Tiny arc under the distance: the sun travels over it by day, the moon by night
+class DayDial extends Control:
+	var hour := 12.0:
+		set(v):
+			if absf(v - hour) > 0.01:
+				hour = v
+				queue_redraw()
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var c := Vector2(size.x * 0.5, size.y - 2.0)
+		var r := size.x * 0.42
+		var line := Color(0.98, 0.96, 0.9, 0.55)
+		draw_arc(c, r, PI, TAU, 24, Color(UiTheme.INK, 0.35), 4.0, true)
+		draw_arc(c, r, PI, TAU, 24, line, 2.0, true)
+		var day := hour >= DayCycle.SUNRISE and hour < DayCycle.SUNSET
+		var t: float
+		if day:
+			t = (hour - DayCycle.SUNRISE) / (DayCycle.SUNSET - DayCycle.SUNRISE)
+		else:
+			var hn := hour if hour >= DayCycle.SUNSET else hour + 24.0
+			t = (hn - DayCycle.SUNSET) / (24.0 - DayCycle.SUNSET + DayCycle.SUNRISE)
+		var p := c + Vector2(cos(PI + t * PI), sin(PI + t * PI)) * r
+		draw_circle(p, 6.5, UiTheme.INK)
+		if day:
+			draw_circle(p, 5.0, UiTheme.SUN)
+		else:
+			draw_circle(p, 5.0, Color(0.93, 0.95, 1.0))
+			draw_circle(p + Vector2(2.2, -1.6), 3.8, UiTheme.INK)

@@ -2,6 +2,7 @@
 // Streaks pulling downwards, white spray at the edge and foot, fraying at the sides.
 shader_type spatial;
 render_mode blend_mix, depth_draw_opaque, cull_disabled, shadows_disabled;
+global uniform float daylight;
 
 uniform sampler2D noise_tex : filter_linear_mipmap, repeat_enable;
 uniform vec3 water_color : source_color = vec3(0.5, 0.86, 0.94);
@@ -23,7 +24,7 @@ void fragment() {
 	float foam = clamp(streak * 0.55 + lip * 0.7 + base * 0.95 + smoothstep(0.7, 0.9, n3) * 0.3, 0.0, 1.0);
 	vec3 col = mix(mix(deep_color, water_color, 0.5 + n2 * 0.5), foam_color, foam);
 	ALBEDO = col * 0.35;
-	EMISSION = col * 0.62;
+	EMISSION = col * 0.62 * daylight;
 	// fray at the sides, dissolve into spray at the bottom
 	float edge = smoothstep(0.0, 0.18 + n2 * 0.15, uv.x) * smoothstep(1.0, 0.82 - n1 * 0.15, uv.x);
 	ALPHA = clamp((0.72 + foam * 0.28) * edge * (0.75 + n3 * 0.25), 0.0, 1.0);

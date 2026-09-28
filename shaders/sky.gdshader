@@ -18,6 +18,12 @@ uniform float rainbow = 0.0;
 uniform float cloud_detail = 0.0;   // Ultra: finer cloud structure
 uniform float sea_amount = 0.0;     // coast: below the horizon the sky continues as sea haze
 uniform vec3 sea_color : source_color = vec3(0.3, 0.45, 0.6);
+uniform float stars = 0.0;          // night: star field
+uniform float moon = 0.0;           // 1 = the light is the moon: a moon disc instead of the sun
+
+float hash21(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
 
 float cloud_field(vec2 uv) {
 	float n = texture(cloud_noise, uv).r * 0.72;
@@ -62,6 +68,31 @@ void sky() {
 	vec3 col = mix(horizon_color, zen, pow(clamp(h, 0.0, 1.0), 0.48));
 	col = mix(col, horizon_color * 1.04, exp(-max(h, 0.0) * 16.0) * horizon_haze * 0.65);
 
+	// stars: two layers of twinkling points and a faint milky band, fading into the horizon glow
+	if (stars > 0.0 && h > 0.0 && !AT_CUBEMAP_PASS) {
+		float fade = smoothstep(0.03, 0.3, h) * stars;
+		for (int layer = 0; layer < 2; layer++) {
+			float sc = layer == 0 ? 55.0 : 120.0;
+			vec2 sp = d.xz / (h + 0.4) * sc + float(layer) * 31.7;
+			vec2 cell = floor(sp);
+			float r = hash21(cell);
+			float thr = layer == 0 ? 0.972 : 0.955;
+			if (r > thr) {
+				vec2 off = vec2(hash21(cell + 3.1), hash21(cell + 7.7)) * 0.6 + 0.2;
+				float dd = length(fract(sp) - off);
+				float tw = 0.65 + 0.35 * sin(TIME * (1.3 + r * 3.0) + r * 60.0);
+				float size = layer == 0 ? 0.16 : 0.09;
+				float st = smoothstep(size, 0.0, dd) * tw * (0.4 + 0.6 * (r - thr) / (1.0 - thr));
+				vec3 tint = mix(vec3(0.75, 0.85, 1.0), vec3(1.0, 0.9, 0.75), hash21(cell + 1.3));
+				col += tint * st * fade * (layer == 0 ? 1.3 : 0.7);
+			}
+		}
+		vec3 band_axis = normalize(vec3(0.35, 0.25, 0.9));
+		float band = exp(-pow(dot(d, band_axis) * 3.2, 2.0));
+		float mw = texture(cloud_noise, d.xz / (h + 0.5) * 0.35 + 0.2).r;
+		col += vec3(0.28, 0.3, 0.45) * band * smoothstep(0.35, 0.8, mw) * fade * 0.35;
+	}
+
 	vec3 sun_dir = LIGHT0_DIRECTION;
 	float sd = dot(d, sun_dir);
 	col += LIGHT0_COLOR * pow(max(sd, 0.0), 10.0) * sun_glow;
@@ -99,7 +130,7 @@ void sky() {
 		vec3 cc = mix(shadow_col, cloud_color, smoothstep(0.25, 0.8, lit));
 		// thin edges glow, as a silver lining in backlight
 		float edge = 1.0 - smoothstep(cov + 0.01, cov + 0.07, n);
-		cc += vec3(1.0) * edge * 0.12;
+		cc += cloud_color * edge * 0.12;
 		cc += LIGHT0_COLOR * edge * pow(max(sd, 0.0), 8.0) * 1.1;
 		float fade = smoothstep(-0.02, 0.06, h);
 		cc = mix(horizon_color * 1.06, cc, smoothstep(0.0, 0.12, hh) * 0.75 + 0.25);
@@ -114,7 +145,15 @@ void sky() {
 	}
 	float sun = smoothstep(0.99955 - sun_size * 0.0001, 0.9997, sd);
 	if (!AT_CUBEMAP_PASS) {
-		col += LIGHT0_COLOR * sun * 3.0;
+		if (moon > 0.5) {
+			// moon: a pale disc with soft maria and a cool halo (behind clouds only where they are thin)
+			float md = smoothstep(0.99925, 0.99942, sd);
+			vec3 mcol = vec3(0.93, 0.95, 1.0) * (0.78 + 0.22 * texture(cloud_noise, d.xz * 18.0 + 0.4).r);
+			col = mix(col, mcol * 1.25, md);
+			col += vec3(0.5, 0.6, 0.9) * pow(max(sd, 0.0), 600.0) * 0.35;
+		} else {
+			col += LIGHT0_COLOR * sun * 3.0;
+		}
 	}
 	COLOR = col;
 }

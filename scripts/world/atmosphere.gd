@@ -17,6 +17,12 @@ var underwater := 0.0:
 			_apply_underwater()
 var dominant := 0
 var dust := 0.0
+## times of day
+var day := DayCycle.new()
+## the atmosphere as shown: biome blend bent to the time of day (current stays the pure biome blend)
+var shown := {}
+## ground height of the valley near the camera (for the valley mist)
+var valley_y := 0.0
 
 var _timer := 0.0
 var _last_z := INF
@@ -79,7 +85,12 @@ func setup(p_gen: WorldGen, parent: Node) -> void:
 	sun.light_volumetric_fog_energy = 0.7
 	parent.add_child(sun)
 	apply_quality()
-	Settings.changed.connect(func(_k): apply_quality())
+	_read_day_settings()
+	Settings.changed.connect(func(k):
+		apply_quality()
+		if k in ["time_of_day", "day_minutes"]:
+			_read_day_settings()
+			_last_z = INF)
 
 
 func apply_quality() -> void:
@@ -141,6 +152,12 @@ func update(world_z: float, delta: float, force := false) -> void:
 	_apply()
 
 
+func _read_day_settings() -> void:
+	day.fixed = int(Settings.values.get("time_of_day", 0))
+	day.day_minutes = float(Settings.values.get("day_minutes", 36.0))
+	day.advance(0.0)
+
+
 ## Sandstorm haze (0..1), comes from the desert effects
 func set_dust(v: float) -> void:
 	if absf(v - dust) < 0.005:
@@ -150,9 +167,9 @@ func set_dust(v: float) -> void:
 
 
 func _apply_fog() -> void:
-	if current.is_empty():
+	if shown.is_empty():
 		return
-	var c := current
+	var c := shown
 	# haze has the horizon's color: distant hills turn blue, not gray
 	env.fog_light_color = (c["fog_color"] as Color).lerp(c["horizon_color"], 0.5).lerp(Color(0.62, 0.78, 0.98), 0.25)
 	# map the biome density (0.001–0.009) onto the depth fog
@@ -163,28 +180,33 @@ func _apply_fog() -> void:
 		env.fog_density = minf(env.fog_density + dust * 0.25, 1.0)
 	env.fog_depth_begin = lerpf(70.0, 10.0, dust)
 	env.fog_depth_end = lerpf(fog_end, 260.0, dust)
+	# (the morning valley mist is its own full-screen pass, see mist.gdshader)
 	if underwater > 0.001:
 		_apply_underwater()
 
 
 func _apply_underwater() -> void:
-	if current.is_empty():
+	if shown.is_empty():
 		return
 	var u := underwater
-	env.fog_light_color = (current["fog_color"] as Color).lerp(Color(0.1, 0.42, 0.5), u)
+	env.fog_light_color = (shown["fog_color"] as Color).lerp(Color(0.1, 0.42, 0.5), u)
 	env.fog_depth_begin = lerpf(70.0, 0.0, u)
 	env.fog_depth_end = lerpf(fog_end, 22.0, u)
 	env.fog_depth_curve = lerpf(1.25, 0.6, u)
-	env.fog_density = lerpf(clampf(0.5 + current["fog_density"] * 40.0, 0.5, 0.85), 1.0, u)
+	env.fog_density = lerpf(clampf(0.5 + shown["fog_density"] * 40.0, 0.5, 0.85), 1.0, u)
 
 
 func _apply() -> void:
-	var c := current
+	shown = day.apply(current)
+	var c := shown
 	sun.basis = Basis.looking_at(c["sun_dir"], Vector3.UP)
 	sun.light_color = c["sun_color"]
 	sun.light_energy = c["sun_energy"]
-	for k in ["zenith_color", "horizon_color", "cloud_coverage", "cirrus_amount", "cloud_shadow", "rainbow", "sun_glow"]:
+	for k in ["zenith_color", "horizon_color", "cloud_coverage", "cirrus_amount", "cloud_shadow", "rainbow", "sun_glow",
+			"cloud_color", "stars", "moon"]:
 		sky_mat.set_shader_parameter(k, c[k])
+	# water and waterfalls brighten themselves a little (anime look): not in the dark
+	RenderingServer.global_shader_parameter_set("daylight", 1.0 - float(c["night"]) * 0.75)
 	env.ambient_light_energy = c["ambient_energy"]
 	env.ambient_light_color = c["ambient_color"]
 	_apply_fog()
