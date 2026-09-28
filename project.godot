@@ -65,6 +65,22 @@ player_pos={
 "type": "vec3",
 "value": Vector3(0, -1000, 0)
 }
+water_ring0={
+"type": "vec4",
+"value": Vector4(0, 0, 99, 0)
+}
+water_ring1={
+"type": "vec4",
+"value": Vector4(0, 0, 99, 0)
+}
+water_ring2={
+"type": "vec4",
+"value": Vector4(0, 0, 99, 0)
+}
+water_ring3={
+"type": "vec4",
+"value": Vector4(0, 0, 99, 0)
+}
 sand_storm={
 "type": "float",
 "value": 0.0

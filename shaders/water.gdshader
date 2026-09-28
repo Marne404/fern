@@ -5,6 +5,11 @@ render_mode blend_mix, depth_draw_always, cull_disabled, specular_schlick_ggx, s
 
 global uniform vec2 world_origin;
 global uniform vec2 wind_direction;
+// rings where the scout wades or swims: x, z (local), age in s, strength
+global uniform vec4 water_ring0;
+global uniform vec4 water_ring1;
+global uniform vec4 water_ring2;
+global uniform vec4 water_ring3;
 
 uniform sampler2D depth_tex : hint_depth_texture, filter_linear;
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
@@ -16,9 +21,32 @@ uniform float clarity_depth = 2.2;
 instance uniform vec2 flow = vec2(0.0);   // rivers: flow direction * speed (m/s)
 
 varying vec3 v_world;
+varying vec2 v_local;
 
 void vertex() {
-	v_world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz + vec3(world_origin.x, 0.0, world_origin.y);
+	vec3 lw = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	v_local = lw.xz;
+	v_world = lw + vec3(world_origin.x, 0.0, world_origin.y);
+}
+
+float hash1(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+// one expanding ring (two crests): x = brightness of the crests, y = radial slope (bends the reflection)
+vec2 ring(vec2 p, vec2 c, float age, float life, float speed, out vec2 dir) {
+	vec2 d = p - c;
+	float dist = length(d);
+	dir = dist > 1e-4 ? d / dist : vec2(0.0);
+	if (age < 0.0 || age > life) return vec2(0.0);
+	float r = 0.08 + age * speed;
+	float fade = 1.0 - age / life;
+	float w = 0.07 + age * 0.05;
+	float a = (dist - r) / w;
+	float b = (dist - r * 0.62) / w;
+	float ea = exp(-a * a);
+	float eb = exp(-b * b);
+	return vec2(ea + 0.5 * eb, -2.0 * a * ea - b * eb) * fade;
 }
 
 void fragment() {
@@ -33,6 +61,32 @@ void fragment() {
 	float n2 = texture(noise_tex, fp * 0.13 + fo * 1.6 + 0.5).r;
 	float n3 = texture(noise_tex, p * 0.45 + vec2(TIME * 0.015, -TIME * 0.01)).r;
 	vec3 nmap = normalize(vec3((n1 - n2) * 0.9 + (n3 - 0.5) * 0.3, 1.0, (n2 - n1 * 0.7 - 0.15) * 0.9));
+
+	// rings: the scout's steps/strokes and, on still water, now and then a rising fish or a water strider
+	float rings = 0.0;
+	vec2 rdir;
+	vec4 wr[4] = vec4[4](water_ring0, water_ring1, water_ring2, water_ring3);
+	for (int i = 0; i < 4; i++) {
+		vec2 v = ring(v_local, wr[i].xy, wr[i].z, 2.4, 0.9, rdir) * wr[i].w;
+		rings += v.x;
+		nmap.xz += rdir * v.y * 0.35;
+	}
+	float near = 1.0 - smoothstep(20.0, 40.0, length(VERTEX));
+	if (fs < 0.01 && near > 0.0) {
+		vec2 cell = floor(p / 7.0);
+		float hc = hash1(cell);
+		float period = 7.0 + hc * 9.0;
+		float t = TIME + hc * 37.0;
+		float cyc = floor(t / period);
+		if (hash1(cell + cyc * 1.37) < 0.45) {
+			// center far enough from the cell edge that the ring is never cut off
+			vec2 c = (cell + 0.22 + 0.56 * vec2(hash1(cell + cyc), hash1(cell - cyc * 0.7))) * 7.0;
+			vec2 v = ring(p, c, t - cyc * period, 2.8, 0.45, rdir) * near;
+			rings += v.x;
+			nmap.xz += rdir * v.y * 0.35;
+		}
+	}
+	nmap = normalize(nmap);
 
 	// water depth along the view ray
 	float depth = texture(depth_tex, SCREEN_UV).r;
@@ -68,12 +122,14 @@ void fragment() {
 	// foam is a close-up detail: no white ring from afar
 	foam *= 1.0 - smoothstep(18.0, 60.0, length(VERTEX));
 	body = mix(body, foam_color, foam * 0.75);
+	body = mix(body, foam_color, clamp(rings, 0.0, 1.0) * 0.4);
 
 	ALBEDO = body * 0.25;
 	EMISSION = body * 0.62;
 	NORMAL_MAP = vec3(nmap.x * 0.5 + 0.5, nmap.z * 0.5 + 0.5, 1.0);
 	NORMAL_MAP_DEPTH = 0.9;
-	ROUGHNESS = mix(0.04, 0.5, foam);
+	// ring crests break up the mirror image (otherwise they vanish in the bright reflection)
+	ROUGHNESS = max(mix(0.04, 0.5, foam), clamp(rings, 0.0, 1.0) * 0.5);
 	SPECULAR = 0.65;
 	ALPHA = mix(0.88, 1.0, depth_fac) * smoothstep(0.0, 0.04, thickness);
 }

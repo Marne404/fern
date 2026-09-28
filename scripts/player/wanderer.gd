@@ -69,6 +69,11 @@ var _zoom := false
 var scout: Scout
 ## Prints and dust puffs of the feet (set by main)
 var footprints: Footprints
+## Water rings around the scout: x, z, age, strength (shader globals water_ring0..3)
+var _rings: Array[Vector4] = [Vector4(0, 0, 99, 0), Vector4(0, 0, 99, 0), Vector4(0, 0, 99, 0), Vector4(0, 0, 99, 0)]
+var _ring_next := 0
+var _ring_t := 0.0
+var _rings_live := true
 var third_person := false
 var _arm: SpringArm3D
 var _cam_dist := 3.4
@@ -166,6 +171,7 @@ func view_origin() -> Vector3:
 
 
 func _process(delta: float) -> void:
+	_update_rings(delta)
 	# the lamp was dropped or thrown: its light goes with it
 	if _light and not _has_item(_light_item):
 		_light.queue_free()
@@ -811,6 +817,8 @@ func _update_water() -> void:
 	var was_swimming := swimming
 	var was_in := in_water
 	in_water = wl > -INF and feet < wl - 0.1
+	if in_water and not was_in:
+		add_ring(global_position, 1.5)
 	if in_water and not was_in and velocity.y < -5.0:
 		# water breaks the fall
 		velocity.y *= 0.2
@@ -1185,6 +1193,8 @@ func _on_step(foot: Node3D) -> void:
 	var run := scout.sprint
 	var vol := (-17.0 if run else -22.0) + (4.0 if kind == "water" else 0.0)
 	Sfx.play(self, "step_%s_%d" % [kind, randi() % 3], vol, randf_range(0.9, 1.1))
+	if kind == "water":
+		add_ring(p, 1.0)
 	if footprints == null or kind in ["water", "wood"]:
 		return
 	p.y = world.ground_y(p.x, p.z)
@@ -1200,3 +1210,30 @@ func _on_landed(fall_speed: float) -> void:
 		var p := global_position
 		p.y = world.ground_y(p.x, p.z)
 		footprints.puff(p, kind, clampf(fall_speed / 9.0, 0.3, 1.0))
+
+
+# ---------------------------------------------------------------- water rings
+
+func add_ring(pos: Vector3, strength: float) -> void:
+	_rings[_ring_next] = Vector4(pos.x, pos.z, 0.0, strength)
+	_ring_next = (_ring_next + 1) % _rings.size()
+	_rings_live = true
+
+
+func _update_rings(delta: float) -> void:
+	# swimming: a ring with every stroke, a faint one now and then while floating
+	# (wading: the steps make rings; standing still, the body sways a little)
+	var moving := Vector2(velocity.x, velocity.z).length() > 0.5
+	if swimming or (in_water and not moving):
+		_ring_t -= delta
+		if _ring_t <= 0.0:
+			_ring_t = 0.55 if moving else 1.8
+			add_ring(global_position, 1.0 if moving else 0.55)
+	if not _rings_live:
+		return
+	var alive := false
+	for i in _rings.size():
+		_rings[i].z += delta
+		alive = alive or _rings[i].z < 3.0
+		RenderingServer.global_shader_parameter_set("water_ring%d" % i, _rings[i])
+	_rings_live = alive
