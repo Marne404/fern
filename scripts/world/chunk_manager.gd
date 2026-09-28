@@ -273,6 +273,8 @@ func _make_terrain(data: Dictionary) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.material_override = mat
+	# extra visual layer: footprint decals only project onto the terrain
+	mi.layers = 1 | Footprints.TERRAIN_VIS_LAYER
 	return mi
 
 

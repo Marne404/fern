@@ -48,6 +48,10 @@ const HEAD_R := 0.29
 const HEAD_SCALE := Vector3(1.0, 0.95, 0.95)
 const TORSO_DZ := 0.78
 
+## A foot touches the ground while walking (footprints, dust, sounds) / landed after a jump or fall
+signal stepped(foot: Node3D)
+signal landed(fall_speed: float)
+
 ## Animation inputs (set by the owner every frame)
 var speed := 0.0
 var sprint := false
@@ -92,6 +96,7 @@ const NO_SHADOW := ["eye", "white", "mouth", "cheek", "sclera", "tongue", "teeth
 
 var _t := 0.0
 var _phase := 0.0
+var _step_sign := 0.0
 var _amp := 0.0
 var _springs := {}
 var _blink := 0.0
@@ -877,6 +882,14 @@ func animate(delta: float) -> void:
 	_phase += delta * speed * TAU / (1.7 if run else 1.2)
 	var s := sin(_phase)
 	var c := cos(_phase)
+	# a foot plants at the end of each swing (cos changes sign): the lower one
+	var cs := signf(c)
+	if moving and a > 0.15 and cs != _step_sign and _step_sign != 0.0:
+		var fl := find_child("FootL", true, false) as Node3D
+		var fr := find_child("FootR", true, false) as Node3D
+		if fl and fr:
+			stepped.emit(fl if fl.global_position.y < fr.global_position.y else fr)
+	_step_sign = cs
 	var tired := mood == Mood.TIRED
 	var breathe := sin(_t * (1.7 + (2.5 if tired else 0.0)))
 	_wave_t = maxf(_wave_t - delta, 0.0)
@@ -889,6 +902,7 @@ func animate(delta: float) -> void:
 		if _air_t > 0.25:
 			_land = clampf(_fall_v * 0.03 + 0.08, 0.08, 0.35)
 			_kick("land", _land * 7.0)
+			landed.emit(_fall_v)
 		_air_t = 0.0
 		_fall_v = 0.0
 	var land := maxf(_spring("land", 0.0, delta, 120.0, 11.0), 0.0)

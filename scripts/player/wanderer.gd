@@ -67,6 +67,8 @@ var _zoom := false
 
 ## The visible hiker. First person: only its shadow; third person (V): fully visible behind the camera arm.
 var scout: Scout
+## Prints and dust puffs of the feet (set by main)
+var footprints: Footprints
 var third_person := false
 var _arm: SpringArm3D
 var _cam_dist := 3.4
@@ -112,6 +114,8 @@ func _ready() -> void:
 	head.add_child(_arm)
 	scout = Scout.new(Settings.values.get("scout", {}))
 	add_child(scout)
+	scout.stepped.connect(_on_step)
+	scout.landed.connect(_on_landed)
 	set_third_person(Settings.values.get("third_person", false))
 	# starting gear
 	inventory.add(ItemDefs.make("wasserflasche"))
@@ -1158,3 +1162,41 @@ func _update_camera(delta: float, moving: bool, sprint: bool) -> void:
 	camera.rotation.z = lerpf(camera.rotation.z, roll, 1.0 - exp(-3.0 * delta))
 	var fov: float = 22.0 if _zoom else Settings.values["fov"]
 	camera.fov = lerpf(camera.fov, fov, 1.0 - exp(-10.0 * delta))
+
+
+# ---------------------------------------------------------------- footsteps
+
+## What the scout is standing on: water, wood (logs, planks, bridges), snow, sand, path or grass
+func _ground_kind(p: Vector3) -> String:
+	if in_water:
+		return "water"
+	if world == null:
+		return "grass"
+	var g := world.ground_y(p.x, p.z)
+	if global_position.y > g + 0.3:
+		return "wood"
+	var w := world.local_to_world(p)
+	return world.gen.ground_kind(w.x, w.z)
+
+
+func _on_step(foot: Node3D) -> void:
+	var p := foot.global_position
+	var kind := _ground_kind(p)
+	var run := scout.sprint
+	var vol := (-17.0 if run else -22.0) + (4.0 if kind == "water" else 0.0)
+	Sfx.play(self, "step_%s_%d" % [kind, randi() % 3], vol, randf_range(0.9, 1.1))
+	if footprints == null or kind in ["water", "wood"]:
+		return
+	p.y = world.ground_y(p.x, p.z)
+	footprints.add_print(p, global_rotation.y, kind)
+	if run or kind in ["snow", "sand"]:
+		footprints.puff(p, kind, 0.45 if run else 0.15)
+
+
+func _on_landed(fall_speed: float) -> void:
+	var kind := _ground_kind(global_position)
+	Sfx.play(self, "step_%s_%d" % [kind, randi() % 3], -12.0, 0.8)
+	if footprints and kind not in ["water", "wood"]:
+		var p := global_position
+		p.y = world.ground_y(p.x, p.z)
+		footprints.puff(p, kind, clampf(fall_speed / 9.0, 0.3, 1.0))

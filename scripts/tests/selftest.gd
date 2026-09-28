@@ -142,6 +142,7 @@ func run() -> void:
 	await _test_emotes(p)
 	await _test_voice(p)
 	await _test_backpack(p)
+	await _test_steps(p)
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
 
@@ -288,6 +289,26 @@ func _test_backpack(p: Wanderer) -> void:
 	bp.close()
 	for c in main.dropped.get_children():
 		c.queue_free()
+
+
+## Footsteps: ground kind, a print on soft ground, no print in water, sound players clean up
+func _test_steps(p: Wanderer) -> void:
+	var gen: WorldGen = main.gen
+	var z: float = main.start_z - 12.0
+	var x := gen.path_x(z)
+	check("Path counts as path", gen.ground_kind(x, z) in ["path", "sand", "snow"], gen.ground_kind(x, z))
+	check("Far off the path is not path", gen.ground_kind(x + 60.0, z) != "path", gen.ground_kind(x + 60.0, z))
+	p.global_position = main.world.world_to_local(Vector3(x, gen.height(x, z) + 0.3, z))
+	await frames(20)
+	var fp: Footprints = main.footprints
+	var before := fp._prints.filter(func(d): return d.visible).size()
+	var foot := p.scout.find_child("FootL", true, false) as Node3D
+	p._on_step(foot)
+	var after := fp._prints.filter(func(d): return d.visible).size()
+	var kind := p._ground_kind(foot.global_position)
+	check("A step on the path leaves a print", after == before + 1 or kind in ["grass", "wood", "water"], "%s %d→%d" % [kind, before, after])
+	await frames(40)
+	check("Step sound players are freed", p.get_children().filter(func(c): return c is AudioStreamPlayer and not c.playing).size() == 0)
 
 
 func _test_voice(p: Wanderer) -> void:

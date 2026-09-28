@@ -1,6 +1,6 @@
 class_name Sfx
 extends RefCounted
-## Tiny synthesizer for item sounds (no audio files needed): whistle, harmonica tune, squeak.
+## Tiny synthesizer for item sounds (no audio files needed): whistle, harmonica tune, squeak, footsteps.
 
 const RATE := 22050
 
@@ -8,15 +8,70 @@ static var _cache := {}
 
 
 ## Plays a synthesized sound on a short-lived player attached to `parent`
-static func play(parent: Node, which: String, volume_db := -6.0) -> void:
+static func play(parent: Node, which: String, volume_db := -6.0, pitch := 1.0) -> void:
+	# looked up at runtime so tool scripts (-s, no autoloads) can still use the synthesizer
+	var settings := parent.get_node_or_null("/root/Settings")
+	var vol: float = settings.values.get("sfx_volume", 0.8) if settings else 0.8
+	if vol <= 0.01:
+		return
 	if not _cache.has(which):
-		_cache[which] = _make(which)
+		_cache[which] = _make_step(which) if which.begins_with("step_") else _make(which)
 	var p := AudioStreamPlayer.new()
 	p.stream = _cache[which]
-	p.volume_db = volume_db
+	p.volume_db = volume_db + linear_to_db(vol)
+	p.pitch_scale = pitch
 	parent.add_child(p)
 	p.play()
 	p.finished.connect(p.queue_free)
+
+
+## Footstep "step_<kind>_<variant>": filtered noise bursts per ground (grass, path, sand, snow, wood, water)
+static func _make_step(which: String) -> AudioStreamWAV:
+	var parts := which.split("_")
+	var kind := parts[1]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(which)
+	var dur: float = {"grass": 0.16, "path": 0.12, "sand": 0.16, "snow": 0.2, "wood": 0.14, "water": 0.3}.get(kind, 0.14)
+	var n := int(RATE * dur)
+	var samples := PackedFloat32Array()
+	samples.resize(n)
+	var lp := 0.0
+	var lp2 := 0.0
+	var ph := 0.0
+	# low-pass amount (0..1, higher = brighter) and grain density per ground
+	var bright: float = {"grass": 0.35, "path": 0.55, "sand": 0.12, "snow": 0.45, "wood": 0.2, "water": 0.3}.get(kind, 0.3)
+	var grains: float = {"grass": 0.002, "path": 0.012, "sand": 0.0, "snow": 0.02, "wood": 0.0, "water": 0.004}.get(kind, 0.0)
+	for i in n:
+		var t := float(i) / RATE
+		var env := minf(t / 0.012, 1.0) * pow(1.0 - t / dur, 2.2)
+		var x := rng.randf_range(-1.0, 1.0)
+		var b := bright
+		if kind == "water":
+			b = lerpf(0.5, 0.08, t / dur)
+		lp += (x - lp) * b
+		lp2 += (lp - lp2) * b
+		var v := lp2 * 1.6
+		if kind == "grass":
+			v = (lp - lp2) * 2.2 + lp2 * 0.6
+		if rng.randf() < grains:
+			v += rng.randf_range(-0.8, 0.8)
+		if kind == "wood":
+			ph += TAU * lerpf(210.0, 150.0, t / dur) / RATE
+			v = v * 0.5 + sin(ph) * 0.9 * exp(-t * 30.0)
+		if kind == "snow":
+			v *= 0.8 + 0.4 * sin(t * TAU * 90.0)
+		samples[i] = v * env
+	# same loudness for every ground (quiet sand would vanish, grainy gravel would click)
+	var rms := 0.0
+	var peak := 0.0
+	for v in samples:
+		rms += v * v
+		peak = maxf(peak, absf(v))
+	rms = sqrt(rms / n)
+	var gain := minf(0.12 / maxf(rms, 1e-5), 0.9 / maxf(peak, 1e-5))
+	for i in n:
+		samples[i] *= gain
+	return _wav(samples)
 
 
 static func _make(which: String) -> AudioStreamWAV:
@@ -55,6 +110,10 @@ static func _make(which: String) -> AudioStreamWAV:
 				var f := 900.0 + 700.0 * sin(t * PI / 0.35)
 				ph += TAU * f / RATE
 				samples.append(signf(sin(ph)) * 0.25 * minf((0.35 - t) / 0.05, 1.0) * minf(t / 0.01, 1.0))
+	return _wav(samples)
+
+
+static func _wav(samples: PackedFloat32Array) -> AudioStreamWAV:
 	var data := PackedByteArray()
 	data.resize(samples.size() * 2)
 	for i in samples.size():

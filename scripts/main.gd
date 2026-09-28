@@ -22,6 +22,7 @@ var backpack: Backpack
 var pois: PoiManager
 var landmarks: LandmarkManager
 var dropped: Node3D
+var footprints: Footprints
 var menus: Menus
 var streaks: WindStreaks
 var butterflies: Butterflies
@@ -150,6 +151,8 @@ func _ready() -> void:
 	dropped = Node3D.new()
 	dropped.name = "Dropped"
 	add_child(dropped)
+	footprints = Footprints.new()
+	add_child(footprints)
 
 	menu_cam = MenuCamera.new()
 	menu_cam.world = world
@@ -293,6 +296,7 @@ func start_journey() -> void:
 	elif _args.has("third"):
 		player.set_third_person(true)
 	player.world = world
+	player.footprints = footprints
 	player.obstacles = obstacles
 	player.spawn_item = _spawn_dropped
 	player.collapsed.connect(func():
@@ -647,6 +651,7 @@ func _on_origin_shifted(shift: Vector3) -> void:
 	obstacles.shift(shift)
 	for c in dropped.get_children():
 		c.global_position -= shift
+	footprints.shift(shift)
 	particles.restart()
 	leaf_fall.restart()
 	desert_fx.shift(shift)

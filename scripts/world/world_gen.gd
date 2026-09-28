@@ -823,6 +823,22 @@ func _ground_color_for(tr: Dictionary, x: float, z: float, slope: float, rel_h: 
 	return col
 
 
+## What the ground at a point is made of (footprints, dust, step sounds): snow, sand, path or grass
+func ground_kind(x: float, z: float) -> String:
+	var r := row(z, false)
+	var tr: Dictionary = r["a"] if r["t"] < 0.5 else r["b"]
+	var snow: float = tr["snow"]
+	if snow > 0.0:
+		var rel_h := height_in_row(x, r) - float(r["elev"])
+		if rel_h + (paint(x, z) - 0.5) * 8.0 > snow + 3.5:
+			return "snow"
+	if lerpf(r["a"]["ripple"], r["b"]["ripple"], r["t"]) > 0.3:
+		return "sand"
+	if path_value(offset_in_row(x, r), r["half_w"]) > 0.45:
+		return "path"
+	return "grass"
+
+
 # ================================================================ Arc length (main thread)
 
 ## Distance walked along the path from z = 0 to z (meters, forward is positive)

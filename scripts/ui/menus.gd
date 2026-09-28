@@ -463,6 +463,7 @@ func _build_settings() -> Control:
 	_slider(list, "shadow_range", "Shadow distance", 0.5, 3.0, 0.1, func(v): return "%d %%" % roundi(v * 100))
 	_check(list, "wind_fx", "Wind lines")
 	_check(list, "particles", "Leaves, pollen & weather effects")
+	_check(list, "footprints", "Footprints & dust puffs")
 	list = _tab("Performance")
 	var note := Label.new()
 	note.text = "All of these save time without a visible difference. Toggle individually to compare."
@@ -488,6 +489,7 @@ func _build_settings() -> Control:
 	list = _tab("Audio & voice")
 	_check(list, "music", "Music")
 	_slider(list, "music_volume", "Music volume", 0.0, 1.0, 0.05, func(v): return "%d %%" % roundi(v * 100))
+	_slider(list, "sfx_volume", "Sound effects (steps, items)", 0.0, 1.0, 0.05, func(v): return "%d %%" % roundi(v * 100))
 	_section(list, "Voice (local test – nothing is sent)")
 	_check(list, "voice_enabled", "Use microphone")
 	var dev_row := _row(list, "Input device")

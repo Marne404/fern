@@ -53,6 +53,7 @@ var values := {
 	"mouse_sens": 1.0,
 	"wind_fx": true,
 	"particles": true,
+	"footprints": true,
 	"fullscreen": false,
 	"show_fps": false,
 	"last_seed": 1,
@@ -69,6 +70,7 @@ var values := {
 	"opt_music_thread": true,   # load music in the background
 	"music": true,
 	"music_volume": 0.7,
+	"sfx_volume": 0.8,
 	"scout": {},                # look of your scout (see Scout.DEFAULT_LOOK)
 	"third_person": false,
 	"emote_wheel": [],          # 8 emote ids for the wheel (empty = Scout.DEFAULT_WHEEL)
