@@ -16,7 +16,7 @@ extends RefCounted
 
 const NAMES := ["Autumn Meadow", "Forest Trail", "Desert Valley", "Blossom Grove", "Spring Meadow", "Red Maple Wood", "Mountain Pines", "Deadwood Bog",
 	"Sunset Coast", "Cliff Lands", "Glowing Forest", "Lake Country", "Lavender Hills", "Birch Wood", "Heather Highlands",
-	"Giants' Old Forest", "Mushroom Wood"]
+	"Giants' Old Forest", "Mushroom Wood", "Wheat Fields"]
 
 const GRASS := ["Grass_Common_Tall", "Grass_Common_Short", "Grass_Wispy_Tall", "Grass_Wispy_Short"]
 const SHORT_GRASS := ["Grass_Common_Short", "Grass_Wispy_Short"]
@@ -43,7 +43,7 @@ const WILDFLOWERS := ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flo
 
 static func all() -> Array[Dictionary]:
 	return [meadow(), forest(), desert(), blossom(), spring(), maple(), alpine(), bog(), coast(), cliffs(), glow(), lakes(),
-		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood()]
+		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood(), wheat_fields()]
 
 
 # ================================================================ Style building blocks
@@ -1331,5 +1331,67 @@ static func mushroom_wood() -> Dictionary:
 			{"kind": "rock", "models": ["Mushroom_RedCap", "Mushroom_Common"], "styles": [giant_violet, giant_cream], "spacing": 10.0, "chance": 0.55,
 				"dist": [6.0, 80.0], "patch": [3], "scale": [2.5, 5.0], "sink": 0.0, "radius": 3.0, "collide": "rock"},
 			pebble_layer(rock_style(Color(0.62, 0.58, 0.66), 0.2, false, {"top_light": 0.3}), 14.0),
+		],
+	}
+
+
+# ================================================================ 18 Wheat Fields
+
+static func wheat_fields() -> Dictionary:
+	var lone := tree_style(Color(0.22, 0.46, 0.08), Color(0.7, 0.9, 0.3), {"tint": Color(0.95, 0.85, 0.8)}, 6.0, {"translucency": 1.0})
+	var oak := tree_style(Color(0.2, 0.42, 0.06), Color(0.62, 0.84, 0.26), {"tint": Color(0.95, 0.85, 0.8)}, 6.0, {"translucency": 0.9})
+	var hedge := {"leaves": leaves(Color(0.16, 0.36, 0.06), Color(0.56, 0.74, 0.2), {"sphere_normals": 0.8}), "stiffness": 7.0}
+	var rock := rock_style(Color(0.8, 0.76, 0.66), 0.25)
+	var wheat := [Color(0.98, 0.84, 0.42), Color(0.94, 0.78, 0.34), Color(1.0, 0.9, 0.52), Color(0.92, 0.74, 0.3)]
+	var stubble := [Color(0.9, 0.78, 0.46), Color(0.84, 0.72, 0.4), Color(0.94, 0.84, 0.54)]
+	var verge := [Color(0.56, 0.74, 0.2), Color(0.66, 0.78, 0.26), Color(0.48, 0.68, 0.18), Color(0.8, 0.78, 0.36)]
+	var edge := cluster_layer(WILDFLOWERS, 3.0, [2.5, 9.0], 8, 1.8, [0.45, 0.72])
+	edge["tints"] = [Color(0.95, 0.16, 0.1), Color(0.95, 0.16, 0.1), Color(0.35, 0.5, 1.0), Color(1.0, 1.0, 0.95)]
+	var meadow := cluster_layer(WILDFLOWERS + ["Flower_6"], 3.0, [2.5, 60.0], 14, 3.0, [0.45, 0.75])
+	meadow["tints"] = [Color(0.95, 0.2, 0.12), Color(1.0, 0.88, 0.25), Color(0.4, 0.55, 1.0), Color(1.0, 1.0, 0.95)]
+	meadow["patch"] = [2]
+	var hedges := hedge_layer(hedge, 34.0, [9.0, 100.0])
+	hedges["patch"] = [3]
+	var bales := {"kind": "rock", "models": ["Rock_Medium_2"], "styles": [rock_style(Color(0.92, 0.8, 0.5), 0.0, false,
+		{"tint": Color(1.3, 1.12, 0.7), "brightness": 1.4, "flatten": 0.2, "top_light": 0.3})], "spacing": 22.0, "chance": 0.5,
+		"dist": [8.0, 80.0], "patch": [1], "scale": [0.55, 0.7], "squash": Vector3(1.0, 1.0, 1.0), "sink": 0.1, "radius": 2.0, "collide": "rock"}
+	return {
+		"name": NAMES[17],
+		# wheat · stubble with bales · poppy meadow · hedged lane
+		"patches": [{"name": "wheat", "share": 0.5}, {"name": "stubble", "share": 0.2},
+			{"name": "meadow", "share": 0.15}, {"name": "hedged lane", "share": 0.15}],
+		"blades": blades(0.3, Color(0.3, 0.36, 0.1), Color(0.8, 0.8, 0.34), Color(0.96, 0.84, 0.42)),
+		"terrain": terrain({"gullies": 0.1, "hummocks": 0.3, "brooks": 0.3, "litter": 0.1, "litter_color": Color(0.9, 0.8, 0.5),
+			"far_height": 30.0, "obstacles": ["stile", "stile", "fallen_tree"], "path_width": 3.4,
+			"valley_width": 45.0, "valley_ramp": 130.0, "valley_height": 12.0, "undulation": 1.6,
+			"grass_dark": Color(0.62, 0.6, 0.24), "grass_light": Color(0.86, 0.76, 0.38),
+			"region_dark": Color(0.84, 0.68, 0.3), "region_light": Color(0.94, 0.8, 0.42),
+			"slope_color": Color(0.7, 0.62, 0.36), "path_color": Color(0.84, 0.74, 0.52), "crack": 0.6}),
+		"atmosphere": atmosphere({"fx": {"dandelion": 0.5, "heat_haze": 0.4, "swallows": 0.8}, "grade_shadow": Color(0.48, 0.44, 0.74),
+			"grade_high": Color(1.0, 0.86, 0.6), "grade_warm": 0.45, "grade_contrast": 0.24, "deer": true, "rain": 0.7,
+			"temperature": 24.0, "sun_dir": Vector3(0.5, -0.48, 0.7), "sun_color": Color(1.0, 0.9, 0.72), "sun_energy": 1.9,
+			"ambient_energy": 0.5, "ambient_color": Color(0.82, 0.76, 0.62), "fog_color": Color(0.96, 0.9, 0.8),
+			"fog_density": 0.0022, "fog_sun_scatter": 0.35, "saturation": 1.1, "gusts": 1.0, "dust": 0.15,
+			"zenith_color": Color(0.26, 0.54, 0.92), "horizon_color": Color(0.96, 0.92, 0.84), "cloud_coverage": 0.44,
+			"cirrus_amount": 0.8, "particles": "motes", "particle_color": Color(1.0, 0.92, 0.7), "butterflies": 10,
+			"mountain_color": Color(0.58, 0.6, 0.62), "mountain_shadow": Color(0.46, 0.48, 0.62), "mountain_snow": 0.2}),
+		"layers": [
+			grass_layer(verge, verge, 1200.0, Vector2(0.35, 0.6)),
+			# the fields: wheat in rows on both sides of the lane
+			{"kind": "rows", "models": ["Grass_Wheat"], "styles": [{}], "row_spacing": 0.8, "step": 0.5, "dist": [4.0, 90.0],
+				"scale": [0.6, 0.8], "palette": wheat, "shadows": false, "vis": 110.0, "near": true, "patch": [0], "full": true},
+			{"kind": "rows", "models": ["Grass_Wheat", "Grass_Wispy_Short"], "styles": [{}], "row_spacing": 1.1, "step": 0.8, "dist": [4.0, 80.0],
+				"scale": [0.3, 0.42], "palette": stubble, "shadows": false, "vis": 90.0, "near": true, "patch": [1], "full": true},
+			bales,
+			{"kind": "tree", "models": TALL + ["CommonTree_1", "CommonTree_3"], "styles": [lone, oak], "spacing": 60.0, "chance": 0.6,
+				"dist": [10.0, 400.0], "scale": [0.8, 1.1], "radius": 4.0, "collide": "trunk", "trunk": 0.35},
+			edge,
+			meadow,
+			hedges,
+			{"kind": "tree", "models": TALL, "styles": [lone], "spacing": 14.0, "chance": 0.7, "dist": [6.0, 14.0], "patch": [3],
+				"scale": [0.7, 0.95], "radius": 3.5, "collide": "trunk", "trunk": 0.33},
+			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 50.0, "chance": 0.3, "dist": [8.0, 60.0],
+				"scale": [0.9, 1.8], "sink": 0.2, "radius": 2.5, "collide": "rock"},
+			pebble_layer(rock_style(Color(0.8, 0.76, 0.68), 0.0, false, {"top_light": 0.3}), 14.0),
 		],
 	}

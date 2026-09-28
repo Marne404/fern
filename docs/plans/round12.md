@@ -486,3 +486,6 @@ bog cotton, low racing clouds; wild and wide.
   twisted trees, glowing small mushrooms and shelves, fairy rings, glowing plants; violet-pink sky; spores and
   wisps at night. The mote shader got a `near_fade` so a wisp next to the camera no longer fills the screen.
   The kit's mushroom texture is orange, so "red" stays a warm red-orange.
+- 4.3 result: wheat rows fill their patches completely (new rows key `full`), stubble fields with hay bales
+  (squashed tinted rocks), poppy/cornflower edges and meadows, hedged lanes, lone trees; golden ground so the
+  fields read to the horizon; swallows, drifting seeds, light heat haze, strong gusts that wave the wheat.

@@ -629,8 +629,8 @@ func _scatter_rows(b: int, li: int, layer: Dictionary) -> void:
 					var lz := z - corner.y + rng.randf_range(-0.15, 0.15)
 					if lx < 0.0 or lx >= SIZE or lz < 0.0 or lz >= SIZE:
 						continue
-					# fields in patches, a few bushes missing
-					if gen.region(x * 0.6 + 300.0, z * 0.6) < 0.42 or rng.randf() < 0.06:
+					# fields in patches, a few bushes missing (whole fields: the patch decides alone)
+					if not layer.get("full", false) and (gen.region(x * 0.6 + 300.0, z * 0.6) < 0.42 or rng.randf() < 0.06):
 						continue
 					if gen.path_value(gen.offset_in_row(x, r), r["half_w"]) > 0.2:
 						continue
