@@ -67,6 +67,12 @@ that competes with the scout; motion slow and calm.
   that fall along the sun direction to the ground between trunks, with slow flicker, dust motes, fading near the
   camera and at grazing angles. Stronger in the morning and golden hour, gone in rain and at night.
   Volumetric fog (High+) gets a little more density in these forests so the real shadowed shafts show too.
+- **Result:** near chunks record every tree (crown center, radius, top from the leaf AABB); every second tree
+  within 42 m gets a fixed beam (hash of its position) that starts high in the crown and falls along the sun
+  (at least 37° steep) to the ground. Axis-billboard quads, soft across and along, drifting dust streaks, a slow
+  pulse, depth-soft ends, forward scattering (bright towards the sun, faint with the sun behind you). Strength
+  per biome (`shafts`: Birch 1.0, Forest 0.9, Pines 0.85, Maple 0.8 …) × time of day (low sun strongest, none
+  from the moon) × clouds. Tied to the "Sun shafts" setting.
 
 ## 5. More life
 

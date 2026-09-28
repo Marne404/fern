@@ -126,6 +126,40 @@ func crowns_near(local_pos: Vector3, radius: float) -> Array:
 	return out
 
 
+## Tree crowns near a point (local coordinates): [center, radius, top height], for the light shafts
+func canopy_near(local_pos: Vector3, radius: float) -> Array:
+	var out := []
+	var wp := Vector2(local_pos.x + origin.x, local_pos.z + origin.y)
+	var c0 := _coord_of(wp - Vector2(radius, radius))
+	var c1 := _coord_of(wp + Vector2(radius, radius))
+	for cz in range(c0.y, c1.y + 1):
+		for cx in range(c0.x, c1.x + 1):
+			var arr: PackedFloat32Array = _canopy.get(Vector2i(cx, cz), PackedFloat32Array())
+			for i in range(0, arr.size(), 5):
+				if Vector2(arr[i], arr[i + 2]).distance_squared_to(wp) < radius * radius:
+					out.append([Vector3(arr[i] - origin.x, arr[i + 1], arr[i + 2] - origin.y), arr[i + 3], arr[i + 4]])
+	return out
+
+
+var _canopy := {}
+var _crown_shape := {}
+
+
+## Crown center height, radius and top from the model's leaves (x, y, z world; radius; top y)
+func _canopy_points(trees: Array) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	for t in trees:
+		var model: String = t[2]
+		if not _crown_shape.has(model):
+			var aabb := lib.raw_mesh(model).get_aabb()
+			_crown_shape[model] = Vector2(maxf(maxf(-aabb.position.x, aabb.end.x), maxf(-aabb.position.z, aabb.end.z)), aabb.end.y)
+		var shape: Vector2 = _crown_shape[model]
+		var p: Vector3 = t[0]
+		var sc: Vector2 = t[1]
+		out.append_array([p.x, p.y + shape.y * sc.y * 0.72, p.z, shape.x * sc.x * 0.8, p.y + shape.y * sc.y])
+	return out
+
+
 func loaded_count() -> int:
 	return _chunks.size()
 
@@ -196,6 +230,7 @@ func _plan() -> void:
 		_chunks.erase(c)
 		_rock_disks.erase(c)
 		_crowns.erase(c)
+		_canopy.erase(c)
 
 
 func _start_job(c: Vector2i, lod: int) -> void:
@@ -254,6 +289,7 @@ func _install(data: Dictionary) -> void:
 	_chunks[c] = {"node": node, "lod": data["lod"]}
 	_rock_disks[c] = data.get("rock_disks", PackedVector3Array())
 	_crowns[c] = data.get("crowns", PackedFloat32Array())
+	_canopy[c] = _canopy_points(data.get("canopy", []))
 	chunk_ready.emit(c, node, data["lod"])
 
 

@@ -165,6 +165,8 @@ func apply(c: Dictionary) -> Dictionary:
 	out["mist"] = m["mist"] * float(c.get("mist_amount", 1.0))
 	out["flies"] = m["flies"]
 	out["night"] = nightness()
+	# sunbeams: strongest with low morning and evening light, none from the moon
+	out["shaft_time"] = 0.0 if moon else (0.55 + 0.6 * float(m["glow"])) * clampf(float(m["e"]) * 1.5, 0.0, 1.0)
 	# nights are cool, misty mornings a little too (a sweater starts to make sense)
 	out["temperature"] = float(c.get("temperature", 16.0)) - 6.0 * float(out["night"]) - 2.0 * float(m["mist"])
 	return out

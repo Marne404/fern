@@ -26,6 +26,7 @@ var rocks: Array = []                    # [key, Transform3D local]
 var blockers: Array[Vector3] = []        # x, z (local), radius
 var clearings: Array[Vector3] = []       # find spots: x, z (local), radius
 var rock_disks: Array[Vector3] = []      # footprints of large rocks: x, z (local), radius – nothing grows there
+var canopy: Array = []                  # near chunks: every tree as [world position, scale (x, y), model] (light shafts)
 var crowns := PackedFloat32Array()       # colorful tree crowns that drop leaves/blossoms: x, y, z (world), radius, r, g, b
 
 
@@ -59,6 +60,7 @@ func build() -> Dictionary:
 		disks.append(Vector3(d.x + corner.x, d.y + corner.y, d.z))
 	result["rock_disks"] = disks
 	result["crowns"] = crowns
+	result["canopy"] = canopy
 	if lod == 0:
 		result["collision"] = _collision_heights()
 	return result
@@ -714,6 +716,8 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 func _add_crown(layer: Dictionary, style: int, model: String, xf: Transform3D) -> void:
 	if lod != 0:
 		return
+	var scl := xf.basis.get_scale()
+	canopy.append([Vector3(corner.x + xf.origin.x, xf.origin.y, corner.y + xf.origin.z), Vector2(scl.x, scl.y), model])
 	var st: Array = layer.get("styles", [{}]) + layer.get("region_styles", [])
 	var lv: Dictionary = (st[style] as Dictionary).get("leaves", {}) if style < st.size() else {}
 	if lv.is_empty():

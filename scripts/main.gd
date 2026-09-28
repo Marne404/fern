@@ -30,6 +30,7 @@ var particles: AmbientParticles
 ## fireflies at dusk and night in every biome
 var night_flies: AmbientParticles
 var rain_fx: RainFx
+var canopy_shafts: CanopyShafts
 var _soaked_hint := false
 var gusts: WindGusts
 var leaf_fall: LeafFall
@@ -186,6 +187,9 @@ func _ready() -> void:
 	rain_fx = RainFx.new()
 	rain_fx.world = world
 	add_child(rain_fx)
+	canopy_shafts = CanopyShafts.new()
+	canopy_shafts.world = world
+	add_child(canopy_shafts)
 	birds = Birds.new()
 	birds.world = world
 	mountains = Mountains.new()
@@ -544,6 +548,9 @@ func _process_inner(delta: float) -> void:
 	particles.set_kind(atmosphere.current.get("particles", "motes"), atmosphere.current.get("particle_color", Color.WHITE))
 	particles.follow(cam.global_position, fwd)
 	_update_night_flies(cam, fwd)
+	var sh := atmosphere.shown
+	var beams: float = float(sh.get("shafts", 0.0)) * float(sh.get("shaft_time", 1.0)) * (1.0 - atmosphere.weather.clouds) * (1.0 - atmosphere.underwater)
+	canopy_shafts.update(beams, -(sh.get("sun_dir", Vector3(0, -1, 0)) as Vector3), sh.get("sun_color", Color.WHITE), cam.global_position, delta)
 	var wd: Vector2 = ProjectSettings.get_setting("shader_globals/wind_direction")["value"]
 	rain_fx.update(float(atmosphere.shown.get("rain", 0.0)) if atmosphere.underwater < 0.01 else 0.0,
 		1.0 - float(atmosphere.shown.get("night", 0.0)) * 0.8, cam.global_position, fwd, wd.normalized(), delta)
@@ -717,6 +724,7 @@ func _on_origin_shifted(shift: Vector3) -> void:
 	for c in dropped.get_children():
 		c.global_position -= shift
 	footprints.shift(shift)
+	canopy_shafts.shift(shift)
 	particles.restart()
 	leaf_fall.restart()
 	desert_fx.shift(shift)
