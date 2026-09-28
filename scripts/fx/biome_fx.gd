@@ -21,22 +21,29 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 	var heat := float(fx.get("heat_haze", 0.0)) * smoothstep(0.35, 0.75, sun_up) * (1.0 - night) \
 		* (1.0 - clampf(rain * 5.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)))
 	_update_haze(heat, delta)
-	for name in ["gossamer"]:
+	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
+	# how hard the wind blows right now (1 = calm, up to ~2.6 in a strong gust)
+	var gust := clampf((WindGusts.current_strength - 1.0) / 1.2, 0.0, 1.0)
+	for name in ["gossamer", "petal_gust"]:
 		var w := float(fx.get(name, 0.0))
+		var at := cam.global_position + fwd * 9.0 + Vector3(0, -0.4, 0)
 		match name:
 			"gossamer":
-				w *= (1.0 - night) * (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
-		_drive(name, w, cam.global_position + fwd * 9.0 + Vector3(0, -0.4, 0), delta)
+				w *= (1.0 - night) * dry
+			"petal_gust":
+				w *= smoothstep(0.1, 0.6, gust) * dry
+				at = cam.global_position + fwd * 6.0 + Vector3(0, 2.5, 0)
+		_drive(name, w, at, delta, 0.4 if name != "petal_gust" else 2.5)
 
 
-func _drive(name: String, w: float, pos: Vector3, delta: float) -> void:
+func _drive(name: String, w: float, pos: Vector3, delta: float, speed := 0.4) -> void:
 	var on: bool = w > 0.01 and Settings.values.get("particles", true)
 	if not _fx.has(name):
 		if not on:
 			return
 		_fx[name] = {"node": _build(name), "level": 0.0}
 	var e: Dictionary = _fx[name]
-	e["level"] = move_toward(float(e["level"]), w if on else 0.0, delta * 0.4)
+	e["level"] = move_toward(float(e["level"]), w if on else 0.0, delta * speed)
 	var p: GPUParticles3D = e["node"]
 	p.emitting = float(e["level"]) > 0.01
 	p.amount_ratio = clampf(float(e["level"]), 0.0, 1.0)
@@ -114,7 +121,45 @@ func _build(name: String) -> GPUParticles3D:
 			q.subdivide_depth = 6
 			q.material = mat
 			p.draw_pass_1 = q
+		"petal_gust":
+			# a gust tears petals off the cherry trees: they swirl up and away with the wind
+			p.amount = 220
+			p.lifetime = 5.0
+			p.visibility_aabb = AABB(Vector3(-40, -15, -40), Vector3(80, 30, 80))
+			pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+			pm.emission_box_extents = Vector3(18, 4, 18)
+			pm.direction = (wdir + Vector3(0, 0.25, 0)).normalized()
+			pm.spread = 35.0
+			pm.initial_velocity_min = 2.5
+			pm.initial_velocity_max = 5.0
+			pm.gravity = Vector3(0, -0.35, 0)
+			pm.turbulence_enabled = true
+			pm.turbulence_noise_scale = 4.0
+			pm.turbulence_noise_strength = 2.0
+			pm.turbulence_influence_min = 0.1
+			pm.turbulence_influence_max = 0.25
+			pm.scale_min = 0.05
+			pm.scale_max = 0.085
+			var gp := Gradient.new()
+			gp.set_color(0, Color(1.0, 0.8, 0.92))
+			gp.set_color(1, Color(1.0, 0.95, 0.97))
+			var gtp := GradientTexture1D.new()
+			gtp.gradient = gp
+			pm.color_initial_ramp = gtp
+			var sc := Curve.new()
+			sc.add_point(Vector2(0.0, 0.0))
+			sc.add_point(Vector2(0.12, 1.0))
+			sc.add_point(Vector2(0.85, 1.0))
+			sc.add_point(Vector2(1.0, 0.0))
+			var sct := CurveTexture.new()
+			sct.curve = sc
+			pm.scale_curve = sct
+			var pmat := ShaderMaterial.new()
+			pmat.shader = preload("res://shaders/leaf_particle.gdshader")
+			var pq := QuadMesh.new()
+			pq.material = pmat
+			p.draw_pass_1 = pq
 	p.process_material = pm
-	p.preprocess = p.lifetime
+	p.preprocess = p.lifetime if name != "petal_gust" else 0.0
 	add_child(p)
 	return p

@@ -432,14 +432,26 @@ static func blossom() -> Dictionary:
 	var lilac := tree_style(Color(0.58, 0.45, 0.85), Color(0.88, 0.8, 1.0), {"tint": Color(0.9, 0.78, 0.75)}, 6.0, {"translucency": 1.0})
 	var white := tree_style(Color(0.85, 0.75, 0.8), Color(1.0, 0.97, 0.97), birch_bark(), 5.0, {"translucency": 1.0})
 	var rock := rock_style(Color(0.72, 0.72, 0.74), 0.3)
+	var cherry_bark := {"tint": Color(0.92, 0.8, 0.78), "brightness": 0.95}
+	var sakura := tree_style(Color(0.88, 0.5, 0.72), Color(1.0, 0.86, 0.95), cherry_bark, 6.0, {"translucency": 1.1})
+	var sakura_white := tree_style(Color(0.9, 0.78, 0.86), Color(1.0, 0.98, 0.99), cherry_bark, 6.0, {"translucency": 1.1})
+	var meadow_flowers := cluster_layer(WILDFLOWERS, 5.0, [2.5, 50.0], 12, 3.0, [0.45, 0.75])
+	meadow_flowers["tints"] = [Color(1.0, 0.7, 0.86), Color(1.0, 0.98, 0.98), Color(1.0, 0.55, 0.78), Color(0.95, 0.8, 1.0)]
+	meadow_flowers["patch"] = [3]
+	var orchard_bush := {"kind": "detail", "models": ["Bush_Large_Flowers", "Bush_Common_Flowers"],
+		"styles": [{"leaves": leaves(Color(0.25, 0.5, 0.12), Color(0.58, 0.84, 0.26), {"sphere_normals": 0.85}), "stiffness": 6.0}],
+		"density": 1.6, "dist": [4.0, 40.0], "scale": [0.6, 1.0], "shadows": true, "vis": 120.0, "near": true, "tilt": 0.3, "patch": [2]}
 	return {
 		"name": NAMES[3],
+		# cherry grove as before · cherry avenue · white orchard · blossom meadow
+		"patches": [{"name": "cherry grove", "share": 0.4}, {"name": "cherry avenue", "share": 0.25},
+			{"name": "white orchard", "share": 0.2}, {"name": "blossom meadow", "share": 0.15}],
 		"blades": blades(0.45, Color(0.15, 0.35, 0.08), Color(0.6, 0.88, 0.28), Color(0.78, 0.86, 0.5)),
 		"terrain": terrain({"scree": 0, "gullies": 0.3, "hummocks": 0.6, "brooks": 0.75, "litter": 0.6, "litter_color": Color(1.0, 0.72, 0.82), "far_height": 45.0, "ponds": 0.45, "terraces": 5.0, "water_shallow": Color(0.5, 0.85, 0.85), "valley_width": 18.0, "valley_height": 12.0, "undulation": 1.0,
 			"grass_dark": Color(0.36, 0.6, 0.16), "grass_light": Color(0.58, 0.78, 0.26),
 			"region_dark": Color(0.62, 0.62, 0.3), "region_light": Color(0.76, 0.74, 0.4),
 			"path_color": Color(0.82, 0.74, 0.56), "crack": 0.3}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.52, 0.45, 0.78), "grade_high": Color(1.0, 0.88, 0.84), "grade_warm": 0.1, "falls": 0.5, "deer": true, "shafts": 0.6, "rainbow": 0.6, "temperature": 19.0, "mountain_color": Color(0.64, 0.6, 0.74), "mountain_shadow": Color(0.55, 0.52, 0.7), "mountain_snow": 0.3, "sun_dir": Vector3(0.5, -0.5, 0.6), "sun_color": Color(1.0, 0.92, 0.88), "sun_energy": 1.7,
+		"atmosphere": atmosphere({"fx": {"petal_gust": 1.0}, "grade_shadow": Color(0.52, 0.45, 0.78), "grade_high": Color(1.0, 0.88, 0.84), "grade_warm": 0.1, "falls": 0.5, "deer": true, "shafts": 0.6, "rainbow": 0.6, "temperature": 19.0, "mountain_color": Color(0.64, 0.6, 0.74), "mountain_shadow": Color(0.55, 0.52, 0.7), "mountain_snow": 0.3, "sun_dir": Vector3(0.5, -0.5, 0.6), "sun_color": Color(1.0, 0.92, 0.88), "sun_energy": 1.7,
 			"ambient_energy": 0.55, "ambient_color": Color(0.8, 0.7, 0.85), "fog_color": Color(0.95, 0.88, 0.95),
 			"fog_density": 0.0024, "fog_sun_scatter": 0.35, "zenith_color": Color(0.35, 0.6, 0.95),
 			"horizon_color": Color(0.94, 0.88, 0.96), "cloud_coverage": 0.52, "particles": "petals",
@@ -447,11 +459,13 @@ static func blossom() -> Dictionary:
 		"layers": [
 			grass_layer([Color(0.5, 0.8, 0.2), Color(0.42, 0.72, 0.16), Color(0.62, 0.86, 0.3)],
 				[Color(0.55, 0.82, 0.25), Color(0.62, 0.86, 0.3), Color(0.95, 0.78, 0.9)], 2200.0),
-			{"kind": "tree", "models": TWISTED, "styles": [pink, pink, lilac], "spacing": 22.0, "chance": 0.65, "dist": [7.0, 400.0],
-				"falloff": [14.0, 140.0, 0.5], "grove": [0.02, -0.05], "scale": [0.45, 0.65], "radius": 5.0, "collide": "trunk", "trunk": 0.45},
-			hero_tree(["TwistedTree_1", "TwistedTree_3"], pink, Vector2(1.5, 1.9)),
+			# (the real cherries replace the recolored twisted trees in the same places)
+			{"kind": "tree", "models": CHERRIES, "styles": [sakura, sakura, lilac], "spacing": 22.0, "chance": 0.65, "dist": [7.0, 400.0],
+				"falloff": [14.0, 140.0, 0.5], "grove": [0.02, -0.05], "scale": [0.6, 0.85], "radius": 5.0, "collide": "trunk", "trunk": 0.3,
+				"thin": {3: 0.12}},
+			hero_tree(["CherryBlossom_1", "CherryBlossom_3"], sakura, Vector2(1.3, 1.5)),
 			{"kind": "tree", "models": COMMON, "styles": [white, pink], "spacing": 16.0, "chance": 0.45, "dist": [6.0, 300.0],
-				"scale": [0.9, 1.3], "radius": 2.6, "collide": "trunk", "trunk": 0.28},
+				"scale": [0.9, 1.3], "radius": 2.6, "collide": "trunk", "trunk": 0.28, "thin": {2: 0.3, 3: 0.1}},
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 34.0, "chance": 0.25, "dist": [6.0, 40.0],
 				"scale": [1.0, 2.2], "sink": 0.15, "radius": 2.5, "collide": "rock"},
 			cluster_layer(["Flower_3_Group", "Flower_4_Group", "Flower_3_Single", "Flower_4_Single"], 1.8, [2.5, 30.0], 7, 2.0, [0.45, 0.75]),
@@ -459,6 +473,13 @@ static func blossom() -> Dictionary:
 			{"kind": "detail", "models": ["Bush_Common_Flowers"], "styles": [{"leaves": leaves(Color(0.25, 0.5, 0.12), Color(0.55, 0.82, 0.25), {"sphere_normals": 0.85}), "stiffness": 6.0}],
 				"density": 2.0, "dist": [4.0, 24.0], "scale": [0.9, 1.5], "shadows": true, "vis": 110.0, "near": true, "tilt": 0.3},
 			pebble_layer(rock_style(Color(0.76, 0.75, 0.74), 0.0, false, {"top_light": 0.3}), 18.0),
+			# round 12: cherry avenue, white orchard, blossom meadow
+			{"kind": "tree", "models": CHERRIES, "styles": [sakura, sakura, sakura_white], "spacing": 9.0, "chance": 0.9,
+				"dist": [5.5, 9.5], "patch": [1], "scale": [0.55, 0.75], "radius": 3.0, "collide": "trunk", "trunk": 0.3},
+			{"kind": "tree", "models": CHERRIES, "styles": [sakura_white], "spacing": 12.0, "chance": 0.95,
+				"dist": [7.0, 120.0], "patch": [2], "scale": [0.45, 0.62], "radius": 4.0, "collide": "trunk", "trunk": 0.3},
+			orchard_bush,
+			meadow_flowers,
 		],
 	}
 

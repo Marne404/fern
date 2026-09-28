@@ -216,3 +216,20 @@ sandstone formations, dead trees, a few hardy colorful plants, air that shimmers
   Heat haze: a full-screen pass drawn *first* among the transparent things (render priority −120) –
   impostor trees get their color only in the transparent pass, so a later screen copy had black holes there.
   Measured: only the far horizon band moves, 1–4 px.
+
+## Step 3.4 – Blossom Grove
+
+Idea: hanami. Real cherry trees in full bloom, a pink carpet under them, petals flying up when a gust comes.
+
+- The grove's main tree layer switches from recolored TwistedTrees to CherryBlossom_1–5 (same layer, same
+  places: the model is picked after the position; TwistedTree and CherryBlossom use the same random numbers
+  for twins/bushes), scale set so they are 8–12 m; the giant hero cherry at 17–20 m.
+- Patches: cherry grove 40 % (as today) · cherry avenue 25 % · white orchard 20 % · blossom meadow 15 %.
+  - Avenue: cherries close to both sides of the path (5.5–9 m), crowns meeting over the path.
+  - White orchard: white-blooming cherries in a regular grid, short grass, flowering bushes.
+  - Blossom meadow: almost no trees, dense pink and white flowers (Flower_1/2/7), clover.
+- Effect "petal_gust": when a gust blows, a burst of petals rises from the trees and drifts with the wind
+  (on top of the steady petal fall), only when dry.
+- Result: the grove is now real sakura (pink, some lilac), the avenue lines the path with crowns reaching over
+  it, the orchard stands in a grid with flowering bushes, the blossom meadow is open and colorful. Petal gusts
+  follow `WindGusts.current_strength` (fast fade in/out), 220 petals with a scale curve so they pop in softly.
