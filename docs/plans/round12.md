@@ -492,3 +492,6 @@ bog cotton, low racing clouds; wild and wide.
 - 4.4 result: pink and deep-pink cherry groves, huge hero cherries, white-cherry patches, pond gardens with
   mossy stones and cherries by the water (ponds 1.0 → lilies and reeds come by themselves), a few red maples as
   accents, pink evening light; petal gusts and dragonflies.
+- 4.5 result: real birches in gold, orange, yellow and some still green on steep golden hills, big grey
+  rocks, rock slopes, young-birch thickets, asters and rust ferns, orange bushes, a crisp blue sky with high
+  clouds; gossamer. The first grading was too warm (everything orange); warmth 0.12 and calmer grass colors.

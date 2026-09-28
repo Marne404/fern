@@ -83,6 +83,7 @@ const BIOMES := [
 	["Moonshadow", "Dreamspire", "Moonlight", "Night Ambient 2", "Sapphire Glade", "Light Ambient 4", "Beyond Mist (quiet)"],   # Mushroom Wood
 	["Eldertide", "Hidden Springs", "Sunblade Horizon", "Light Ambient 2", "Ambient 1", "Sapphire Glade", "Ambient 5"],   # Wheat Fields
 	["Sapphire Glade", "Moonshadow", "Hidden Springs", "Light Ambient 4", "Dreamspire", "Pale Waters", "Moonlight (quiet)"],   # Cherry Valley
+	["Hollow Vale", "Eldertide", "Silent Reach", "Ambient 2", "Light Ambient 5", "Frostfire", "Ambient 6"],   # Golden Birch Slopes
 ]
 
 ## Situations that override the biome playlist
