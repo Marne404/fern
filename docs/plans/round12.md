@@ -176,3 +176,22 @@ Idea: late September, gossamer summer. Golden birch stands, hedged stubble field
   kilometer shows more of them. Gossamer: 110 threads around the camera, subdivided quads that sag a little
   (a `pow()` with a negative base had made them vanish), axis billboards in world space, ≥1 px wide with the
   brightness spread out, bright only against the sun. `--patchinfo=z0,z1` prints the patches along the path.
+
+## Step 3.2 – Forest Trail
+
+Idea: a mixed mountain forest that feels older and taller: giant pines above the normal canopy, fern hollows
+in the shade, sunny clearings full of flowers.
+
+- Patches: forest 40 % (as today, plus a few giants) · old growth 25 % · fern hollow 20 % · clearing 15 %.
+- Old growth: GiantPine_1–5 at 22–32 m (dark blue-green, stiff), spacing 11 m; the normal pines thinned to 45 %,
+  broadleaf trees to 30 %; mossy boulders (Rock_Big), shelf fungi on trunks.
+- Fern hollow: a dense carpet of Fern_1/Fern_2 and blue-green Plant_2, grass thinned to 60 %, trees to 70 %.
+- Clearing: trees almost gone (8 %), flowers from the new families (white, yellow, violet), flowering big
+  bushes at the edge – light falls in, butterflies find the flowers by themselves.
+- Everywhere: Bush_Large understory at the forest edge beside the path, fly agarics near the path,
+  single giant pines over the normal forest (spacing 55 m) as landmarks you see from afar.
+- Result: giant pines tower over the old growth and stand as single landmarks elsewhere; mossy big rocks;
+  fern hollows use only Fern_2 (Fern_1 is 9 m wide at scale 1) at 2–3.5 m, grass thinned to 35 %;
+  clearings open up with flowers and flowering bushes. Real birches got brighter bark (the kit's bark is
+  mid-gray; ×1.95, less vertex AO) so they read white like the old painted birches.
+  `scripts/tests/chunk_count.gd` counts instances per model in one chunk (headless).

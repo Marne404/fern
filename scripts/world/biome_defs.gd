@@ -185,7 +185,7 @@ static func thinned(layer: Dictionary, thin: Dictionary) -> Dictionary:
 static func birch_style(dark: Color, light: Color, extra := {}) -> Dictionary:
 	var e := {"translucency": 1.0}
 	e.merge(extra, true)
-	return tree_style(dark, light, {"tint": Color(1.04, 1.0, 0.94), "brightness": 1.12}, 4.5, e)
+	return tree_style(dark, light, {"tint": Color(1.06, 1.02, 0.96), "brightness": 1.95, "ao_strength": 0.45, "desaturate": 0.3}, 4.5, e)
 
 
 ## Hedgerows: lines of long bushes parallel to the path, with gaps (fields between them)
@@ -285,8 +285,27 @@ static func forest() -> Dictionary:
 	var autumn := tree_style(Color(0.85, 0.32, 0.08), Color(1.0, 0.6, 0.25), {"desaturate": 0.8, "brightness": 1.5, "tint": Color(1.1, 1.08, 1.0)}, 7.0, {"translucency": 1.0})
 	var rock := rock_style(Color(0.74, 0.75, 0.72), 0.35)
 	var cliff := rock_style(Color(0.74, 0.75, 0.72), 0.45, true)
+	var giant := tree_style(Color(0.07, 0.28, 0.12), Color(0.34, 0.6, 0.22), {"tint": Color(1.0, 0.84, 0.74), "brightness": 1.0}, 9.0,
+		{"sphere_normals": 0.5, "translucency": 0.5})
+	var giant_blue := tree_style(Color(0.06, 0.25, 0.16), Color(0.3, 0.56, 0.3), {"tint": Color(1.0, 0.84, 0.74), "brightness": 1.0}, 9.0,
+		{"sphere_normals": 0.5, "translucency": 0.5})
+	var undergrowth := {"leaves": leaves(Color(0.12, 0.34, 0.06), Color(0.46, 0.74, 0.18), {"sphere_normals": 0.85}), "stiffness": 6.0}
+	var mossy := rock_style(Color(0.7, 0.72, 0.68), 0.75, true, {"triplanar_scale": 0.08})
+	var ferns := cluster_layer(["Fern_2"], 14.0, [2.3, 45.0], 7, 3.2, [0.4, 0.62], true)
+	ferns["patch"] = [2]
+	var blue_plants := cluster_layer(["Plant_2", "Plant_2_Big"], 0.8, [2.5, 35.0], 3, 1.4, [0.6, 1.0], true)
+	blue_plants["patch"] = [2]
+	var glade := cluster_layer(WILDFLOWERS, 5.0, [2.5, 45.0], 10, 2.8, [0.45, 0.75])
+	glade["tints"] = [Color(1.0, 1.0, 0.95), Color(1.0, 0.88, 0.25), Color(0.7, 0.55, 1.0)]
+	glade["patch"] = [3]
+	var glade_bush := {"kind": "detail", "models": ["Bush_Large_Flowers", "Bush_Common_Flowers"], "styles": [undergrowth], "density": 1.6,
+		"dist": [5.0, 40.0], "scale": [0.7, 1.1], "shadows": true, "vis": 130.0, "near": true, "tilt": 0.3, "patch": [3]}
+	var agarics := cluster_layer(["Mushroom_RedCap"], 0.5, [2.2, 14.0], 3, 0.7, [0.3, 0.55])
 	return {
 		"name": NAMES[1],
+		# forest as before · old growth with giant pines · fern hollow · sunny clearing
+		"patches": [{"name": "forest", "share": 0.4}, {"name": "old growth", "share": 0.25},
+			{"name": "fern hollow", "share": 0.2}, {"name": "clearing", "share": 0.15}],
 		"blades": blades(0.4, Color(0.1, 0.28, 0.05), Color(0.5, 0.8, 0.18), Color(0.78, 0.8, 0.25)),
 		"terrain": terrain({"scree": 0, "gullies": 0.4, "hummocks": 0.2, "brooks": 0.8, "litter": 0.6, "litter_color": Color(0.55, 0.38, 0.2), "far_height": 55.0, "obstacles": ["fallen_tree", "fallen_tree", "river", "mud"], "ponds": 0.3, "path_width": 2.8, "valley_width": 12.0, "valley_ramp": 70.0, "valley_height": 12.0, "undulation": 1.4,
 			"grass_dark": Color(0.3, 0.54, 0.1), "grass_light": Color(0.55, 0.74, 0.18),
@@ -298,12 +317,13 @@ static func forest() -> Dictionary:
 			"zenith_color": Color(0.3, 0.62, 0.9), "horizon_color": Color(0.82, 0.93, 0.97), "cloud_coverage": 0.54,
 			"cirrus_amount": 0.4, "particles": "motes", "butterflies": 5}),
 		"layers": [
-			grass_layer([Color(0.55, 0.86, 0.2), Color(0.45, 0.78, 0.16), Color(0.7, 0.92, 0.3), Color(0.62, 0.86, 0.24)],
-				[Color(0.92, 0.72, 0.25), Color(0.85, 0.6, 0.2), Color(0.8, 0.82, 0.3)], 2000.0),
+			thinned(grass_layer([Color(0.55, 0.86, 0.2), Color(0.45, 0.78, 0.16), Color(0.7, 0.92, 0.3), Color(0.62, 0.86, 0.24)],
+				[Color(0.92, 0.72, 0.25), Color(0.85, 0.6, 0.2), Color(0.8, 0.82, 0.3)], 2000.0), {2: 0.35}),
 			{"kind": "tree", "models": PINES, "styles": [pine], "spacing": 7.5, "chance": 0.8, "dist": [5.5, 400.0],
-				"falloff": [20.0, 120.0, 0.55], "scale": [1.5, 2.3], "radius": 3.0, "collide": "trunk", "trunk": 0.35},
+				"falloff": [20.0, 120.0, 0.55], "scale": [1.5, 2.3], "radius": 3.0, "collide": "trunk", "trunk": 0.35,
+				"thin": {1: 0.45, 2: 0.7, 3: 0.08}},
 			{"kind": "tree", "models": COMMON, "styles": [broad], "spacing": 13.0, "chance": 0.6, "dist": [5.5, 300.0],
-				"scale": [1.2, 1.8], "radius": 3.0, "collide": "trunk", "trunk": 0.3},
+				"scale": [1.2, 1.8], "radius": 3.0, "collide": "trunk", "trunk": 0.3, "thin": {1: 0.3, 2: 0.7, 3: 0.08}},
 			hero_tree(["Pine_4", "Pine_2"], pine, Vector2(4.2, 5.0)),
 			{"kind": "tree", "models": ["TwistedTree_2"], "styles": [autumn], "spacing": 160.0, "chance": 0.5, "dist": [7.0, 25.0],
 				"scale": [0.5, 0.6], "radius": 5.0, "collide": "trunk", "trunk": 0.5},
@@ -318,6 +338,21 @@ static func forest() -> Dictionary:
 				"scale": [0.6, 0.9], "shadows": false, "vis": 60.0, "near": true},
 			pebble_layer(rock_style(Color(0.74, 0.75, 0.72), 0.0, false, {"top_light": 0.3}), 22.0),
 			small_rock_layer(rock),
+			# round 12: giant pines, fern hollows, clearings
+			{"kind": "tree", "models": GIANT_PINES, "styles": [giant, giant, giant_blue], "spacing": 11.0, "chance": 0.75,
+				"dist": [7.0, 400.0], "patch": [1], "scale": [1.3, 1.9], "radius": 4.5, "collide": "trunk", "trunk": 0.42},
+			{"kind": "tree", "models": GIANT_PINES, "styles": [giant], "spacing": 55.0, "chance": 0.55,
+				"dist": [9.0, 400.0], "patch": [0, 2], "scale": [1.4, 2.0], "radius": 4.5, "collide": "trunk", "trunk": 0.42},
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [mossy], "spacing": 34.0, "chance": 0.45, "dist": [7.0, 60.0],
+				"patch": [1, 2], "scale": [0.8, 1.5], "sink": 0.2, "radius": 5.0, "collide": "rock"},
+			ferns,
+			blue_plants,
+			glade,
+			glade_bush,
+			{"kind": "detail", "models": ["Bush_Large", "Bush_Long_1", "Bush_Long_2"], "styles": [undergrowth], "density": 1.4,
+				"dist": [4.5, 22.0], "scale": [0.7, 1.15], "shadows": true, "vis": 120.0, "near": true, "tilt": 0.3},
+			agarics,
+			oyster_layer(0.18),
 		],
 	}
 
