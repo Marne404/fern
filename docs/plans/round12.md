@@ -317,3 +317,18 @@ and yellow gorse, sea birds over the water, a warm glittering sea.
   golden marram dunes, sea-thrift cushions, gorse on the land side, bigger Rock_Big sea stacks. Gulls: six
   bent-winged birds circling over the sea side, following you slowly; grey undersides (white vanished
   against the bright evening sky).
+
+## Step 3.10 – Cliff Lands
+
+Idea: Genshin-like green terraces between blue-grey cliffs: lush round trees, boulder fields, tall slender
+trees on the ridges, waterfalls in the distance, swallows darting over the meadows.
+
+- Everywhere: Rock_Big formations as the big terrace rocks (mossy tops), tall TallThick trees on ridges.
+- Patches: terrace meadow 40 % (as today) · boulder field 25 % · tall grove 20 % · flower terrace 15 %.
+  - Boulder field: many big and medium boulders with moss tops, ferns between them, fewer trees.
+  - Tall grove: slender TallThick trees in bright green, a fresh canopy with light falling through.
+  - Flower terrace: white/yellow/blue flower carpets and daisies.
+- Effect "swallows": a few fast birds darting low over the meadow in curves, by day.
+- Result: mossy Rock_Big terrace rocks and slender trees on the ridges, boulder fields with ferns, tall
+  groves, flower terraces (grass thinned to 35 % there, or the tall Cliff Lands grass hid every flower);
+  light shafts in the groves. Swallows: five dark forked-tail birds looping low over the meadow, banking.

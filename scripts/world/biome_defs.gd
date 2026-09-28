@@ -825,23 +825,33 @@ static func cliffs() -> Dictionary:
 		{"translucency": 0.9, "sphere_normals": 0.9})
 	var deep := tree_style(Color(0.12, 0.38, 0.08), Color(0.45, 0.78, 0.2), {"tint": Color(0.95, 0.85, 0.8)}, 6.0, {"sphere_normals": 0.9})
 	var rock := rock_style(Color(0.58, 0.63, 0.72), 0.55, false, {"moss_color": Color(0.5, 0.72, 0.2)})
+	var terrace := rock_style(Color(0.58, 0.63, 0.74), 0.7, true, {"triplanar_scale": 0.06, "moss_color": Color(0.48, 0.72, 0.18), "top_light": 0.55})
+	var slender := tree_style(Color(0.18, 0.5, 0.07), Color(0.64, 0.94, 0.28), {"tint": Color(0.95, 0.85, 0.8)}, 5.0, {"translucency": 1.0})
+	var blooms := {"kind": "cluster", "models": WILDFLOWERS + ["Flower_6"], "styles": [{}], "density": 4.5, "dist": [2.5, 60.0], "count": 30,
+		"radius": 4.0, "scale": [0.55, 0.9], "tints": [Color(1.0, 1.0, 1.0), Color(1.0, 0.9, 0.3), Color(0.5, 0.65, 1.0)],
+		"vis": 75.0, "near": true, "tilt": 0.8, "patch": [3]}
+	var boulder_ferns := cluster_layer(["Fern_2"], 3.5, [3.0, 50.0], 3, 2.0, [0.3, 0.46], true)
+	boulder_ferns["patch"] = [1]
 	return {
 		"name": NAMES[9],
+		# terrace meadow as before · boulder field · tall grove · flower terrace
+		"patches": [{"name": "terrace meadow", "share": 0.4}, {"name": "boulder field", "share": 0.25},
+			{"name": "tall grove", "share": 0.2}, {"name": "flower terrace", "share": 0.15}],
 		"blades": blades(0.75, Color(0.14, 0.36, 0.05), Color(0.62, 0.9, 0.2), Color(0.9, 0.95, 0.35)),
 		"terrain": terrain({"scree": 0.8, "gullies": 0.6, "hummocks": 0.2, "brooks": 0.5, "litter": 0.2, "litter_color": Color(0.7, 0.55, 0.3), "far_height": 85.0, "obstacles": ["cliff", "cliff", "river", "boulders"], "terraces": 9.0, "valley_width": 22.0, "valley_ramp": 85.0, "valley_height": 38.0, "undulation": 1.4,
 			"grass_dark": Color(0.3, 0.56, 0.1), "grass_light": Color(0.55, 0.78, 0.16),
 			"region_dark": Color(0.45, 0.66, 0.12), "region_light": Color(0.68, 0.82, 0.22),
 			"slope_color": Color(0.54, 0.6, 0.7), "path_color": Color(0.78, 0.7, 0.5), "crack": 0.4, "ponds": 0.4}),
-		"atmosphere": atmosphere({"grade_shadow": Color(0.35, 0.5, 0.78), "grade_high": Color(1.0, 0.9, 0.72), "grade_warm": 0.1, "falls": 0.9, "sun_dir": Vector3(-0.35, -0.62, 0.7), "sun_color": Color(1.0, 0.95, 0.85), "sun_energy": 1.9,
+		"atmosphere": atmosphere({"fx": {"swallows": 1.0}, "grade_shadow": Color(0.35, 0.5, 0.78), "grade_high": Color(1.0, 0.9, 0.72), "grade_warm": 0.1, "falls": 0.9, "shafts": 0.5, "sun_dir": Vector3(-0.35, -0.62, 0.7), "sun_color": Color(1.0, 0.95, 0.85), "sun_energy": 1.9,
 			"ambient_energy": 0.5, "ambient_color": Color(0.6, 0.75, 0.9), "zenith_color": Color(0.14, 0.45, 0.92),
 			"horizon_color": Color(0.74, 0.88, 1.0), "cloud_coverage": 0.44, "cirrus_amount": 0.7, "fog_density": 0.0022,
 			"saturation": 1.12, "rainbow": 0.5, "particles": "motes", "butterflies": 10, "temperature": 18.0,
 			"mountain_color": Color(0.5, 0.6, 0.72), "mountain_shadow": Color(0.38, 0.46, 0.66), "mountain_snow": 0.55, "mountain_scale": 1.4}),
 		"layers": [
-			grass_layer([Color(0.5, 0.82, 0.16), Color(0.42, 0.74, 0.12), Color(0.62, 0.88, 0.22)],
-				[Color(0.75, 0.9, 0.25), Color(0.55, 0.82, 0.18)], 2800.0, Vector2(0.55, 1.0)),
+			thinned(grass_layer([Color(0.5, 0.82, 0.16), Color(0.42, 0.74, 0.12), Color(0.62, 0.88, 0.22)],
+				[Color(0.75, 0.9, 0.25), Color(0.55, 0.82, 0.18)], 2800.0, Vector2(0.55, 1.0)), {3: 0.35}),
 			{"kind": "tree", "models": COMMON, "styles": [round_tree, round_tree, deep], "spacing": 8.0, "chance": 0.85, "dist": [7.0, 400.0],
-				"grove": [0.02, 0.05], "scale": [1.3, 2.1], "radius": 3.0, "collide": "trunk", "trunk": 0.32},
+				"grove": [0.02, 0.05], "scale": [1.3, 2.1], "radius": 3.0, "collide": "trunk", "trunk": 0.32, "thin": {1: 0.3, 2: 0.35, 3: 0.2}},
 			hero_tree(["CommonTree_1", "CommonTree_3"], round_tree, Vector2(4.5, 5.5)),
 			{"kind": "rock", "models": ROCKS, "styles": [rock], "spacing": 26.0, "chance": 0.35, "dist": [6.0, 60.0],
 				"scale": [1.2, 3.4], "sink": 0.2, "radius": 3.0, "collide": "rock"},
@@ -853,6 +863,17 @@ static func cliffs() -> Dictionary:
 			pebble_layer(rock_style(Color(0.74, 0.76, 0.8), 0.0, false, {"top_light": 0.3}), 18.0),
 			# (new layers go last: earlier layers keep their index and so the same scatter in every world)
 			scree_layer(rock_style(Color(0.72, 0.7, 0.66), 0.1), 50.0),
+			# round 12: terrace rocks, tall trees on the ridges, boulder fields, tall groves, flower terraces
+			{"kind": "rock", "models": BIG_ROCKS, "styles": [terrace], "spacing": 48.0, "chance": 0.5, "dist": [10.0, 110.0],
+				"scale": [1.2, 2.6], "grow_with_dist": true, "sink": 0.2, "radius": 8.0, "collide": "rock"},
+			{"kind": "tree", "models": TALL, "styles": [slender], "spacing": 30.0, "chance": 0.5, "dist": [12.0, 400.0],
+				"scale": [0.75, 1.05], "radius": 4.0, "collide": "trunk", "trunk": 0.35},
+			{"kind": "rock", "models": ["Rock_Big_1", "Rock_Big_2", "Rock_Medium_4", "Rock_Medium_1"], "styles": [terrace], "spacing": 13.0,
+				"chance": 0.6, "dist": [5.0, 80.0], "patch": [1], "scale": [0.5, 1.4], "sink": 0.18, "radius": 3.5, "collide": "rock"},
+			boulder_ferns,
+			{"kind": "tree", "models": TALL, "styles": [slender, round_tree], "spacing": 10.0, "chance": 0.8, "dist": [7.0, 400.0],
+				"patch": [2], "scale": [0.7, 1.0], "radius": 3.5, "collide": "trunk", "trunk": 0.33},
+			blooms,
 		],
 	}
 

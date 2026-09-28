@@ -12,6 +12,9 @@ var _gulls: Node3D
 var _gull_level := 0.0
 var _gull_center := Vector3.ZERO
 var _gull_data: Array = []       # per gull: [radius, height, speed, angle]
+var _swallows: Node3D
+var _sw_level := 0.0
+var _sw_data: Array = []         # per swallow: phase offsets for its looping path
 
 
 ## fx: blended strengths of the current biomes; shown: the atmosphere after time of day and weather
@@ -26,6 +29,7 @@ func update(cam: Camera3D, delta: float, fx: Dictionary, shown: Dictionary) -> v
 		* (1.0 - clampf(rain * 5.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)))
 	_update_haze(heat, delta)
 	_update_gulls(float(fx.get("gulls", 0.0)) * (1.0 - night) * (1.0 - clampf(rain * 3.0, 0.0, 1.0)), cam, delta)
+	_update_swallows(float(fx.get("swallows", 0.0)) * (1.0 - night) * (1.0 - clampf(rain * 3.0, 0.0, 1.0)), cam, delta)
 	var dry := (1.0 - clampf(rain * 4.0, 0.0, 1.0)) * (1.0 - float(shown.get("wet", 0.0)) * 0.8)
 	# how hard the wind blows right now (1 = calm, up to ~2.6 in a strong gust)
 	var gust := clampf((WindGusts.current_strength - 1.0) / 1.2, 0.0, 1.0)
@@ -149,6 +153,72 @@ func _update_gulls(w: float, cam: Camera3D, delta: float) -> void:
 		var mi := _gulls.get_child(i) as MeshInstance3D
 		mi.visible = i < shown
 		mi.global_transform = Transform3D(Basis.looking_at(tangent, Vector3.UP).rotated(tangent, -0.3 * signf(float(g[2]))), p).scaled_local(Vector3.ONE * 1.25)
+
+
+## Swallows darting low over the meadow in fast loops around you (forked tails, swept wings)
+func _update_swallows(w: float, cam: Camera3D, delta: float) -> void:
+	_sw_level = move_toward(_sw_level, w, delta * 0.3)
+	if _swallows == null:
+		if _sw_level <= 0.01:
+			return
+		_swallows = Node3D.new()
+		_swallows.top_level = true
+		add_child(_swallows)
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for side in [-1.0, 1.0]:
+			# long, pointed, swept-back wings
+			st.add_vertex(Vector3(0.0, 0.0, -0.12))
+			st.add_vertex(Vector3(side * 0.95, 0.0, 0.42))
+			st.add_vertex(Vector3(0.0, 0.0, 0.12))
+			# forked tail
+			st.add_vertex(Vector3(0.0, 0.0, 0.2))
+			st.add_vertex(Vector3(side * 0.22, 0.0, 0.75))
+			st.add_vertex(Vector3(side * 0.05, 0.0, 0.3))
+		st.add_vertex(Vector3(0.0, 0.03, -0.4))
+		st.add_vertex(Vector3(0.07, 0.0, 0.3))
+		st.add_vertex(Vector3(-0.07, 0.0, 0.3))
+		st.generate_normals()
+		var mesh := st.commit()
+		var mat := ShaderMaterial.new()
+		mat.shader = preload("res://shaders/bird.gdshader")
+		mat.set_shader_parameter("color", Color(0.1, 0.14, 0.28))
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 9
+		for i in 5:
+			var mi := MeshInstance3D.new()
+			mi.mesh = mesh
+			mi.material_override = mat
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.set_instance_shader_parameter("phase", rng.randf() * TAU)
+			_swallows.add_child(mi)
+			_sw_data.append([rng.randf() * TAU, rng.randf_range(0.55, 0.85), rng.randf_range(9.0, 16.0), rng.randf() * TAU])
+	_swallows.visible = _sw_level > 0.01
+	if not _swallows.visible:
+		return
+	var t := Time.get_ticks_msec() / 1000.0
+	var fwd := -cam.global_basis.z
+	fwd = Vector3(fwd.x, 0.0, fwd.z).normalized()
+	var center := cam.global_position + fwd * 12.0
+	var ground := center.y - 1.0
+	var n := _swallows.get_child_count()
+	for i in n:
+		var d: Array = _sw_data[i]
+		# a figure-eight-ish loop: two frequencies, low over the grass with quick rises
+		var s := t * float(d[1]) + float(d[0])
+		var r := float(d[2])
+		var p := center + Vector3(sin(s) * r, 0.0, sin(s * 2.0 + float(d[3])) * r * 0.6)
+		p.y = ground + 1.6 + (sin(s * 3.0 + float(d[3])) * 0.5 + 0.5) * 3.5
+		var s2 := s + 0.02
+		var p2 := center + Vector3(sin(s2) * r, 0.0, sin(s2 * 2.0 + float(d[3])) * r * 0.6)
+		p2.y = ground + 1.6 + (sin(s2 * 3.0 + float(d[3])) * 0.5 + 0.5) * 3.5
+		var dir := (p2 - p).normalized()
+		var mi := _swallows.get_child(i) as MeshInstance3D
+		mi.visible = i < int(round(_sw_level * n))
+		if dir.length() > 0.5 and absf(dir.y) < 0.98:
+			# banking into the curve
+			var bank := clampf((p2 - p).cross(Vector3.UP).dot(fwd) * 8.0, -0.8, 0.8)
+			mi.global_transform = Transform3D(Basis.looking_at(dir, Vector3.UP).rotated(dir, bank), p).scaled_local(Vector3.ONE * 0.28)
 
 
 ## After an origin shift the particles are in the wrong place – restart them.
