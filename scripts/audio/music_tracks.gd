@@ -79,6 +79,7 @@ const BIOMES := [
 	["Sapphire Glade", "Dreamspire", "Hidden Springs", "Light Ambient 2", "Ambient 1", "Eldertide", "Sunblade Horizon"],   # Lavender Hills
 	["White Moss", "Whispering Pines", "Hollow Vale", "Light Ambient 1", "Ambient 3", "Ambient 7", "Light Ambient 5"],   # Birch Wood
 	["Silent Reach", "Frozen Hollow", "Beyond Mist", "Ambient 8", "Light Ambient 3", "Canyon Echoes", "Night Ambient 3"],   # Heather Highlands
+	["Whispering Pines", "White Moss", "Beyond Mist", "Ambient 7", "Light Ambient 1", "Hollow Vale", "Night Ambient 1"],   # Giants' Old Forest
 ]
 
 ## Situations that override the biome playlist

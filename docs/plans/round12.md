@@ -414,3 +414,71 @@ bog cotton, low racing clouds; wild and wide.
 - Result: granite tors on the hillsides and tor fields near the path, sheltered hollows with pale birches and
   orange rowans and ferns, bog patches with pale marsh flowers (Flower_6 can't be tinted pure white; it reads
   as pale pink marsh flowers), broad moor-grass tufts. Selftest and obtest passed after all 15 biomes.
+
+## Step 4 – New biomes (appended as indices 15–21; the biome order of every world except seed 1's fixed
+## opening is reshuffled once per new biome, which is expected). Each also gets: a music playlist, find-spot
+## loot category (forest/cold/hot), a place in the website gallery later.
+
+### 4.1 Giants' Old Forest (15)
+- Feeling: small under huge trees – a cathedral of GiantPines (scale 2.0–2.8 → 25–35 m) with mossy trunks,
+  dim green light with strong light shafts, mist lying on the ground, ferns everywhere, fallen giants.
+- Terrain: rolling (undulation 1.6), deep green moss ground, path of dark earth, brooks 0.9, gullies 0.5,
+  hummocks 0.6, obstacles: fallen_tree ×2, river, mud. Litter: brown needles.
+- Layers: giant pines (spacing 14 m) + normal pines as undergrowth trees, mossy big rocks, fern carpets
+  (Fern_1/2 at 1.0–1.7), Plant_2 blue accents, shelf fungi on 40 % of the trunks, fly agarics, clover, pebbles.
+- Patches: cathedral 45 % · fern sea 25 % · boulder moss 15 % · clearing 15 % (flowers, butterflies, light).
+- Atmosphere: shafts 1.2, volumetric fog, mist 1.4, grading green-teal shadows, warm highlights, cool 12 °C,
+  deer, songbirds; fx: spores 0.25 (a few pale motes), gossamer 0.3. Rain 1.2.
+### 4.2 Mushroom Wood (16)
+- Feeling: a whimsical wood where mushrooms are as big as trees: giant red caps (Mushroom_RedCap ×6–10),
+  shelf fungi stairs, violet dusk; at night everything glows.
+- Terrain: soft hills, brown-violet moss ground, brooks 0.5, ponds 0.4 with glowing water tint; obstacles:
+  fallen_tree, mud, river.
+- Layers: giant mushrooms as "trees" (rock-like scatter with collision), normal twisted trees in violet/teal,
+  small mushroom clusters everywhere, glowing plants, oyster shelves on trunks, fairy rings.
+- Patches: giant caps 40 % · twisted wood 30 % · ring meadow 15 % · glow pond 15 %.
+- Atmosphere: warm violet sky, clock 0.6, mist, fx spores 0.8 + wisps 0.3, grade violet shadows.
+### 4.3 Wheat Fields (17)
+- Feeling: late summer farmland – golden wheat to the horizon, waves running through it when gusts come,
+  red poppies and blue cornflowers at the edges, hedgerows, single tall trees, a warm hazy afternoon.
+- Terrain: wide gentle valley (valley_width 45, height 12), undulation 1.6, pale ochre ground, dry path,
+  obstacles: stile ×2, fallen_tree.
+- Layers: wheat rows (Grass_Wheat) as the main field on both sides in patches, grass verges, poppy and
+  cornflower edges, hedgerows, lone TallThick trees, a few big rocks.
+- Patches: wheat 50 % · stubble & hay 20 % · meadow 15 % · hedged lane 15 %.
+- Atmosphere: warm golden grading, dust 0.2, fx: dandelion 0.5, heat_haze 0.4, swallows 0.8; butterflies.
+### 4.4 Cherry Valley (18)
+- Feeling: hanami by the water – cherry trees around ponds, water lilies, petals on the water, stone
+  lanterns-like rocks, calm pink evenings.
+- Terrain: ponds 1.0 (many, medium), brooks 0.8, soft valley, fresh green ground.
+- Layers: cherries (pink/white) in groves, big old hero cherries, flowering bushes, flower meadows, reeds and
+  lilies (automatic at ponds), mossy rocks.
+- Patches: cherry grove 40 % · pond garden 30 % · white cherry 15 % · open meadow 15 %.
+- Atmosphere: soft pink sky, clock 0.6 towards evening colors, fx: petal_gust 1.0, dragonflies 1.0.
+### 4.5 Golden Birch Slopes (19)
+- Feeling: the kit's key art – orange and yellow birches on golden hillsides, big grey rocks, clear blue
+  autumn sky, long shadows.
+- Terrain: steep rolling hills (undulation 2.4, valley_height 26), golden grass ground, scree 0.3.
+- Layers: birches gold/orange/yellow-green in groves, big grey rocks (Rock_Big), golden grass, small asters,
+  bushes in orange.
+- Patches: birch grove 45 % · rock slope 20 % · open golden hill 20 % · young birches 15 %.
+- Atmosphere: crisp blue sky, strong sun, fx: gossamer 0.8, samara 0 (birch leaves fall via particles).
+### 4.6 Rock Gorge (20)
+- Feeling: walking in a canyon of rounded grey rock walls, a lively brook beside the path, waterfalls far and
+  near, spray and rainbows, ferns clinging to the rocks.
+- Terrain: narrow valley (valley_width 9, ramp 30, height 34), roughness 1.4, scree 1.0, brooks 1.0 (always),
+  cliffs obstacles.
+- Layers: Rock_Big walls close to the path (grow with distance), boulders in the brook area, ferns, moss,
+  a few pines and birches on ledges.
+- Patches: narrows 40 % · boulder bed 25 % · fern ledge 20 % · open basin 15 %.
+- Atmosphere: cool, mist 1.2, falls 1.2, rainbow 0.7, fx: crystal_motes 0.3 (spray glitter).
+### 4.7 Blue Fern Hollow (21)
+- Feeling: the Glowing Forest's gentle daytime sibling – blue and violet plants, teal ferns, pale trees,
+  fireflies in the shade even by day, a dreamy bluish light.
+- Terrain: soft hollows, blue-green ground, ponds 0.5.
+- Layers: blue Plant_2 carpets, magenta Plant_4, teal ferns, pale birches with teal crowns, violet flowers,
+  glowing oyster shelves.
+- Patches: fern sea 40 % · blue glade 30 % · pale grove 30 %.
+- Atmosphere: blue-teal sky, clock 0.8, fx: spores 0.4, wisps 0.15; day fireflies via particles "fireflies".
+- 4.1 result: giant pines at 25–35 m with normal pines below, mossy big rocks, fern seas in the morning light,
+  shelf fungi, a clearing patch with flowers; grass kept low and sparse (dark forest floor) so ferns carry it.
