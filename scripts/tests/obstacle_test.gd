@@ -90,6 +90,9 @@ func run() -> void:
 	p.body.food = 100.0
 	p.body.water = 100.0
 
+	if "--only_boulders" in OS.get_cmdline_user_args():
+		await _test_boulders(p, gen)
+		return
 	await _test_fallen_tree(p, gen, ob)
 	await _test_river(p, gen, ob)
 	await _test_rope(p, gen, ob)

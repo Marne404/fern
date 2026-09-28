@@ -801,6 +801,8 @@ func _scatter_grid(b: int, li: int, layer: Dictionary) -> void:
 				continue
 			if layer.get("region_only", false) and gen.region(x, z) < 0.55:
 				continue
+			if gen.obstacle_keep_clear(x, z):
+				continue
 			if outside:
 				# only remember the footprint (same random sequence as in the neighboring chunk)
 				rng.randi()

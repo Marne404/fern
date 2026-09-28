@@ -798,6 +798,17 @@ func obstacle_zone(z: float, margin: float) -> bool:
 	return false
 
 
+## Near the path at a boulder field, a mud hollow or a stile: nothing from the scatter may stand there
+## (dense tree patches would block the way through or grow on top of the obstacle's rocks).
+func obstacle_keep_clear(x: float, z: float) -> bool:
+	for o in obstacles_near(z):
+		if not o["type"] in ["boulders", "mud", "stile"]:
+			continue
+		if absf(z - float(o["z"])) < 32.0 and absf(x - path_x(z)) < 26.0:
+			return true
+	return false
+
+
 func cliffs_near(z: float) -> Array:
 	var out := []
 	for o in obstacles_near(z):

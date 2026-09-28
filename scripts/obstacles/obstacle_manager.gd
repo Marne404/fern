@@ -1162,6 +1162,9 @@ func _build_boulders(o: Dictionary, root: Node3D) -> void:
 		var keep := 1.2 + radius
 		if big and absf(x - way) < keep:
 			x = way + signf(x - way + 0.001) * (keep + rng.randf() * 3.0)
+		elif not big and absf(x - way) < 0.9 + radius:
+			# small stones lie beside the way, not in its narrowest line
+			x = way + signf(x - way + 0.001) * (0.9 + radius)
 		var rot := Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, rng.randf_range(-0.2, 0.2))
 		var pos := _ground(o, Vector2(x, zz), -s * 0.22)
 		var body := StaticBody3D.new()

@@ -498,3 +498,10 @@ bog cotton, low racing clouds; wild and wide.
 - 4.6 result: a narrow valley (floor 15 m, ramp 32 m, 34 m high) makes real grey rock walls; brooks always,
   the brook seeps away at its end instead of turning into the wall (terrain key `brook_turn`), boulder beds,
   fern ledges, pines and birches, blue/white alpine flowers, swallows, spray glitter, many far waterfalls.
+- 4.7 result: pale teal birches and lilac trees, teal fern seas (grass thinned to 15 % there, or the fern
+  tint vanished in the teal grass), softly glowing blue carpets, glowing shelves and mushrooms, fireflies of
+  its own, a dreamy blue-teal sky; night like a gentler Glowing Forest.
+- After all 22 biomes the obtest failed at the first boulder field (now in the Heather Highlands): the new
+  dense tree/rock patches stood inside obstacles, and a small stone lay in the narrow way. Scatter trees and
+  rocks now keep clear of boulder fields, mud hollows and stiles near the path (`obstacle_keep_clear`), small
+  stones lie beside the narrow line. `--obtest --only_boulders` runs just that check. Both test suites pass.

@@ -85,6 +85,7 @@ const BIOMES := [
 	["Sapphire Glade", "Moonshadow", "Hidden Springs", "Light Ambient 4", "Dreamspire", "Pale Waters", "Moonlight (quiet)"],   # Cherry Valley
 	["Hollow Vale", "Eldertide", "Silent Reach", "Ambient 2", "Light Ambient 5", "Frostfire", "Ambient 6"],   # Golden Birch Slopes
 	["Canyon Echoes", "Silent Reach", "Hidden Springs", "Ambient 8", "Forgotten Waters", "Frozen Hollow", "Light Ambient 3"],   # Rock Gorge
+	["Moonlight", "Sapphire Glade", "Beyond Mist", "Night Ambient 5", "Light Ambient 4", "Moonshadow", "White Moss (quiet)"],   # Blue Fern Hollow
 ]
 
 ## Situations that override the biome playlist
