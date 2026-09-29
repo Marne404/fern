@@ -1,7 +1,8 @@
 extends SceneTree
 ## Renders scouts in a small studio scene and saves a picture (for looking at the character).
 ## godot --path . --resolution 1600x900 -s res://scripts/tests/scout_studio.gd -- --out=/tmp/x.png --mode=lineup
-## Modes: lineup, poses, face, back, walk
+## Modes: lineup, poses, face, back, walk, gait (filmstrip: 8 phases of a cycle per speed, side view;
+## --speeds=1.6,3.4,6.2 --cols=8)
 
 var _frames := 0
 var _args := {}
@@ -179,6 +180,10 @@ func _initialize() -> void:
 				world.add_child(sc)
 				_scouts.append(sc)
 			_cam.look_at_from_position(Vector3(0, 1.5, -4.8), Vector3(0, 0.9, 0))
+		"gait":
+			_gait_strip(world)
+		"clip":
+			_clip_setup(world, ground)
 		"walk":
 			for i in 4:
 				var sc := Scout.new(Scout.random_look() if i > 0 else Scout.DEFAULT_LOOK)
@@ -193,6 +198,8 @@ func _initialize() -> void:
 
 
 func _process(_delta: float) -> bool:
+	if _clip:
+		return _clip_step()
 	_frames += 1
 	if _frames == int(_args.get("frames", "40")):
 		var img := _vp.get_texture().get_image()
@@ -200,3 +207,125 @@ func _process(_delta: float) -> bool:
 		print("saved ", _args.get("out", "/tmp/scout.png"))
 		return true
 	return false
+
+
+## Filmstrip: one row per speed, one column per phase of the gait cycle (each scout simulated on its own)
+func _gait_strip(world: Node3D) -> void:
+	var speeds: PackedFloat64Array = str(_args.get("speeds", "1.6,3.4,6.2")).split_floats(",")
+	var cols := int(_args.get("cols", "8"))
+	var dt := 1.0 / 120.0
+	var gap := 0.62
+	var row_h := 2.0
+	for r in speeds.size():
+		var v: float = speeds[r]
+		var strip := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(1.4, 0.04, cols * gap + 0.8)
+		strip.mesh = bm
+		var sm := StandardMaterial3D.new()
+		sm.albedo_color = Color("7fae4f")
+		strip.material_override = sm
+		strip.position = Vector3(0, -r * row_h - 0.02, -(cols - 1) * gap * 0.5)
+		world.add_child(strip)
+		for k in cols:
+			var holder := Node3D.new()
+			world.add_child(holder)
+			var sc := Scout.new(Scout.DEFAULT_LOOK)
+			holder.add_child(sc)
+			sc.frozen = true
+			var target := float(k) / cols
+			var t := 0.0
+			var last := 0.0
+			while true:
+				sc.speed = v
+				sc.sprint = v > 3.5
+				sc.position.z -= v * dt
+				sc.animate(dt)
+				t += dt
+				var g: float = sc._gait_g
+				var crossed := (last <= target and g > target) or (target == 0.0 and g < last)
+				last = g
+				if t > 2.0 and crossed:
+					break
+				if t > 8.0:
+					break
+			holder.position = Vector3(0, -r * row_h, -k * gap) - Vector3(0, 0, sc.position.z)
+			_scouts.append(sc)
+	var cam_mid := Vector3(0, -(speeds.size() - 1) * row_h * 0.5 + 0.7, -(cols - 1) * gap * 0.5)
+	_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+	_cam.size = speeds.size() * row_h + 0.2
+	_cam.look_at_from_position(cam_mid + Vector3(8, 0, 0), cam_mid)
+
+
+# ---------------------------------------------------------------- clip: a scripted little hike, saved frame by frame
+# --mode=clip --out=/dir (frames as /dir/f0000.png, 30 fps) --script=… (default: start, walk, sprint, stop, curves)
+var _clip: Scout
+var _clip_t := 0.0
+var _clip_n := 0
+var _clip_v := Vector3.ZERO
+var _clip_yaw := 0.0
+var _clip_len := 16.0
+var _cam_pos := Vector3.ZERO
+var _cam_yaw := 0.0
+
+
+func _clip_setup(world: Node3D, ground: MeshInstance3D) -> void:
+	(ground.mesh as PlaneMesh).size = Vector2(400, 400)
+	var gm := ground.material_override as StandardMaterial3D
+	var nt := NoiseTexture2D.new()
+	var fn := FastNoiseLite.new()
+	fn.frequency = 0.08
+	nt.noise = fn
+	nt.seamless = true
+	nt.color_ramp = Gradient.new()
+	nt.color_ramp.set_color(0, Color("5f8f3a"))
+	nt.color_ramp.set_color(1, Color("9cc460"))
+	gm.albedo_texture = nt
+	gm.uv1_triplanar = true
+	gm.uv1_world_triplanar = true
+	gm.uv1_scale = Vector3(0.25, 0.25, 0.25)
+	_clip = Scout.new(Scout.DEFAULT_LOOK)
+	world.add_child(_clip)
+	_clip.frozen = true
+	_clip_len = float(_args.get("len", "17"))
+	_cam.fov = 40.0
+
+
+## Wanted speed and turn rate over time: stand, walk, sprint, stop, stand, walk in curves, stop
+func _clip_input(t: float) -> Array:
+	if t < 1.2: return [0.0, 0.0, false]
+	if t < 4.5: return [3.4, 0.0, false]
+	if t < 8.0: return [6.2, 0.0, true]
+	if t < 9.5: return [0.0, 0.0, false]
+	if t < 11.0: return [1.6, 0.0, false]
+	if t < 15.0: return [3.4, 1.4 * sin((t - 11.0) * 1.2), false]
+	return [0.0, 0.0, false]
+
+
+func _clip_step() -> bool:
+	var dt := 1.0 / 30.0
+	var inp := _clip_input(_clip_t)
+	# like the wanderer: velocity eases towards the wanted one
+	_clip_yaw += float(inp[1]) * dt
+	var dir := Vector3(-sin(_clip_yaw), 0, -cos(_clip_yaw))
+	_clip_v = _clip_v.lerp(dir * float(inp[0]), 1.0 - exp(-10.0 * dt))
+	_clip.position += _clip_v * dt
+	if _clip_v.length() > 0.4:
+		_clip.rotation.y = lerp_angle(_clip.rotation.y, atan2(-_clip_v.x, -_clip_v.z), 1.0 - exp(-9.0 * dt))
+	_clip.speed = _clip_v.length()
+	_clip.sprint = inp[2]
+	_clip.turn_rate = float(inp[1])
+	for k in 2:
+		_clip.animate(dt * 0.5)
+	# camera: from the side and a little ahead, following smoothly
+	_cam_yaw = _clip.rotation.y if _clip_n == 0 else lerp_angle(_cam_yaw, _clip.rotation.y, 1.0 - exp(-2.0 * dt))
+	var off := Basis(Vector3.UP, _cam_yaw) * Vector3(2.5, 1.0, -0.9)
+	var want := _clip.position + off
+	_cam_pos = want if _clip_n == 0 else _cam_pos.lerp(want, 1.0 - exp(-8.0 * dt))
+	_cam.look_at_from_position(_cam_pos, _cam_pos - off + Vector3(0, 0.7, 0))
+	if _clip_n > 2:
+		var img := _vp.get_texture().get_image()
+		img.save_png("%s/f%04d.png" % [_args.get("out", "/tmp"), _clip_n - 3])
+	_clip_n += 1
+	_clip_t += dt
+	return _clip_t > _clip_len
