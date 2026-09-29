@@ -584,3 +584,31 @@ Three new landmark types, chosen by an extra hash (so the old landmarks of every
   walk up onto, moss, shelf fungi, young trees growing from it, root plate), grove circles (6–8 trees sized
   to leave gaps, a flat mossy stone in the middle). 45 % of the landmark cells use the new types via an own
   hash, the others keep their old landmark.
+
+## Step 8 – Campfires, items, foraging, cairns, skipping stones (plan)
+
+New items (hand-built models and icons like the others):
+- **Matches** (`streichhoelzer`, 6 charges; wet matches don't light), **Lighter** (`feuerzeug`, waterproof),
+  **Marshmallows** (`marshmallows`, 4 charges; eaten raw or roasted at a fire for much more),
+  **Flat pebble** (`kiesel`, for skipping stones and cairns), **Fly agaric** (`fliegenpilz`: pretty,
+  poisonous), plus the existing berries and mushrooms as forage.
+
+8a **Campfire** (new find spot `lagerfeuer`, more often in cold biomes and near evening camps): a ring of
+   stones with charred logs, a woodpile and two log seats. "Light the fire" needs matches or a lighter and
+   not heavy rain (except under a shelter). A lit fire has animated flames, rising sparks, glowing embers,
+   a flickering warm light and a crackling sound; it burns ~8 minutes, then glows out. Sitting by it warms
+   you, dries you and rests you faster; with marshmallows: "Roast marshmallows".
+8b **Foraging**: berry clusters on some bushes near the path (red, blue or black), mushroom clusters at the
+   foot of trees (edible ones and fly agarics); "Pick berries" / "Gather mushrooms" puts them in the backpack
+   and they are gone (remembered). Flat pebbles lie at the shores of ponds and brooks.
+8c **Cairns**: small cairns stand at some viewpoints; "Add a stone" (with a pebble or pretty stone) stacks it
+   on top; using a stone elsewhere starts your own cairn. Cairns are remembered per world (saved).
+8d **Skipping stones**: use a flat pebble facing water: it flies out and skips over the surface with rings
+   at every touch; the number of skips depends on the angle/luck; a message counts them.
+- 8a result: campfire find spots (fire ring of blackened stones with a charred log tipi, woodpile, two seat
+  logs; grass kept clear around it and around shelters). Lighting needs matches (not wet) or a lighter and no
+  heavy rain; a lit fire has teardrop flames (own shader), sparks, smoke, glowing embers, a flickering light
+  and a synthesized crackle, burns 8 min and glows out 1.5 min. By the fire you warm up, dry off and rest
+  faster; with marshmallows you roast them (+14 food, +20 stamina). New items with hand-built models and
+  icons: matches (start kit), lighter, marshmallows, flat pebble, fly agaric (poisonous). `--lightfires`.
+  The selftest's voice-gate check no longer depends on the live microphone.

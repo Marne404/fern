@@ -121,6 +121,50 @@ static func rain_loop() -> AudioStreamWAV:
 	return w
 
 
+## Crackling campfire: a soft roar of low noise with little pops and snaps, loops (4 s)
+static func fire_loop() -> AudioStreamWAV:
+	if _cache.has("fire"):
+		return _cache["fire"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 23
+	var n := int(RATE * 4.0)
+	var samples := PackedFloat32Array()
+	samples.resize(n)
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in n:
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.08
+		lp2 += (lp - lp2) * 0.2
+		# the roar breathes slowly
+		samples[i] = lp2 * (0.55 + 0.25 * sin(float(i) / RATE * 2.3))
+	for c in 70:
+		var start := rng.randi_range(0, n - 1200)
+		var amp := rng.randf_range(0.2, 0.9) * (1.0 if rng.randf() < 0.8 else 1.8)
+		var len := rng.randi_range(80, 900)
+		var hp := 0.0
+		for k in len:
+			var t := float(k) / len
+			var x := rng.randf_range(-1.0, 1.0)
+			hp = x - hp * 0.3
+			samples[start + k] += hp * amp * exp(-t * 6.0) * 0.5
+	var fade := 2000
+	for k in fade:
+		var w := float(k) / fade
+		samples[k] = samples[k] * w + samples[n - fade + k] * (1.0 - w)
+	var out := PackedFloat32Array(samples.slice(0, n - fade))
+	var peak := 0.0
+	for v in out:
+		peak = maxf(peak, absf(v))
+	for i in out.size():
+		out[i] = out[i] / maxf(peak, 1e-5) * 0.7
+	var wv := _wav(out)
+	wv.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	wv.loop_begin = 0
+	wv.loop_end = out.size()
+	_cache["fire"] = wv
+	return wv
+
+
 ## A babbling brook: soft rushing noise with bubbly little tones, loops seamlessly (4 s)
 static func brook_loop() -> AudioStreamWAV:
 	if _cache.has("brook"):

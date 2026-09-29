@@ -335,7 +335,7 @@ func _find_clearings() -> void:
 		var lx: float = p["x"] - corner.x
 		var lz: float = p["z"] - corner.y
 		if lx > -4.0 and lz > -4.0 and lx < SIZE + 4.0 and lz < SIZE + 4.0:
-			var r := 1.4 if p["type"] == "schild" else 2.6
+			var r := 1.4 if p["type"] == "schild" else (3.4 if p["type"] in ["lagerfeuer", "unterstand"] else 2.6)
 			clearings.append(Vector3(lx, lz, r))
 			blockers.append(Vector3(lx, lz, r + 1.0))
 	# mud hollows: no plants in the mud (three circles along the path cover the ellipse)

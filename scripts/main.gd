@@ -137,6 +137,8 @@ func _ready() -> void:
 			zz -= 40.0
 		get_tree().quit()
 		return
+	if _args.has("lightfires"):
+		Campfire.debug_lit = true
 	if _args.has("findspots"):
 		# test helper: --findspots=type lists the first find spots of that type
 		var n_found := 0
@@ -602,6 +604,7 @@ func _process_inner(delta: float) -> void:
 	if wf.flash > 0.01:
 		atmosphere.env.ambient_light_energy = float(atmosphere.shown.get("ambient_energy", 0.5)) + wf.flash * 0.12
 		_rain_on_player(delta)
+		_campfire_warmth(delta)
 	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
 	# test helpers for tuning the lighting
@@ -964,6 +967,21 @@ func _setup_post() -> void:
 
 
 ## Rain soaks you unless you wear the rain jacket or the poncho
+## By a burning campfire: warm, drying off, resting faster
+func _campfire_warmth(delta: float) -> void:
+	if not player or mode != Mode.PLAYING:
+		return
+	for f: Campfire in get_tree().get_nodes_in_group("campfire"):
+		if not f.is_burning() or f.global_position.distance_to(player.global_position) > 3.6:
+			continue
+		player.body.warm_bonus_t = maxf(player.body.warm_bonus_t, 4.0)
+		player.body.wet = maxf(player.body.wet - delta * 0.012, 0.0)
+		if player.resting:
+			player.body.rest = minf(player.body.rest + delta * 0.5, 100.0)
+			player.body.stamina = minf(player.body.stamina + delta * 2.0, player.body.max_stamina())
+		return
+
+
 func _rain_on_player(delta: float) -> void:
 	var w := atmosphere.weather
 	if not player or not w.is_raining() or player.swimming:

@@ -402,6 +402,38 @@ static func _build(id: String, b: B) -> void:
 			b.add(ball(Vector3(0.03, 0.022, 0.02)), Color("e8b877"), T(Vector3(-0.012, 0.02, 0), Vector3(0, 0, 0.5)))
 			b.add(ball(Vector3(0.03, 0.022, 0.02)), Color("e0ac66"), T(Vector3(0.012, 0.02, 0), Vector3(0, 0, -0.5)))
 			b.add(box(Vector3(0.01, 0.002, 0.04), 4.0), Color("f4f1ea"), T(Vector3(0.0, 0.026, 0.02)))
+		"streichhoelzer":
+			# a little matchbox, half open, a few red-tipped matches
+			b.add(box(Vector3(0.06, 0.016, 0.04), 8.0), Color("f2d36b"), T(Vector3(0, 0.008, 0)))
+			b.add(box(Vector3(0.061, 0.012, 0.03), 8.0), Color("c8453e"), T(Vector3(0, 0.009, 0)))
+			b.add(box(Vector3(0.05, 0.012, 0.036), 8.0), Color("e9dcc0"), T(Vector3(0.022, 0.013, 0)))
+			for i in 4:
+				var z := -0.012 + i * 0.008
+				b.add(box(Vector3(0.045, 0.003, 0.003), 3.0), Color("e8c890"), T(Vector3(0.03, 0.02, z)))
+				b.add(ball(Vector3(0.0045, 0.004, 0.004)), Color("c22f2a"), T(Vector3(0.053, 0.02, z)))
+			b.add(box(Vector3(0.062, 0.017, 0.006), 4.0), Color("7a4a2a"), T(Vector3(0, 0.008, 0.019)))
+		"feuerzeug":
+			b.add(box(Vector3(0.024, 0.07, 0.012), 6.0), Color("3f7fc8"), T(Vector3(0, 0.035, 0)), GLOSS)
+			b.add(box(Vector3(0.022, 0.018, 0.011), 5.0), Color("c9ced3"), T(Vector3(0, 0.078, 0)), GLOSS)
+			b.add(cyl(0.006, 0.006, 0.008, 10), Color("5a5d61"), T(Vector3(0.004, 0.09, 0), Vector3(PI * 0.5, 0, 0)))
+		"marshmallows":
+			# a see-through bag with pink and white marshmallows
+			b.add(ball(Vector3(0.065, 0.05, 0.04), 2.6, 10, 16), Color("eef3f7"), T(Vector3(0, 0.05, 0)), GLOSS)
+			var cols := [Color("fbe6ee"), Color("f7b6cf"), Color("ffffff"), Color("f7b6cf"), Color("fbe6ee"), Color("ffffff")]
+			for i in 6:
+				var a := i * 1.1
+				b.add(cyl(0.017, 0.017, 0.022, 12, 0.006), cols[i], T(Vector3(cos(a) * 0.028, 0.03 + (i % 2) * 0.03, sin(a) * 0.016), Vector3(0.3 * (i % 3), a, 0)))
+			b.add(box(Vector3(0.06, 0.012, 0.012), 4.0), Color("e0507a"), T(Vector3(0, 0.1, 0)))
+		"kiesel":
+			b.add(ball(Vector3(0.045, 0.011, 0.035), 2.4, 8, 16), Color("9aa0a4"), T(Vector3(0, 0.011, 0)))
+			b.add(ball(Vector3(0.03, 0.004, 0.02), 2.0, 5, 10), Color("b8bdc0"), T(Vector3(-0.008, 0.019, 0.004)))
+		"fliegenpilz":
+			b.add(lathe([Vector2(0, 0), Vector2(0.012, 0), Vector2(0.01, 0.05), Vector2(0.014, 0.055), Vector2(0, 0.055)], 12), Color("f4efe4"))
+			b.add(lathe([Vector2(0, 0.05), Vector2(0.045, 0.052), Vector2(0.04, 0.066), Vector2(0.022, 0.078), Vector2(0, 0.08)], 16), Color("d8322a"), T(), GLOSS)
+			for i in 7:
+				var a2 := i * 2.3
+				var r2 := 0.012 + (i % 3) * 0.009
+				b.add(ball(Vector3(0.005, 0.003, 0.005)), Color("fffbf0"), T(Vector3(cos(a2) * r2, 0.078 - r2 * 0.45, sin(a2) * r2)))
 		_:
 			b.add(box(Vector3(0.08, 0.08, 0.08)), Color("ff00ff"))
 

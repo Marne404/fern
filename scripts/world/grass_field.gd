@@ -263,6 +263,15 @@ func _build_tile(t: Vector2i, lod: int) -> MultiMeshInstance3D:
 			var md := Vector3(gen.path_x(mz), mz, float(o["wid"]) * (1.0 if f == 0.0 else 0.8))
 			if Rect2(wx, wz, TILE, TILE).grow(md.z).has_point(Vector2(md.x, md.y)):
 				disks.append(md)
+	# campfires, shelters and benches stand on a bare patch (their find spot's clearing)
+	var k0 := floori(-(wz + TILE) / PoiManager.CELL) - 1
+	for pk in range(maxi(k0, 0), k0 + 3):
+		var fp := PoiManager.plan(gen, pk)
+		if fp.is_empty() or not fp["type"] in ["lagerfeuer", "unterstand", "bank", "picknick"]:
+			continue
+		var fd := Vector3(fp["x"], fp["z"], 3.2 if fp["type"] in ["lagerfeuer", "unterstand"] else 2.0)
+		if Rect2(wx, wz, TILE, TILE).grow(fd.z).has_point(Vector2(fd.x, fd.y)):
+			disks.append(fd)
 	disks.sort_custom(func(a, b): return a.z > b.z)
 	for i in 4:
 		var d: Vector3 = disks[i] if i < disks.size() else Vector3(0, 0, 0)

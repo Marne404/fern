@@ -481,3 +481,51 @@ static func shelter() -> ArrayMesh:
 			var a := k * TAU / 4.0
 			b.add(ItemModels.tube([Vector3(0.6 + cos(a) * 0.08, ridge - 0.64, sin(a) * 0.08), Vector3(0.6 + cos(a) * 0.08, ridge - 0.46, sin(a) * 0.08)], 0.008, 4), IRON)
 		b.add(Mesh3.lathe([Vector2(0, 0), Vector2(0.1, 0), Vector2(0, 0.08)], 8), IRON, T(Vector3(0.6, ridge - 0.46, 0))))
+
+
+# ================================================================ campfire
+
+## A fire ring: a circle of blackened field stones around ash, a little tipi of charred logs in the middle.
+static func fire_ring(seed_v: int) -> ArrayMesh:
+	return _cached("fire_ring_%d" % seed_v, func(b: ItemModels.B):
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_v
+		var n := 10
+		for i in n:
+			var a := i * TAU / n + rng.randf_range(-0.12, 0.12)
+			var r := rng.randf_range(0.62, 0.72)
+			var st := lumpy(Vector3(rng.randf_range(0.14, 0.2), rng.randf_range(0.1, 0.15), rng.randf_range(0.12, 0.17)), 2.4, seed_v + i, 0.18, 6, 10)
+			var tone := Color("8e8f8a").lerp(Color("5d5c58"), rng.randf())
+			b.add(st, tone, T(Vector3(cos(a) * r, 0.06, sin(a) * r), Vector3(0, -a, rng.randf_range(-0.2, 0.2))))
+		# ash bed
+		b.add(Mesh3.blob(Vector3(0.55, 0.03, 0.55), 2.2, 4, 18), Color("6d6862"), T(Vector3(0, 0.0, 0)))
+		b.add(Mesh3.blob(Vector3(0.35, 0.03, 0.35), 2.2, 4, 14), Color("3e3a37"), T(Vector3(0, 0.015, 0)))
+		# charred log tipi
+		for i in 5:
+			var a2 := i * TAU / 5.0 + 0.3
+			var base := Vector3(cos(a2) * 0.32, 0.03, sin(a2) * 0.32)
+			b.add(ItemModels.tube([base, Vector3(cos(a2) * 0.05, 0.42, sin(a2) * 0.05)], 0.045, 7), Color("3a2b22") if i % 2 == 0 else Color("4a3527")))
+
+
+## A neat stack of split firewood (origin at the bottom center)
+static func woodpile() -> ArrayMesh:
+	return _cached("woodpile", func(b: ItemModels.B):
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 11
+		for row in 3:
+			var count := 4 - row
+			for i in count:
+				var x := (i - (count - 1) * 0.5) * 0.17
+				var y := 0.08 + row * 0.14
+				b.add(Mesh3.lathe([Vector2(0, -0.35), Vector2(0.075, -0.35), Vector2(0.075, 0.35), Vector2(0, 0.35)], 7), Color("8c5d36").lerp(Color("a8703f"), rng.randf()), T(Vector3(x, y, rng.randf_range(-0.04, 0.04)), Vector3(PI * 0.5, 0, 0)))
+				b.add(Mesh3.lathe([Vector2(0, 0.35), Vector2(0.07, 0.35), Vector2(0, 0.351)], 7), Color("e2c28f"), T(Vector3(x, y, rng.randf_range(-0.04, 0.04)), Vector3(PI * 0.5, 0, 0))))
+
+
+## A log to sit on, lying on its side (origin at the bottom center, along x)
+static func seat_log(length: float) -> ArrayMesh:
+	return _cached("seat_log_%.1f" % length, func(b: ItemModels.B):
+		b.add(Mesh3.lathe([Vector2(0, -length * 0.5), Vector2(0.2, -length * 0.5), Vector2(0.21, 0), Vector2(0.2, length * 0.5), Vector2(0, length * 0.5)], 12), WOOD, T(Vector3(0, 0.2, 0), Vector3(0, 0, PI * 0.5)))
+		for s in [-1.0, 1.0]:
+			b.add(Mesh3.lathe([Vector2(0, 0), Vector2(0.19, 0), Vector2(0, 0.002)], 12), Color("e2c28f"), T(Vector3(s * length * 0.5, 0.2, 0), Vector3(0, 0, -s * PI * 0.5)))
+		# a flat seat cut on top
+		b.add(ItemModels.box(Vector3(length * 0.8, 0.02, 0.2), 4.0), Color("c99257"), T(Vector3(0, 0.395, 0))))

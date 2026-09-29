@@ -14,7 +14,7 @@ var _mats := {}
 
 const TYPES := [
 	["picknick", 18], ["rucksack", 14], ["bank", 16], ["quelle", 12], ["kiste", 12],
-	["beeren", 14], ["fund", 4], ["schild", 10], ["unterstand", 6],
+	["beeren", 14], ["fund", 4], ["schild", 10], ["unterstand", 6], ["lagerfeuer", 9],
 ]
 const PLACES := ["Somewhere", "Nowhere", "Further", "Past the Horizon", "Almost There", "A Bit More",
 	"Grandma", "Kiosk", "North Pole", "To the Sea", "Mountain Lake", "Lunch Break", "Back? Nope."]
@@ -58,6 +58,8 @@ static func plan(gen: WorldGen, k: int) -> Dictionary:
 		off = r["half_w"] + 1.2
 	elif type == "unterstand":
 		off = r["half_w"] + 3.2
+	elif type == "lagerfeuer":
+		off = r["half_w"] + rng.randf_range(4.0, 5.5)
 	var x: float = r["px"] + side * off / r["inv_len"]
 	if gen.water_level(x, z) > -INF:
 		return {}
@@ -88,7 +90,7 @@ static func _loot(type: String, biome: int, rng: RandomNumberGenerator) -> Array
 	var forest := biome in [1, 5, 10, 13, 15, 16, 19, 21] # Forest Trail, Red Maple Wood, Glowing Forest, Birch Wood, Giants' Old Forest, Mushroom Wood
 	var coast := biome == 8              # Sunset Coast
 	var food := ["apfel", "apfel", "brot", "muesliriegel", "bohnen", "beeren", "kaese", "sandwich", "schokolade",
-		"trockenobst", "moehre", "keks", "honig", "glueckskeks"]
+		"trockenobst", "moehre", "keks", "honig", "glueckskeks", "marshmallows"]
 	if forest:
 		food += ["pilze", "pilze", "beeren"]
 	var drink := ["wasserflasche", "limonade", "saft"]
@@ -99,7 +101,7 @@ static func _loot(type: String, biome: int, rng: RandomNumberGenerator) -> Array
 	if cold:
 		drink += ["tee", "kakao", "tee"]
 	var gear := ["verband", "seil", "taschenlampe", "fernglas", "feldhandbuch", "kamera", "kompass", "karte", "messer",
-		"stock", "laterne", "pflaster", "erste_hilfe", "pfeife"]
+		"stock", "laterne", "pflaster", "erste_hilfe", "pfeife", "streichhoelzer", "feuerzeug"]
 	var clothes := ["regenjacke", "pullover", "muetze", "poncho", "schal", "handschuhe", "stiefel"]
 	if hot:
 		clothes = ["sonnenhut", "sonnenhut", "sonnencreme", "sonnencreme", "stiefel", "poncho"]
@@ -320,12 +322,89 @@ func _build(p: Dictionary, corner: Vector2) -> Node3D:
 			_signpost(root, p)
 		"unterstand":
 			_shelter(root)
+		"lagerfeuer":
+			_campfire(root, p)
 	for i in items.size():
 		var uid := _uid(p, i)
 		if taken.has(uid) or i >= spots.size():
 			continue
 		_spawn(root, ItemDefs.make(items[i], uid), spots[i])
 	return root
+
+
+## Campfire: a fire ring with a woodpile and two log seats; light it, sit by it, roast marshmallows
+func _campfire(root: Node3D, p: Dictionary) -> void:
+	_model(root, StructureModels.fire_ring(int(p["seed"]) % 5), Vector3.ZERO)
+	var fire := Campfire.new()
+	fire.uid = _uid(p, 97)
+	root.add_child(fire)
+	var body := StaticBody3D.new()
+	root.add_child(body)
+	_model(body, StructureModels.woodpile(), Vector3(1.55, 0, -0.7), 0.3)
+	_model(body, StructureModels.seat_log(1.6), Vector3(0, 0, 1.7))
+	_model(body, StructureModels.seat_log(1.4), Vector3(-1.7, 0, -0.1), PI * 0.5)
+	for bx in [[Vector3(0.75, 0.6, 0.8), Vector3(1.55, 0.3, -0.7)], [Vector3(1.6, 0.4, 0.42), Vector3(0, 0.2, 1.7)], [Vector3(0.42, 0.4, 1.4), Vector3(-1.7, 0.2, -0.1)]]:
+		var cs := CollisionShape3D.new()
+		var sh := BoxShape3D.new()
+		sh.size = bx[0]
+		cs.shape = sh
+		cs.position = bx[1]
+		body.add_child(cs)
+	Songbirds.mark(root, Vector3(-0.5, 0.42, 1.7))
+	var prompt := func(w: Wanderer) -> String:
+		if fire.is_burning():
+			return "Roast marshmallows" if _find(w, "marshmallows") else "Sit by the fire"
+		return "Light the fire"
+	_interactable(root, Vector3(0, 0.5, 0), Vector3(1.6, 1.0, 1.6), prompt, func(w: Wanderer):
+		if fire.is_burning():
+			var mm := _find(w, "marshmallows")
+			if not mm.is_empty():
+				mm["charges"] -= 1
+				w.body.food = minf(w.body.food + 14.0, 100.0)
+				w.body.stamina = minf(w.body.stamina + 20.0, w.body.max_stamina())
+				if mm["charges"] <= 0:
+					w.inventory.remove(mm)
+				else:
+					w.inventory.changed.emit()
+				w.message.emit("Golden brown and gooey. The best thing on the whole trail.")
+			if not w.resting:
+				w.resting = true
+			if mm.is_empty():
+				w.message.emit("You sit down by the crackling fire. Warm at last.")
+			return
+		_light_fire(w, fire))
+
+
+func _find(w: Wanderer, id: String) -> Dictionary:
+	for it in w.inventory.items:
+		if it["id"] == id and it["condition"] >= 0.35 and it.get("charges", 1) > 0:
+			return it
+	return {}
+
+
+func _light_fire(w: Wanderer, fire: Campfire) -> void:
+	var lighter := _find(w, "feuerzeug")
+	var matches := _find(w, "streichhoelzer")
+	if lighter.is_empty() and matches.is_empty():
+		w.message.emit("You need matches or a lighter to light the fire.")
+		return
+	if lighter.is_empty() and matches.get("wet", false):
+		w.message.emit("The matches are soaked. They won't light.")
+		return
+	if lighter.is_empty():
+		matches["charges"] -= 1
+		if matches["charges"] <= 0:
+			w.inventory.remove(matches)
+		else:
+			w.inventory.changed.emit()
+	# heavy rain puts the flame out (unless the fire ring is under a roof)
+	var main := w.get_tree().current_scene
+	var weather: Weather = main.atmosphere.weather if main and "atmosphere" in main else null
+	if weather and weather.rain * (1.0 - weather.snow_share) > 0.45:
+		w.message.emit("The rain puts the little flame out. Maybe when it eases off.")
+		return
+	fire.light()
+	w.message.emit("The kindling catches – the fire crackles to life.")
 
 
 ## Rain shelter: walls and roof collide, under the roof you stay dry (group "shelter"), rain stops at the roof
@@ -384,7 +463,8 @@ func _spawn(root: Node3D, item: Dictionary, local_pos: Vector3) -> WorldItem:
 	return wi
 
 
-func _interactable(root: Node3D, pos: Vector3, size: Vector3, prompt: String, action: Callable) -> void:
+## prompt: a text or a Callable(Wanderer) -> String for prompts that change (e.g. a fire that burns or not)
+func _interactable(root: Node3D, pos: Vector3, size: Vector3, prompt: Variant, action: Callable) -> void:
 	var area := Area3D.new()
 	area.collision_layer = 1 << 2
 	area.collision_mask = 0

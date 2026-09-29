@@ -59,6 +59,15 @@ const ITEMS := {
 	"muschel": {"name": "Seashell", "weight": 0.1, "kind": "kram", "props": ["wasserfest"], "desc": "Hold it to your ear."},
 	"tannenzapfen": {"name": "Pinecone", "weight": 0.05, "kind": "kram", "props": ["schwimmt"], "desc": "Smells like a forest. Burns well."},
 	"glueckskeks": {"name": "Fortune cookie", "weight": 0.02, "kind": "essen", "food": 3, "props": [], "desc": "There's a little note inside."},
+	# ---------------------------------------------------------------- round 12
+	"streichhoelzer": {"name": "Matches", "weight": 0.05, "kind": "werkzeug", "charges": 6, "props": [], "desc": "For a campfire. Keep them dry."},
+	"feuerzeug": {"name": "Lighter", "weight": 0.05, "kind": "werkzeug", "props": ["wasserfest"], "desc": "Lights a campfire, even when it's damp."},
+	"marshmallows": {"name": "Marshmallows", "weight": 0.2, "kind": "essen", "food": 5, "stamina": 6, "charges": 4, "props": [],
+		"desc": "Nice raw. Much nicer roasted over a fire."},
+	"kiesel": {"name": "Flat pebble", "weight": 0.15, "kind": "kram", "props": ["wasserfest"],
+		"desc": "Perfect for skipping over water. Or for a cairn."},
+	"fliegenpilz": {"name": "Fly agaric", "weight": 0.1, "kind": "essen", "food": 2, "poison": 30.0, "props": ["verderblich"],
+		"desc": "Red with white dots. Beautiful. Do not eat."},
 }
 
 const PROP_NAMES := {"wasserfest": "waterproof", "zerbrechlich": "fragile", "verderblich": "perishable",

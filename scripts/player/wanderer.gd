@@ -6,6 +6,8 @@ signal state_changed(state: int)
 signal collapsed
 signal recovered
 signal message(text: String)
+## a pebble or stone was used: main decides (skip it over water, add it to a cairn, start a cairn)
+signal use_stone(item: Dictionary)
 signal sleep_fade(on: bool)
 
 const WALK_SPEED := 3.4
@@ -128,6 +130,7 @@ func _ready() -> void:
 	inventory.add(ItemDefs.make("wasserflasche"))
 	inventory.add(ItemDefs.make("apfel"))
 	inventory.add(ItemDefs.make("muesliriegel"))
+	inventory.add(ItemDefs.make("streichhoelzer"))
 
 
 func look_along(dir: Vector3) -> void:
@@ -975,7 +978,11 @@ func use_item(item: Dictionary) -> void:
 			if d.has("warm_time"):
 				body.warm_bonus_t = maxf(body.warm_bonus_t, d["warm_time"])
 			_consume(item, d)
-			if randf() < d.get("queasy", 0.0):
+			if d.has("poison"):
+				body.health = maxf(body.health - float(d["poison"]), 5.0)
+				body.spend(25.0)
+				message.emit("Ugh. That was a very bad idea. You feel dizzy.")
+			elif randf() < d.get("queasy", 0.0):
 				body.spend(10.0)
 				message.emit("Hmm. Your tummy doesn't like that.")
 			elif item["id"] == "glueckskeks":
@@ -1038,6 +1045,10 @@ func _use_special(item: Dictionary) -> void:
 			message.emit("Hold the right mouse button to look through.")
 		"feldhandbuch":
 			message.emit("Page 1: knots. Page 2: fire. Page 3: ... the pages are stuck together.")
+		"streichhoelzer", "feuerzeug":
+			message.emit("Look for a fire ring along the trail to light a campfire.")
+		"kiesel", "stein":
+			use_stone.emit(item)
 		_:
 			message.emit(ItemDefs.def(item["id"])["desc"])
 

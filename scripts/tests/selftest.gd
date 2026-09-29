@@ -22,8 +22,8 @@ func run() -> void:
 		await get_tree().process_frame
 	var p: Wanderer = main.player
 	var inv := p.inventory
-	check("Starting gear", inv.items.size() == 3, "%d items" % inv.items.size())
-	check("Weight", absf(inv.total_weight() - 1.3) < 0.01, "%.2f kg" % inv.total_weight())
+	check("Starting gear", inv.items.size() == 4, "%d items" % inv.items.size())
+	check("Weight", absf(inv.total_weight() - 1.35) < 0.01, "%.2f kg" % inv.total_weight())
 
 	# eating
 	p.body.food = 40.0
@@ -449,7 +449,11 @@ func _test_voice(p: Wanderer) -> void:
 	for i in 30:
 		closed = not g.call(2, -70.0, 0.8, false, 0.016)
 	check("Voice activation closes after silence", closed)
+	# (the live microphone may be transmitting right now: test the gate from a closed state)
+	var was: bool = v.transmitting
+	v.transmitting = false
 	check("Noise without voice does not open", not g.call(2, -20.0, 0.1, false, 0.016))
+	v.transmitting = was
 	check("Push to talk needs the key", g.call(0, -70.0, 0.0, true, 0.016) and not g.call(0, -10.0, 0.9, false, 0.016))
 	check("Always on", g.call(1, -80.0, 0.0, false, 0.016))
 	# lip sync with a fake signal
