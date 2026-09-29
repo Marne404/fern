@@ -428,6 +428,7 @@ func _make_instances(node: Node3D, data: Dictionary) -> void:
 			# hard limit just behind the shader thinning, without cell blending
 			mmi.visibility_range_end = grass_distance * (1.0 if info["kind"] == "grass" else 1.25) + 24.0
 			node.add_child(mmi)
+			_plant_lod(node, mmi, mm, key.get_slice("#", 0))
 			continue
 		var base: String = key.get_slice("#", 0)
 		if info["kind"] == "tree" and not base.ends_with("@far"):
@@ -438,8 +439,35 @@ func _make_instances(node: Node3D, data: Dictionary) -> void:
 			mmi.visibility_range_end_margin = 12.0
 			mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
 		node.add_child(mmi)
+		_plant_lod(node, mmi, mm, base)
 		if info["kind"] == "tree" and base.ends_with("@far"):
 			impostors.attach(mmi, base.trim_suffix("@far"))
+
+
+## Grass tufts and flowers beyond plant_detail_distance: a sibling batch with the kit's first level of detail
+## takes over (same instances and material, 2–5× fewer triangles). The engine picks a batch's LOD from the
+## nearest point of its 16 m cell, so cells in the middle distance mostly stay at full detail.
+func _plant_lod(node: Node3D, mmi: MultiMeshInstance3D, mm: MultiMesh, base: String) -> void:
+	if not Settings.values["opt_far_plants"]:
+		return
+	var model := base.get_slice("/", base.get_slice_count("/") - 1)
+	if not AssetLibrary.is_plant(model) or not lib.has_lod(model):
+		return
+	var d: float = Settings.values["plant_detail_distance"]
+	var end := mmi.visibility_range_end
+	if end > 0.0 and end <= d:
+		return
+	var far := _mm_copy(mm, _mesh_for(base + "@lo")["mesh"])
+	far.cast_shadow = mmi.cast_shadow
+	far.visibility_range_begin = d
+	far.visibility_range_begin_margin = 4.0
+	far.visibility_range_end = end
+	far.visibility_range_end_margin = mmi.visibility_range_end_margin
+	far.visibility_range_fade_mode = mmi.visibility_range_fade_mode
+	mmi.visibility_range_end = d
+	mmi.visibility_range_end_margin = 4.0
+	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
+	node.add_child(far)
 
 
 ## Tree levels of detail with visibility ranges (they also apply to the shadow passes):

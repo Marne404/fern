@@ -99,14 +99,18 @@ func _find_mesh_instance(n: Node) -> MeshInstance3D:
 
 ## Mesh with style. style: { "leaves": {...}, "bark": {...}, "rock": {...}, "grass": {...}, "plant": {...} }
 ## Model name with "@far": distant variant with thinned-out, enlarged leaf cards.
+## Model name with "@lo": the kit's first level of detail (every blade and leaf stays, with fewer segments).
 func mesh(model: String, style: Dictionary = {}) -> ArrayMesh:
 	var key := model + "|" + str(style)
 	if _styled.has(key):
 		return _styled[key]
 	var far := model.ends_with("@far")
-	var base_model := model.trim_suffix("@far")
+	var lo := model.ends_with("@lo")
+	var base_model := model.trim_suffix("@far").trim_suffix("@lo")
 	var src := raw_mesh(base_model)
 	var m := _without_leaf_lods(src, far)
+	if lo:
+		m = _first_lod(m)
 	m.resource_name = base_model
 	var aabb := src.get_aabb()
 	for s in m.get_surface_count():
@@ -132,6 +136,40 @@ func _without_leaf_lods(src: ArrayMesh, far: bool) -> ArrayMesh:
 	var m := ArrayMesh.new()
 	m.set("_surfaces", surfaces)
 	return m
+
+
+## Grass tufts and flowers get a simplified variant for the distance (opt_far_plants)
+static func is_plant(model: String) -> bool:
+	return model.begins_with("Grass_") or model.begins_with("Flower_") or model.begins_with("Clover_")
+
+
+## Does the model have a first level of detail to draw in the distance?
+func has_lod(model: String) -> bool:
+	if not _has_lod.has(model):
+		var found := false
+		for surf in (raw_mesh(model).get("_surfaces") as Array):
+			if not (surf.get("lods", []) as Array).is_empty():
+				found = true
+		_has_lod[model] = found
+	return _has_lod[model]
+var _has_lod := {}
+
+
+## Every surface drawn with the index buffer of its first level of detail (surfaces without one stay)
+func _first_lod(m: ArrayMesh) -> ArrayMesh:
+	var surfaces: Array = m.get("_surfaces").duplicate(true)
+	for surf in surfaces:
+		var lods: Array = surf.get("lods", [])
+		if lods.size() < 2 or not (lods[1] is PackedByteArray):
+			continue
+		var bytes_per_index: int = (surf["index_data"] as PackedByteArray).size() / maxi(int(surf["index_count"]), 1)
+		surf["index_data"] = lods[1]
+		surf["index_count"] = (lods[1] as PackedByteArray).size() / bytes_per_index
+		# the deeper levels stay: the engine still picks them for batches far away
+		surf["lods"] = lods.slice(2)
+	var out := ArrayMesh.new()
+	out.set("_surfaces", surfaces)
+	return out
 
 
 func _thin_cards(surf: Dictionary, src: ArrayMesh, s: int) -> void:
