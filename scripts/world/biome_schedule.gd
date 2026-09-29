@@ -308,3 +308,12 @@ func _at_best_match(gen: WorldGen, b: int, k: int) -> float:
 	if delta < 0.4:
 		return 0.5
 	return 1.0 if delta <= 7.0 else maxf(0.0, 1.0 - (delta - 7.0) / 8.0)
+
+
+## Hour for the title screen: the heart of the first biome's window (the golden hour without one)
+func title_hour(gen: WorldGen, d: float) -> float:
+	var wins := _wins(gen, gen.segment_at(d))
+	if wins.is_empty():
+		return 17.2
+	var hh := _in_out(wins)
+	return hh.x

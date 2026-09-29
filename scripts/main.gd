@@ -244,8 +244,9 @@ func _ready() -> void:
 	menu_cam.far = 4000.0
 	add_child(menu_cam)
 	menu_cam.start_z = start_z + 30.0
-	# the title screen shows the golden hour (the clock only runs while hiking)
-	atmosphere.day.hour = 17.2
+	# the title screen shows the first biome at its best hour (the clock only runs while hiking): a morning
+	# biome in its morning light, the journey then begins at 7:00 in the same mood
+	atmosphere.day.hour = gen.schedule.title_hour(gen, -start_z)
 	menu_scout = Scout.new(Settings.values.get("scout", {}))
 	menu_scout.process_mode = Node.PROCESS_MODE_PAUSABLE
 	add_child(menu_scout)
