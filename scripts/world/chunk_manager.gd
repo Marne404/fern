@@ -69,7 +69,8 @@ func _read_settings() -> void:
 
 func _on_setting(key: String) -> void:
 	if key in ["view_distance", "veg_density", "grass_distance", "opt_cells", "opt_far_batch", "opt_far_trees",
-			"opt_opaque_grass", "opt_small_noshadow", "opt_foliage_noaniso"]:
+			"opt_opaque_grass", "opt_small_noshadow", "opt_foliage_noaniso", "opt_tree_lod", "opt_tree_shadow_lod",
+			"opt_far_plants", "plant_detail_distance"]:
 		_read_settings()
 		if key in ["opt_opaque_grass", "opt_foliage_noaniso"]:
 			lib.clear_styled()
@@ -211,6 +212,12 @@ func pending_count() -> int:
 	return _jobs.size()
 
 
+## Chunks the last plan wanted (missing or at the wrong detail) but couldn't start yet
+func backlog_count() -> int:
+	return _backlog
+var _backlog := 0
+
+
 func _coord_of(world_xz: Vector2) -> Vector2i:
 	return Vector2i(floori(world_xz.x / SIZE), floori(world_xz.y / SIZE))
 
@@ -255,6 +262,7 @@ func _plan() -> void:
 			var prio := dist - facing * 40.0 + (0.0 if have == -2 else 60.0)
 			wanted.append([prio, c, lod])
 	wanted.sort_custom(func(a, b): return a[0] < b[0])
+	_backlog = wanted.size()
 	for w in wanted:
 		if _jobs.size() >= MAX_JOBS:
 			break

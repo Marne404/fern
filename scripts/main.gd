@@ -80,6 +80,9 @@ var _frame := 0
 var _spawn_pending := false
 var _shot_vp: SubViewport
 var _shot_cam: Camera3D
+## benchmark run (--bench or settings → Performance → Run benchmark)
+var _bench: Benchmark
+var _bench_mode := false
 
 
 func _ready() -> void:
@@ -99,21 +102,26 @@ func _ready() -> void:
 			Settings.set_value(kv2[0], str_to_var(kv2[1]))
 	if _args.has("timescale"):
 		Engine.time_scale = float(_args["timescale"])
+	PerfStats.install(self)
+	_bench_mode = _args.has("bench") or Settings.bench_pending
+	Settings.bench_pending = false
 	var seed_v: int = Settings.values["last_seed"]
 	if Settings.next_seed >= 0:
 		seed_v = Settings.next_seed
 		Settings.next_seed = -1
 	if _args.has("seed"):
 		seed_v = Settings.parse_seed(_args["seed"])
+	if _bench_mode:
+		seed_v = Benchmark.SEED
 	# the biome order is planned for a hike that starts at 7:00 with the player's day length
 	WorldGen.plan_defaults = {"start_hour": 7.0, "day_minutes": float(Settings.values.get("day_minutes", 36.0)),
 		"fixed": int(Settings.values.get("time_of_day", 0)), "pace": BiomeSchedule.PACE}
-	if _args.has("obtest") or _args.has("selftest"):
-		# tests always see the same world, whatever the player's day settings
+	if _args.has("obtest") or _args.has("selftest") or _bench_mode:
+		# tests and the benchmark always see the same world, whatever the player's day settings
 		WorldGen.plan_defaults = {"start_hour": 7.0, "day_minutes": 36.0, "fixed": 0, "pace": BiomeSchedule.PACE}
 	gen = WorldGen.new(seed_v)
 	# tests keep the plan made at world creation (a deterministic world)
-	_schedule_live = not (_args.has("obtest") or _args.has("selftest"))
+	_schedule_live = not (_args.has("obtest") or _args.has("selftest") or _bench_mode)
 	if _args.has("profile"):
 		for i in 30:
 			var pz := -i * 100.0
@@ -326,6 +334,12 @@ func _ready() -> void:
 	menus.start_pressed.connect(_on_start_pressed)
 	menus.resume_pressed.connect(resume)
 	menus.main_menu_pressed.connect(end_journey)
+	menus.bench_pressed.connect(func():
+		# a fresh scene: the benchmark starts in world 1 and comes back here with its report
+		_save_record()
+		get_tree().paused = false
+		Settings.bench_pending = true
+		get_tree().reload_current_scene.call_deferred())
 	menus.scout_editor.connect(func(open: bool):
 		menu_cam.portrait = open
 		menu_cam.drag_yaw = 0.0
@@ -345,12 +359,15 @@ func _ready() -> void:
 	_update_focus()
 	atmosphere.update(start_z, 0.0, true)
 	menus.set_seed_text(str(gen.seed_value))
-	if _args.has("play") or _args.has("selftest") or _args.has("obtest") or Settings.autostart:
+	if _args.has("play") or _args.has("selftest") or _args.has("obtest") or Settings.autostart or _bench_mode:
 		Settings.autostart = false
 		start_journey()
 	else:
 		menus.show_main(best_distance / 1000.0)
 		music.set_menu()
+		if Settings.bench_report != "":
+			menus.show_bench_result(Settings.bench_report, Settings.bench_report_path)
+			Settings.bench_report = ""
 		if _args.has("settings"):
 			menus._open_settings(menus._main)
 			if _args["settings"] != "1":
@@ -374,6 +391,13 @@ func _ready() -> void:
 		t.main = self
 		add_child(t)
 		t.run()
+	if _bench_mode:
+		_bench = Benchmark.new()
+		_bench.main = self
+		_bench.progress.connect(hud.set_status)
+		_bench.finished.connect(_on_bench_finished)
+		add_child(_bench)
+		_bench.start()
 
 
 # ================================================================ Flow
@@ -467,6 +491,59 @@ func _on_start_pressed() -> void:
 	start_journey()
 
 
+# ================================================================ Benchmark hooks
+
+## Put the scout at z (world) on the trail, looking ahead; it stands still until the ground has loaded.
+func bench_place(z: float) -> void:
+	var px := gen.path_x(z)
+	var pos := world.world_to_local(Vector3(px, gen.height(px, z) + 0.3, z))
+	player.global_position = pos
+	player.velocity = Vector3.ZERO
+	player.input_enabled = false
+	var ahead := world.world_to_local(gen.path_point(z - 6.0))
+	player.look_along((ahead - pos) * Vector3(1, 0, 1))
+	player.set_physics_process(false)
+	_spawn_pending = true
+	atmosphere.update(z, 0.0, true)
+
+
+func bench_spawning() -> bool:
+	return _spawn_pending
+
+
+func bench_walk(on: bool) -> void:
+	# the autopilot only steers while the player can act
+	player.input_enabled = on
+	player.autopilot = _autopilot if on else Callable()
+
+
+## The viewport that renders the world (offscreen with --size)
+func bench_viewport() -> SubViewport:
+	return _shot_vp
+
+
+func _on_bench_finished(report: String, path: String) -> void:
+	print(report)
+	print("Report saved: ", path)
+	if _args.has("bench"):
+		get_tree().quit()
+		return
+	# back to the menu of the player's own world, the report on top
+	Settings.bench_report = report
+	Settings.bench_report_path = path
+	Settings.next_seed = int(Settings.values["last_seed"])
+	get_tree().reload_current_scene.call_deferred()
+
+
+func _bench_abort() -> void:
+	if _args.has("bench"):
+		get_tree().quit()
+		return
+	Settings.apply_all()
+	Settings.next_seed = int(Settings.values["last_seed"])
+	get_tree().reload_current_scene.call_deferred()
+
+
 func end_journey() -> void:
 	_save_record()
 	get_tree().paused = false
@@ -517,12 +594,17 @@ func _unhandled_input(event: InputEvent) -> void:
 					elif player.can_act():
 						backpack.open(player)
 			KEY_ESCAPE:
-				if backpack.is_open():
+				if _bench:
+					_bench_abort()
+				elif backpack.is_open():
 					backpack.close()
 				elif menus.is_open():
 					menus.back()
 				elif mode == Mode.PLAYING:
 					pause()
+			KEY_F3:
+				# performance overlay: off → FPS → detailed
+				Settings.set_value("perf_overlay", (int(Settings.values["perf_overlay"]) + 1) % 3, false)
 			KEY_F12:
 				var path := "user://screenshot_%d.png" % Time.get_unix_time_from_system()
 				get_viewport().get_texture().get_image().save_png(path)
@@ -812,7 +894,8 @@ func _process_inner(delta: float) -> void:
 			if player.global_position.y < ground - 2.0:
 				player.global_position.y = ground + 0.3
 				player.velocity = Vector3.ZERO
-	hud.update_fps(Settings.values["show_fps"] or _args.has("fps"))
+	var overlay: int = 2 if _args.has("fps") else int(Settings.values["perf_overlay"])
+	hud.update_perf(overlay, PerfStats.sample(_shot_vp if _shot_vp else get_viewport()) if overlay >= 2 else {})
 
 	if _args.has("debug") and _frame % 60 == 0 and player:
 		for ci in player.get_slide_collision_count():
@@ -860,14 +943,9 @@ func _process_inner(delta: float) -> void:
 			Engine.get_frames_per_second(), world.loaded_count(), world.pending_count(), journey_distance,
 			gen.biomes[biome]["name"], get_viewport().scaling_3d_scale,
 			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME)])
-		var vp_rid := _shot_vp.get_viewport_rid() if _shot_vp else get_viewport().get_viewport_rid()
-		RenderingServer.viewport_set_measure_render_time(vp_rid, true)
-		print("   draws %d | objects %d | GPU %.1f ms | Render CPU %.1f ms | Script %.1f ms | Physics %.1f ms" % [
-			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
-			RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
-			RenderingServer.viewport_get_measured_render_time_gpu(vp_rid),
-			RenderingServer.viewport_get_measured_render_time_cpu(vp_rid) + RenderingServer.get_frame_setup_time_cpu(),
-			_script_ms, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
+		var ps := PerfStats.sample(_shot_vp if _shot_vp else get_viewport())
+		print("   draws %d | objects %d | GPU %.1f ms | Render CPU %.1f ms | Script %.1f ms (main %.1f) | Physics %.1f ms" % [
+			ps["draws"], ps["objects"], ps["gpu_ms"], ps["render_ms"], ps["process_ms"], _script_ms, ps["physics_ms"]])
 		print("   longest frame %.0f ms | hitches >50 ms: %d | impostors %d (+%d)" % [_max_frame_ms, _spikes, world.impostors.baked_count(), world.impostors.pending_count()])
 		_max_frame_ms = 0.0
 	_update_shot()
@@ -1305,6 +1383,8 @@ func _load_record() -> float:
 
 func _save_record() -> void:
 	# test runs don't change records
+	if _bench_mode:
+		return
 	for a in ["autowalk", "obtest", "selftest", "shot", "set", "preset", "z"]:
 		if _args.has(a):
 			return

@@ -16,6 +16,11 @@ var _overlay_mat: ShaderMaterial
 var _black: ColorRect
 var _message: Label
 var _fps: Label
+var _perf: Label
+var _status: Label
+var _perf_t := 0.0
+var _perf_acc := {}
+var _perf_n := 0
 var _hint: Label
 var _prompt: HBoxContainer
 var _prompt_title: Label
@@ -85,6 +90,22 @@ func _ready() -> void:
 	_fps.offset_right = -20
 	_fps.offset_top = 16
 	add_child(_fps)
+	# detailed overlay (F3 twice): frame costs, averaged over a quarter second
+	_perf = _label(14, HORIZONTAL_ALIGNMENT_RIGHT, 600)
+	_perf.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_perf.offset_left = -420
+	_perf.offset_right = -20
+	_perf.offset_top = 40
+	_perf.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_perf.visible = false
+	add_child(_perf)
+	# benchmark progress, top left
+	_status = _label(18, HORIZONTAL_ALIGNMENT_LEFT, 700)
+	_status.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_status.offset_left = 20
+	_status.offset_top = 16
+	_status.visible = false
+	add_child(_status)
 
 	# prompt: OBJECT NAME [E] action
 	_prompt = HBoxContainer.new()
@@ -285,10 +306,41 @@ func collapse_fade(on: bool, text := "You collapsed from exhaustion …") -> voi
 	t.tween_property(_message, "modulate:a", 1.0 if on else 0.0, 1.0)
 
 
-func update_fps(show: bool) -> void:
-	_fps.visible = show
-	if show:
+## Performance overlay: 0 off, 1 frame rate, 2 frame rate and what each frame costs
+func update_perf(level: int, stats: Dictionary) -> void:
+	_fps.visible = level >= 1
+	_perf.visible = level >= 2
+	if level >= 1:
 		_fps.text = "%d FPS · %d %%" % [Engine.get_frames_per_second(), roundi(get_viewport().scaling_3d_scale * 100.0)]
+	if level < 2 or stats.is_empty():
+		return
+	for k in stats:
+		_perf_acc[k] = float(_perf_acc.get(k, 0.0)) + float(stats[k])
+	_perf_n += 1
+	_perf_t += get_process_delta_time()
+	if _perf_t < 0.25:
+		return
+	var a := {}
+	for k in _perf_acc:
+		a[k] = _perf_acc[k] / _perf_n
+	var frame_ms := _perf_t * 1000.0 / _perf_n
+	var cpu: float = a["render_ms"] + a["process_ms"] + a["physics_ms"]
+	_perf.text = "\n".join([
+		"frame %.1f ms   %s" % [frame_ms, PerfStats.verdict(frame_ms, a["gpu_ms"], cpu)],
+		"GPU %.1f ms" % a["gpu_ms"],
+		"CPU render %.1f · scripts %.1f · physics %.1f ms" % [a["render_ms"], a["process_ms"], a["physics_ms"]],
+		"draws %d · objects %d · %.2f M tris" % [a["draws"], a["objects"], a["prims"] / 1000000.0],
+		"VRAM %.0f MB · nodes %d · %s" % [a["vram_mb"], a["nodes"], Settings.values["preset"]],
+	])
+	_perf_acc.clear()
+	_perf_n = 0
+	_perf_t = 0.0
+
+
+## A line of status text top left (benchmark progress); empty hides it
+func set_status(text: String) -> void:
+	_status.text = text
+	_status.visible = text != ""
 
 
 ## Bottom right: backpack slot with item count and weight, plus key hints

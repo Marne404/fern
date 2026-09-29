@@ -9,6 +9,8 @@ signal main_menu_pressed
 signal scout_editor(open: bool)
 signal scout_changed
 signal scout_dragged(dx: float)
+## settings → Performance → Run benchmark
+signal bench_pressed
 
 var _theme: Theme
 var _main: Control
@@ -23,6 +25,33 @@ var _seed_info: Label
 var _controls := {}              # settings key -> Control
 var _tabs: TabContainer
 var _updating := false
+var _preset_info: Label
+var _rows := {}                  # settings key -> its row (dimmed when the setting has no effect)
+var _bench_result: Control
+
+const PRESET_INFO := {
+	"Low": "Low – for integrated graphics and old laptops: short ranges, few effects, every simplification on.",
+	"Medium": "Medium – light effects, moderate ranges, every simplification on.",
+	"High": "High – the full look at moderate ranges; simplifications in the distance keep it smooth.",
+	"Ultra": "Ultra – long ranges and every effect; only a few simplifications far away. Beautiful and still smooth on a good graphics card.",
+	"Extreme": "Extreme – as beautiful as the game can look, whatever it costs: everything at full detail, as far as it makes sense. For very strong graphics cards and screenshots.",
+	"Custom": "Custom – your own mix.",
+}
+
+## settings that only matter when another one is on: key -> condition on the current values
+const DEPENDS := {
+	"upscaler": "render_scale < 0.99",
+	"target_fps": "dynamic_res",
+	"soft_shadows": "shadows > 0",
+	"shadow_range": "shadows > 0",
+	"blade_range": "grass_blades > 0",
+	"plant_detail_distance": "opt_far_plants",
+	"impostor_distance": "impostors",
+	"opt_tree_shadow_lod": "shadows > 0",
+	"opt_shadow_filter": "shadows == 4",
+	"opt_shafts_16": "sun_shafts",
+	"day_minutes": "time_of_day == 0",
+}
 
 const AA_NAMES := ["Off", "FXAA", "MSAA 2×", "MSAA 4×", "TAA"]
 const SHADOW_NAMES := ["Off", "Low", "Medium", "High", "Ultra"]
@@ -439,61 +468,104 @@ func _build_settings() -> Control:
 	_tabs.custom_minimum_size = Vector2(840, 600)
 	outer.add_child(_tabs)
 	var list := _tab("Graphics")
-	_option(list, "preset", "Preset", Settings.PRESET_NAMES + ["Custom"])
-	_slider(list, "render_scale", "Render resolution", 0.5, 1.5, 0.05, func(v): return "%d %%" % roundi(v * 100))
-	_option(list, "upscaler", "Upscaling below 100 %", ["FSR 1 (sharp)", "FSR 2 (temporal, smooth)", "Bilinear"])
-	_check(list, "dynamic_res", "Dynamic resolution (lowers resolution when FPS drop)")
-	_option(list, "target_fps", "Target frame rate", FPS_TARGETS.map(func(v): return "%d FPS" % v))
-	_option(list, "aa", "Anti-aliasing", AA_NAMES)
-	_option(list, "shadows", "Shadows", SHADOW_NAMES)
-	_check(list, "ssao", "Ambient occlusion (SSAO)")
-	_check(list, "volumetric", "Volumetric fog / light rays")
-	_check(list, "glow", "Glow")
-	_check(list, "sun_shafts", "Sun shafts")
-	_option(list, "grass_blades", "Grass blades", ["Off", "Normal", "Dense", "Paradise"])
-	_slider(list, "blade_range", "Grass blade range", 0.6, 2.2, 0.1, func(v): return "%d %%" % roundi(v * 100))
-	_check(list, "film_look", "Film look (anime color grading)")
-	_check(list, "outlines", "Anime outlines")
-	_check(list, "ssil", "Indirect light (SSIL)")
-	_check(list, "dof", "Distance depth of field")
-	_slider(list, "lod", "Distant detail reduction", 0.25, 8.0, 0.25, func(v): return "%.2f" % v)
-	_slider(list, "view_distance", "View distance", 3, 24, 1, func(v): return "%d m" % (int(v) * 64))
-	_slider(list, "veg_density", "Vegetation density", 0.25, 2.5, 0.05, func(v): return "%d %%" % roundi(v * 100))
-	_slider(list, "grass_distance", "Grass distance", 25, 250, 5, func(v): return "%d m" % int(v))
-	_slider(list, "impostor_distance", "Trees as impostors from", 120, 500, 10, func(v): return "%d m" % int(v))
-	_option(list, "time_of_day", "Time of day", ["Day cycle", "Always morning", "Always midday", "Always golden hour", "Always dusk", "Always night", "Each biome at its best"])
-	_slider(list, "day_minutes", "Length of a day", 12, 120, 2, func(v): return "%d min" % int(v))
-	_option(list, "weather", "Weather", ["Changing", "Always fair", "Always rain"])
-	_check(list, "rest_blur", "Soft focus while resting")
-	_slider(list, "shadow_range", "Shadow distance", 0.5, 3.0, 0.1, func(v): return "%d %%" % roundi(v * 100))
-	_check(list, "wind_fx", "Wind lines")
-	_check(list, "particles", "Leaves, pollen & weather effects")
-	_check(list, "footprints", "Footprints & dust puffs")
+	_option(list, "preset", "Preset", Settings.PRESET_NAMES + ["Custom"],
+		"Extreme looks as beautiful as the game can. Each step down trades a little of the look for frame rate.")
+	_preset_info = Label.new()
+	_preset_info.add_theme_font_size_override("font_size", 15)
+	_preset_info.add_theme_color_override("font_color", UiTheme.INK_SOFT)
+	_preset_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	list.add_child(_preset_info)
+	_section(list, "Image")
+	_slider(list, "render_scale", "Render resolution", 0.5, 1.5, 0.05, func(v): return "%d %%" % roundi(v * 100),
+		"The 3D world is drawn at this share of the screen resolution and scaled up. Above 100 %: supersampling.")
+	_option(list, "upscaler", "Upscaling below 100 %", ["FSR 1 (sharp)", "FSR 2 (temporal, smooth)", "Bilinear"],
+		"How the smaller image is scaled up to the screen.")
+	_option(list, "aa", "Anti-aliasing", AA_NAMES,
+		"Smooth edges. MSAA 4× is the cleanest for leaves and grass and the most expensive; TAA is smooth but a little soft.")
+	_check(list, "dynamic_res", "Dynamic resolution",
+		"Lowers the render resolution for a moment when the frame rate drops below the target.")
+	_option(list, "target_fps", "Target frame rate", FPS_TARGETS.map(func(v): return "%d FPS" % v),
+		"The frame rate dynamic resolution tries to keep.")
+	_section(list, "Light & shadows")
+	_option(list, "shadows", "Shadows", SHADOW_NAMES,
+		"Resolution and cascades of the sun's shadows. One of the biggest costs.")
+	_option(list, "soft_shadows", "Soft shadows", ["Filtered", "Soft", "Very soft"],
+		"Soft and very soft: shadows are sharp where things touch the ground and blur with distance, like real sunlight. Costs a search per pixel.")
+	_slider(list, "shadow_range", "Shadow distance", 0.5, 3.0, 0.1, func(v): return "%d %%" % roundi(v * 100),
+		"How far shadows reach. Longer ranges draw many more trees into the shadow map.")
+	_check(list, "ssao", "Ambient occlusion (SSAO)", "Soft darkening in corners, under bushes and between rocks.")
+	_check(list, "ssil", "Indirect light (SSIL)", "Sunlit surfaces tint their surroundings with their color.")
+	_check(list, "volumetric", "Volumetric fog & light rays", "Light you can see in the air, in the morning haze and through canopies.")
+	_check(list, "sun_shafts", "Sun shafts", "Rays around the sun when it stands behind trees or clouds.")
+	_check(list, "glow", "Glow", "Bright things shine softly into their surroundings.")
+	_section(list, "Landscape")
+	_slider(list, "view_distance", "View distance", 3, 24, 1, func(v): return "%d m" % (int(v) * 64),
+		"How far the landscape is loaded. Costs memory and loading time more than frame rate.")
+	_slider(list, "veg_density", "Vegetation density", 0.25, 2.5, 0.05, func(v): return "%d %%" % roundi(v * 100),
+		"How many plants, flowers and grass tufts grow. A big cost.")
+	_slider(list, "grass_distance", "Grass distance", 25, 250, 5, func(v): return "%d m" % int(v),
+		"How far grass tufts and small flowers are drawn. A big cost.")
+	_option(list, "grass_blades", "Grass blades", ["Off", "Normal", "Dense", "Paradise"],
+		"A carpet of single swaying blades around you.")
+	_slider(list, "blade_range", "Grass blade range", 0.6, 2.2, 0.1, func(v): return "%d %%" % roundi(v * 100),
+		"How far the blade carpet reaches.")
+	_slider(list, "lod", "Distant detail reduction", 0.25, 8.0, 0.25, func(v): return "%.2f" % v,
+		"How early the engine's simplified models take over in the distance. Lower is more detailed.")
+	_section(list, "Look")
+	_check(list, "film_look", "Film look (anime color grading)", "Warmer highlights, cooler shadows, a soft vignette.")
+	_check(list, "outlines", "Anime outlines", "Ink lines around shapes.")
+	_check(list, "dof", "Distance depth of field", "Far scenery blurs softly, like a painting.")
+	_check(list, "rest_blur", "Soft focus while resting", "The distance blurs while you sit down.")
+	_check(list, "wind_fx", "Wind lines", "Streaks in the air that show the wind.")
+	_check(list, "particles", "Leaves, pollen & weather effects", "Falling leaves, pollen, rain, snow and sand.")
+	_check(list, "footprints", "Footprints & dust puffs", "Tracks behind you and dust where you step.")
+
 	list = _tab("Performance")
-	var note := Label.new()
-	note.text = "All of these save time without a visible difference. Toggle individually to compare."
-	note.add_theme_font_size_override("font_size", 14)
-	note.add_theme_color_override("font_color", UiTheme.INK_SOFT)
-	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	list.add_child(note)
-	_check(list, "opt_cells", "Batch plants in small cells")
-	_check(list, "opt_far_batch", "Coarse batching for distant areas")
-	_check(list, "opt_far_trees", "Simplify distant trees")
-	_check(list, "opt_opaque_grass", "Grass tufts without alpha test")
-	_check(list, "opt_small_noshadow", "No shadows for small props")
-	_check(list, "opt_foliage_noaniso", "Leaves without anisotropic filtering")
-	_check(list, "opt_shafts_16", "Sun shafts with fewer samples")
-	_check(list, "opt_shadow_filter", "Ultra shadows: medium filter")
-	_check(list, "opt_blade_budget", "Build grass blades gradually (prevents hitches)")
-	_check(list, "opt_music_thread", "Load music in the background")
-	_check(list, "impostors", "Distant trees as impostors (pre-rendered billboards)")
-	_check(list, "opt_tree_lod", "Simplified crowns for distant trees (75 m+)")
-	_check(list, "opt_tree_shadow_lod", "Simplified shadows for distant trees (45 m+)")
+	_option(list, "perf_overlay", "Performance overlay (F3)", ["Off", "Frame rate", "Detailed"],
+		"Detailed shows what each frame costs: graphics card, processor, draw calls, triangles and memory.")
+	var bench_row := _row(list, "Benchmark", "The same short hike for everyone: six places in world 1 at midday, then a walk. Takes about two minutes and ends the current hike. The report is saved and shown afterwards.")
+	var bench := Button.new()
+	bench.text = "Run benchmark"
+	bench.pressed.connect(func(): bench_pressed.emit())
+	bench_row.add_child(bench)
+	_section(list, "Simplifications in the distance")
+	_note(list, "Each saves time for a small change in the look. Extreme uses none of them, Ultra a few, High and below all.")
+	_check(list, "opt_far_plants", "Simpler grass & flowers in the distance",
+		"Beyond the distance below, grass tufts and flowers are drawn with fewer segments (every blade stays). 2–5× fewer triangles.")
+	_slider(list, "plant_detail_distance", "Full-detail plants up to", 10, 120, 5, func(v): return "%d m" % int(v),
+		"Grass tufts and flowers closer than this always keep their full detail.")
+	_check(list, "impostors", "Distant trees as impostors",
+		"Trees far away become pre-rendered pictures. Without them every tree up to the horizon is drawn as a model.")
+	_slider(list, "impostor_distance", "Trees as impostors from", 120, 500, 10, func(v): return "%d m" % int(v),
+		"Never closer than the shadow distance (impostors cast no shadows).")
+	_check(list, "opt_tree_lod", "Simpler crowns for distant trees (75 m+)", "Distant trees use a crown with fewer, bigger leaf cards.")
+	_check(list, "opt_tree_shadow_lod", "Simpler tree shadows (45 m+)", "The shadows of distant trees come from the simpler crown.")
+	_check(list, "opt_far_trees", "Simpler trees in far areas", "Trees in far-away chunks are built with the simpler crown.")
+	_check(list, "opt_small_noshadow", "No shadows for small props", "Pebbles, mushrooms and small stones cast no shadows.")
+	_check(list, "opt_foliage_noaniso", "Leaves without anisotropic filtering", "Leaf textures seen at a flat angle get a little blurrier.")
+	_check(list, "opt_shafts_16", "Sun shafts with fewer samples", "16 instead of 24 samples per pixel.")
+	_check(list, "opt_shadow_filter", "Ultra shadows with the medium filter", "Shadow edges are filtered with fewer samples.")
+	_section(list, "Free optimizations")
+	_note(list, "No visible difference – always on. Turn one off only to compare.")
+	_check(list, "opt_cells", "Batch plants in small cells", "Finer culling: less is drawn outside the view.")
+	_check(list, "opt_far_batch", "Coarse batching for distant areas", "Fewer draw calls for far chunks.")
+	_check(list, "opt_opaque_grass", "Grass tufts without alpha test", "Lets the graphics card skip hidden grass early.")
+	_check(list, "opt_blade_budget", "Build grass blades gradually", "Spreads the building of grass blades over frames (prevents hitches).")
+	_check(list, "opt_music_thread", "Load music in the background", "Prevents hitches when a new track starts.")
+
 	list = _tab("Display")
-	_option(list, "fps_limit", "Frame rate limit", FPS_LIMITS.map(func(v): return "Unlimited" if v == 0 else "%d FPS" % v))
-	_check(list, "vsync", "VSync")
 	_check(list, "fullscreen", "Fullscreen")
-	_check(list, "show_fps", "Show frame rate")
+	_check(list, "vsync", "VSync", "Waits for the monitor: no tearing, but the frame rate snaps to the monitor's steps.")
+	_option(list, "fps_limit", "Frame rate limit", FPS_LIMITS.map(func(v): return "Unlimited" if v == 0 else "%d FPS" % v),
+		"Caps the frame rate, e.g. to keep the graphics card cool and quiet.")
+	_slider(list, "fov", "Field of view", 55, 100, 1, func(v): return "%d°" % int(v))
+
+	list = _tab("World")
+	_option(list, "time_of_day", "Time of day", ["Day cycle", "Always morning", "Always midday", "Always golden hour", "Always dusk", "Always night", "Each biome at its best"],
+		"Each biome at its best: the clock follows the trail so every biome comes at its most beautiful hour.")
+	_slider(list, "day_minutes", "Length of a day", 12, 120, 2, func(v): return "%d min" % int(v),
+		"Real minutes for a whole day and night.")
+	_option(list, "weather", "Weather", ["Changing", "Always fair", "Always rain"])
 	list = _tab("Audio & voice")
 	_check(list, "music", "Music")
 	_slider(list, "music_volume", "Music volume", 0.0, 1.0, 0.05, func(v): return "%d %%" % roundi(v * 100))
@@ -530,12 +602,70 @@ func _build_settings() -> Control:
 	_check(list, "emote_camera", "Emote camera (first person steps back while an emote plays)")
 	for i in 8:
 		_emote_slot(list, i)
-	_slider(list, "fov", "Field of view", 55, 100, 1, func(v): return "%d°" % int(v))
 	_slider(list, "mouse_sens", "Mouse sensitivity", 0.2, 3.0, 0.05, func(v): return "%.2f" % v)
 
 	var back := _button("Back", func(): back(), true)
 	outer.add_child(back)
 	return root
+
+
+func _note(list: VBoxContainer, text: String) -> void:
+	var note := Label.new()
+	note.text = text
+	note.add_theme_font_size_override("font_size", 14)
+	note.add_theme_color_override("font_color", UiTheme.INK_SOFT)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	list.add_child(note)
+
+
+## Benchmark report on top of the main menu: copy it, open its folder, close
+func show_bench_result(report: String, path: String) -> void:
+	if _bench_result:
+		_bench_result.queue_free()
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.theme = _theme
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.5)
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(dim)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(center)
+	var panel := PanelContainer.new()
+	center.add_child(panel)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 12)
+	panel.add_child(box)
+	box.add_child(_big_label("Benchmark", 40))
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(1060, 520)
+	box.add_child(scroll)
+	var text := Label.new()
+	text.text = report
+	var mono := SystemFont.new()
+	mono.font_names = PackedStringArray(["DejaVu Sans Mono", "Consolas", "Menlo", "monospace"])
+	text.add_theme_font_override("font", mono)
+	text.add_theme_font_size_override("font_size", 14)
+	text.add_theme_color_override("font_color", UiTheme.INK)
+	scroll.add_child(text)
+	var where := Label.new()
+	where.text = "Saved: " + path
+	where.add_theme_font_size_override("font_size", 13)
+	where.add_theme_color_override("font_color", UiTheme.INK_SOFT)
+	box.add_child(where)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 12)
+	box.add_child(buttons)
+	var copy := _secondary(_button("Copy report", func(): DisplayServer.clipboard_set(report)))
+	buttons.add_child(copy)
+	buttons.add_child(_secondary(_button("Open folder", func(): OS.shell_open(path.get_base_dir()))))
+	var close := _button("Close", func():
+		root.queue_free()
+		_bench_result = null, true)
+	buttons.add_child(close)
+	add_child(root)
+	_bench_result = root
 
 
 ## One slot of the emote wheel (G)
@@ -592,19 +722,26 @@ func _tab(title: String) -> VBoxContainer:
 	return list
 
 
-func _row(list: VBoxContainer, text: String) -> HBoxContainer:
+func _row(list: VBoxContainer, text: String, hint := "") -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 16)
 	var l := Label.new()
 	l.text = text
-	l.custom_minimum_size = Vector2(330, 0)
+	# a fixed column for the names: controls line up, long names wrap
+	l.custom_minimum_size = Vector2(400, 0)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if hint != "":
+		# hovering the name explains the setting
+		l.tooltip_text = hint
+		l.mouse_filter = Control.MOUSE_FILTER_STOP
 	row.add_child(l)
 	list.add_child(row)
 	return row
 
 
-func _option(list: VBoxContainer, key: String, text: String, items: Array) -> void:
-	var row := _row(list, text)
+func _option(list: VBoxContainer, key: String, text: String, items: Array, hint := "") -> void:
+	var row := _row(list, text, hint)
+	_rows[key] = row
 	var ob := OptionButton.new()
 	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for it in items:
@@ -614,16 +751,18 @@ func _option(list: VBoxContainer, key: String, text: String, items: Array) -> vo
 	_controls[key] = ob
 
 
-func _check(list: VBoxContainer, key: String, text: String) -> void:
-	var row := _row(list, text)
+func _check(list: VBoxContainer, key: String, text: String, hint := "") -> void:
+	var row := _row(list, text, hint)
+	_rows[key] = row
 	var cb := CheckButton.new()
 	cb.toggled.connect(func(on): if not _updating: Settings.set_value(key, on))
 	row.add_child(cb)
 	_controls[key] = cb
 
 
-func _slider(list: VBoxContainer, key: String, text: String, lo: float, hi: float, step: float, fmt: Callable) -> void:
-	var row := _row(list, text)
+func _slider(list: VBoxContainer, key: String, text: String, lo: float, hi: float, step: float, fmt: Callable, hint := "") -> void:
+	var row := _row(list, text, hint)
+	_rows[key] = row
 	var s := HSlider.new()
 	s.drag_started.connect(func(): s.set_meta("dragging", true))
 	s.drag_ended.connect(func(_c): s.remove_meta("dragging"))
@@ -642,7 +781,7 @@ func _slider(list: VBoxContainer, key: String, text: String, lo: float, hi: floa
 	_controls[key] = s
 
 
-const HEAVY := ["view_distance", "veg_density", "grass_distance", "blade_range"]
+const HEAVY := ["view_distance", "veg_density", "grass_distance", "blade_range", "plant_detail_distance"]
 
 
 ## Apply heavy settings (world rebuild) only on release
@@ -691,4 +830,19 @@ func _refresh_settings() -> void:
 				elif c is HSlider:
 					(c as HSlider).value = v[key]
 					(c as HSlider).value_changed.emit((c as HSlider).value)
+	if _preset_info:
+		_preset_info.text = PRESET_INFO.get(v["preset"], "")
+	# dim what has no effect right now
+	for key in DEPENDS:
+		if not _rows.has(key):
+			continue
+		var expr := Expression.new()
+		expr.parse(DEPENDS[key], PackedStringArray(v.keys()))
+		var on: bool = expr.execute(v.values()) == true
+		(_rows[key] as Control).modulate.a = 1.0 if on else 0.45
+		var c = _controls[key]
+		if c is HSlider:
+			(c as HSlider).editable = on
+		elif c is BaseButton:
+			(c as BaseButton).disabled = not on
 	_updating = false

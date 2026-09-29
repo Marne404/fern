@@ -117,7 +117,9 @@ func apply_quality() -> void:
 	env.ssil_intensity = 1.2
 	env.ssil_sharpness = 0.9
 	sky_mat.set_shader_parameter("cloud_detail", 1.0 if ultra else 0.0)
-	sun.light_angular_distance = 1.2 if Settings.values["shadows"] >= 4 else 0.5
+	# soft shadows: the sun's size makes shadows sharp at the contact and soft further away (PCSS, costs
+	# a blocker search per pixel); 0 = evenly filtered edges
+	sun.light_angular_distance = [0.0, 0.5, 1.2][clampi(int(Settings.values["soft_shadows"]), 0, 2)]
 	# depth of field: distant scenery soft like a painting
 	var attrs := CameraAttributesPractical.new()
 	_dof = attrs

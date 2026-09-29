@@ -8,22 +8,49 @@ signal changed(key: String)
 const PATH := "user://settings.cfg"
 const PRESET_NAMES := ["Low", "Medium", "High", "Ultra", "Extreme"]
 
+## Extreme is as beautiful as the game can look, whatever it costs. Every step down trades a little of the
+## look for frame rate: shorter ranges, fewer effects and more of the optimizations that simplify things
+## in the distance. Optimizations without any visible difference (FREE_OPTIMIZATIONS) are on everywhere.
 const PRESETS := {
-	"Low": {"render_scale": 0.67, "aa": 1, "shadows": 1, "ssao": false, "volumetric": false, "glow": false, "sun_shafts": false, "lod": 6.0, "grass_blades": 0, "film_look": false, "ssil": false, "dof": false,
-		"view_distance": 4, "veg_density": 0.45, "grass_distance": 35.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 140.0},
-	"Medium": {"render_scale": 0.85, "aa": 1, "shadows": 2, "ssao": true, "volumetric": false, "glow": true, "sun_shafts": true, "lod": 4.0, "grass_blades": 0, "film_look": false, "ssil": false, "dof": false,
-		"view_distance": 5, "veg_density": 0.6, "grass_distance": 45.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 160.0},
-	"High": {"render_scale": 1.0, "aa": 2, "shadows": 3, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 2.0, "grass_blades": 1, "film_look": true, "ssil": false, "dof": false,
-		"view_distance": 7, "veg_density": 1.0, "grass_distance": 65.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 180.0},
-	"Ultra": {"render_scale": 1.0, "aa": 3, "shadows": 4, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 1.0, "grass_blades": 3, "film_look": true, "ssil": true, "dof": true,
-		"view_distance": 9, "veg_density": 1.3, "grass_distance": 85.0, "blade_range": 1.0, "shadow_range": 1.0, "impostor_distance": 240.0},
-	# for strong GPUs: everything further away and denser
-	"Extreme": {"render_scale": 1.0, "aa": 3, "shadows": 4, "ssao": true, "volumetric": true, "glow": true, "sun_shafts": true, "lod": 0.5, "grass_blades": 3, "film_look": true, "ssil": true, "dof": true,
-		"view_distance": 16, "veg_density": 1.7, "grass_distance": 150.0, "blade_range": 1.6, "shadow_range": 1.8, "impostor_distance": 320.0},
+	"Low": {"render_scale": 0.67, "aa": 1, "shadows": 1, "soft_shadows": 0, "shadow_range": 1.0,
+		"ssao": false, "ssil": false, "volumetric": false, "glow": false, "sun_shafts": false, "film_look": false, "dof": false,
+		"lod": 6.0, "view_distance": 4, "veg_density": 0.45, "grass_distance": 35.0, "grass_blades": 0, "blade_range": 1.0,
+		"impostors": true, "impostor_distance": 140.0, "opt_far_plants": true, "plant_detail_distance": 15.0,
+		"opt_far_trees": true, "opt_tree_lod": true, "opt_tree_shadow_lod": true, "opt_small_noshadow": true,
+		"opt_foliage_noaniso": true, "opt_shafts_16": true, "opt_shadow_filter": true},
+	"Medium": {"render_scale": 0.85, "aa": 1, "shadows": 2, "soft_shadows": 0, "shadow_range": 1.0,
+		"ssao": true, "ssil": false, "volumetric": false, "glow": true, "sun_shafts": true, "film_look": false, "dof": false,
+		"lod": 4.0, "view_distance": 5, "veg_density": 0.6, "grass_distance": 45.0, "grass_blades": 0, "blade_range": 1.0,
+		"impostors": true, "impostor_distance": 160.0, "opt_far_plants": true, "plant_detail_distance": 20.0,
+		"opt_far_trees": true, "opt_tree_lod": true, "opt_tree_shadow_lod": true, "opt_small_noshadow": true,
+		"opt_foliage_noaniso": true, "opt_shafts_16": true, "opt_shadow_filter": true},
+	"High": {"render_scale": 1.0, "aa": 2, "shadows": 3, "soft_shadows": 1, "shadow_range": 1.0,
+		"ssao": true, "ssil": false, "volumetric": true, "glow": true, "sun_shafts": true, "film_look": true, "dof": false,
+		"lod": 2.0, "view_distance": 7, "veg_density": 1.0, "grass_distance": 65.0, "grass_blades": 1, "blade_range": 1.0,
+		"impostors": true, "impostor_distance": 180.0, "opt_far_plants": true, "plant_detail_distance": 30.0,
+		"opt_far_trees": true, "opt_tree_lod": true, "opt_tree_shadow_lod": true, "opt_small_noshadow": true,
+		"opt_foliage_noaniso": true, "opt_shafts_16": true, "opt_shadow_filter": true},
+	"Ultra": {"render_scale": 1.0, "aa": 3, "shadows": 4, "soft_shadows": 1, "shadow_range": 1.0,
+		"ssao": true, "ssil": true, "volumetric": true, "glow": true, "sun_shafts": true, "film_look": true, "dof": true,
+		"lod": 1.0, "view_distance": 9, "veg_density": 1.3, "grass_distance": 85.0, "grass_blades": 3, "blade_range": 1.0,
+		"impostors": true, "impostor_distance": 240.0, "opt_far_plants": true, "plant_detail_distance": 45.0,
+		"opt_far_trees": true, "opt_tree_lod": true, "opt_tree_shadow_lod": true, "opt_small_noshadow": false,
+		"opt_foliage_noaniso": false, "opt_shafts_16": true, "opt_shadow_filter": true},
+	# as beautiful as possible: everything at full detail and as far as it makes sense
+	"Extreme": {"render_scale": 1.0, "aa": 3, "shadows": 4, "soft_shadows": 2, "shadow_range": 1.8,
+		"ssao": true, "ssil": true, "volumetric": true, "glow": true, "sun_shafts": true, "film_look": true, "dof": true,
+		"lod": 0.5, "view_distance": 16, "veg_density": 1.7, "grass_distance": 150.0, "grass_blades": 3, "blade_range": 1.6,
+		"impostors": true, "impostor_distance": 320.0, "opt_far_plants": false, "plant_detail_distance": 80.0,
+		"opt_far_trees": false, "opt_tree_lod": false, "opt_tree_shadow_lod": false, "opt_small_noshadow": false,
+		"opt_foliage_noaniso": false, "opt_shafts_16": false, "opt_shadow_filter": false},
 }
+
+## Optimizations without any visible difference: on in every preset (they can still be turned off to compare)
+const FREE_OPTIMIZATIONS := ["opt_cells", "opt_far_batch", "opt_opaque_grass", "opt_blade_budget", "opt_music_thread"]
 
 # aa: 0 off, 1 FXAA, 2 MSAA 2×, 3 MSAA 4×, 4 TAA
 # shadows: 0 off, 1 low, 2 medium, 3 high, 4 ultra
+# soft_shadows: 0 filtered edges, 1 soft (contact-hardening, PCSS), 2 very soft
 var values := {
 	"preset": "Medium",
 	"render_scale": 0.8,
@@ -31,6 +58,7 @@ var values := {
 	"target_fps": 45,
 	"aa": 2,
 	"shadows": 2,
+	"soft_shadows": 0,
 	"ssao": true,
 	"volumetric": false,
 	"glow": true,
@@ -55,7 +83,7 @@ var values := {
 	"particles": true,
 	"footprints": true,
 	"fullscreen": false,
-	"show_fps": false,
+	"perf_overlay": 0,          # 0 off, 1 frame rate, 2 frame rate and frame costs (F3 cycles)
 	"last_seed": 1,
 	# Performance optimizations (all can be turned off, default: on)
 	"opt_cells": true,          # batch plants in small cells (more precise culling)
@@ -70,6 +98,8 @@ var values := {
 	"opt_music_thread": true,   # load music in the background
 	"opt_tree_shadow_lod": true, # trees farther than 45 m cast shadows with their simplified far crown
 	"opt_tree_lod": true,       # trees farther than 75 m are drawn with the simplified far crown
+	"opt_far_plants": true,     # grass tufts and flowers beyond plant_detail_distance with fewer segments
+	"plant_detail_distance": 30.0,
 	"impostors": true,          # distant trees as pre-rendered billboards (baked in the background)
 	"impostor_distance": 180.0, # from here on trees hand over to their impostors (never inside the shadows)
 	"music": true,
@@ -99,12 +129,20 @@ var autostart := false
 var dynamic_factor := 1.0
 ## false = don't save changes (for test runs from the command line)
 var persist := true
+## Benchmark: start one after the scene reload; its report is shown in the menu afterwards
+var bench_pending := false
+var bench_report := ""
+var bench_report_path := ""
 var _perf_start := 0
 var _frames := 0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# test runs never write the player's files, not even a migration
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--preset") or a.begins_with("--set") or a == "--bench":
+			persist = false
 	_migrate_old_user_dir()
 	if not _load():
 		# First start: weaker GPUs get "Medium", others "High".
@@ -247,7 +285,7 @@ func save() -> void:
 	cfg.save(PATH)
 
 
-const VERSION := 2
+const VERSION := 3
 
 
 ## The game used to be called "Fernweh": take over settings and records from the old save folder once.
@@ -268,9 +306,21 @@ func _load() -> bool:
 	# old German preset names
 	var renamed := {"Niedrig": "Low", "Mittel": "Medium", "Hoch": "High", "Benutzerdefiniert": "Custom"}
 	values["preset"] = renamed.get(values["preset"], values["preset"])
+	var version := int(cfg.get_value("meta", "version", 1))
 	# Version 2: dynamic resolution is off by default (one-time migration)
-	if int(cfg.get_value("meta", "version", 1)) < 2:
+	if version < 2:
 		values["dynamic_res"] = false
-		if persist:
-			save()
+	# Version 3: presets also choose the optimizations; "show frame rate" became the performance overlay
+	if version < 3:
+		if cfg.get_value("settings", "show_fps", false):
+			values["perf_overlay"] = 1
+		for k in FREE_OPTIMIZATIONS:
+			values[k] = true
+		# soft shadows used to come with the shadow quality (Ultra: very soft, below: soft)
+		var q := int(values["shadows"])
+		values["soft_shadows"] = 2 if q >= 4 else (1 if q >= 2 else 0)
+		if PRESETS.has(values["preset"]):
+			apply_preset(values["preset"], false)
+	if version < VERSION and persist:
+		save()
 	return true
