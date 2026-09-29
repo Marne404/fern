@@ -412,6 +412,33 @@ func _test_weather() -> void:
 		none.advance_flash(0.05, 0.0)
 		none_flash = maxf(none_flash, none.flash)
 	check("Heat lightning flickers on warm evenings", flashes > 0 and none_flash == 0.0, "%d frames" % flashes)
+	# weather director: a biome that wishes for rain gets a shower within a minute and keeps it while you stay;
+	# a clear wish ends it
+	var wr := Weather.new()
+	wr.reset()
+	var rained := 0.0
+	for i in 2400:
+		if i % 40 == 0:
+			wr.wish("rain")
+		wr.advance(0.05, 1.0)
+		if i > 1400:
+			rained = maxf(rained, wr.rain) if i == 1401 else minf(rained, wr.rain)
+	check("A rain wish brings a lasting shower", wr.state == Weather.RAIN and rained > 0.3, "state %d, rain %.2f" % [wr.state, rained])
+	for i in 1200:
+		if i % 40 == 0:
+			wr.wish("clear")
+		wr.advance(0.05, 1.0)
+	check("A clear wish clears the sky", wr.rain < 0.05 and wr.state in [Weather.FAIR, Weather.AFTER, Weather.CLEARING], "state %d, rain %.2f" % [wr.state, wr.rain])
+	# the biome schedule: every biome comes, none twice within a few segments, seed 1 opens in hour order
+	var g: WorldGen = main.gen
+	var seen := {}
+	var close_repeat := false
+	for k in 60:
+		seen[g.segment_biome(k)] = true
+		for j in range(maxi(k - BiomeSchedule.NO_REPEAT, 0), k):
+			if k >= g.intro_len and g.segment_biome(j) == g.segment_biome(k):
+				close_repeat = true
+	check("The schedule shows every biome without close repeats", seen.size() == g.biome_count and not close_repeat, "%d biomes" % seen.size())
 
 
 ## A brook: carved bed under water, banks above it, water found by water_level

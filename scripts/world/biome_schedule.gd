@@ -230,3 +230,21 @@ func director_scale(gen: WorldGen, d: float, hour: float) -> float:
 			best = v
 			best_sc = sc
 	return best_sc
+
+
+# ---------------------------------------------------------------- weather wishes
+
+## The weather a biome wishes for on this visit: "rain", "fog", "clear" or "" (one roll per segment,
+## from the biome's chances – the bog wants rain most of the time, the golden slopes a clear sky)
+func weather_wish(gen: WorldGen, k: int) -> String:
+	var w: Dictionary = gen.biomes[gen.segment_biome(k)]["best"]["weather"]
+	if w.is_empty():
+		return ""
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([gen.seed_value, k, 777])
+	var r := rng.randf()
+	for kind in ["rain", "fog", "clear"]:
+		r -= float(w.get(kind, 0.0))
+		if r < 0.0:
+			return kind
+	return ""

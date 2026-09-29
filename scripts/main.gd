@@ -1269,13 +1269,25 @@ func _update_schedule(delta: float, pw: Vector3) -> void:
 	if _dir_t <= 0.0:
 		_dir_t = 2.0
 		_dir_want = sch.director_scale(gen, d, day.hour)
+		# weather director: the biome's wish for this visit; the next biome's wish shortly before its border
+		# (a shower takes ~45 s to build up)
+		var k := gen.segment_at(d)
+		var w := sch.weather_wish(gen, k)
+		if gen.segment_start(k + 1) - d < 150.0:
+			var w2 := sch.weather_wish(gen, k + 1)
+			if w2 != "" or w == "rain" or w == "fog":
+				w = w2
+		if w != "":
+			atmosphere.weather.wish(w)
 	day.rate_scale = lerpf(day.rate_scale, _dir_want, 1.0 - exp(-delta / 6.0))
 	if _args.has("schedinfo") and _frame % 300 == 0:
 		var k := gen.segment_at(d)
 		var ahead := []
 		for kk in range(k, k + 4):
 			ahead.append(gen.biomes[gen.segment_biome(kk)]["name"])
-		print("[Schedule] d=%.0f hour %.2f clock x%.2f pace %.2f  %s  (open from %d)" % [d, day.hour, day.rate_scale, _pace, " → ".join(ahead), sch.first_open])
+		var wf := atmosphere.weather
+		print("[Schedule] d=%.0f hour %.2f clock x%.2f pace %.2f  %s  (open from %d)  weather %d wish %s rain %.2f fog %.2f" % [d, day.hour,
+			day.rate_scale, _pace, " → ".join(ahead), sch.first_open, wf.state, sch.weather_wish(gen, k), wf.rain, wf.fog])
 
 
 # ================================================================ Records

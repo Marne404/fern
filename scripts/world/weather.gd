@@ -139,6 +139,40 @@ func advance_flash(dt: float, amount: float) -> void:
 			_flash_seq.append(randf_range(0.25, 0.45))
 
 
+## The weather director (BiomeSchedule) nudges the weather towards what a biome wishes for; called every
+## few seconds while the wish lasts. Only in "changing" mode.
+func wish(kind: String) -> void:
+	if mode != 0:
+		return
+	match kind:
+		"rain":
+			# a shower builds up (or keeps going while you are in the biome)
+			if state in [FAIR, AFTER, FOG]:
+				_enter(BUILDING)
+			elif state == CLEARING and _t < CLEAR_TIME * 0.5:
+				_enter(RAIN)
+				_dur = 60.0
+			elif state == RAIN:
+				_dur = maxf(_dur, _t + 25.0)
+		"fog":
+			if state == FAIR:
+				_enter(FOG)
+				_dur = 60.0
+			elif state == FOG:
+				_dur = maxf(_dur, _t + 25.0)
+		"clear":
+			# no new shower or fog day here; a running one clears up
+			next_shower = maxf(next_shower, 90.0)
+			next_fog = maxf(next_fog, 90.0)
+			if state == BUILDING:
+				_enter(FAIR if clouds < 0.35 else CLEARING)
+			elif state == RAIN:
+				_enter(CLEARING)
+			elif state == FOG:
+				_enter(FAIR)
+				next_fog = randf_range(900.0, 1800.0)
+
+
 func _enter(s: int) -> void:
 	state = s
 	_t = 0.0
