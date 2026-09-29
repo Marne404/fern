@@ -317,6 +317,34 @@ static func _make(which: String) -> AudioStreamWAV:
 				lp += (randf_range(-1.0, 1.0) - lp) * 0.25
 				var beats := pow(maxf(sin(t * TAU * 16.0), 0.0), 3.0)
 				samples.append(lp * beats * (1.0 - t / 0.35) * 0.9)
+		"stone_click":
+			# two stones knocking: a short dry click with a woody ring
+			var n := int(RATE * 0.18)
+			for i in n:
+				var t := float(i) / RATE
+				var env := exp(-t * 45.0)
+				samples.append((sin(TAU * 1900.0 * t) * 0.5 + sin(TAU * 3100.0 * t) * 0.3 + randf_range(-1.0, 1.0) * 0.4) * env * 0.7)
+		"skip":
+			# a pebble kissing the water: a bright "tip"
+			var n := int(RATE * 0.12)
+			for i in n:
+				var t := float(i) / RATE
+				samples.append(sin(TAU * (1400.0 - t * 5000.0) * t) * exp(-t * 55.0) * 0.6 + randf_range(-1.0, 1.0) * exp(-t * 80.0) * 0.25)
+		"plop":
+			# sinking: a round, falling "blop"
+			var n := int(RATE * 0.3)
+			var ph := 0.0
+			for i in n:
+				var t := float(i) / RATE
+				ph += TAU * (520.0 - t * 900.0) / RATE
+				samples.append(sin(ph) * exp(-t * 14.0) * minf(t / 0.005, 1.0) * 0.7)
+		"whoosh":
+			var n := int(RATE * 0.25)
+			var lp := 0.0
+			for i in n:
+				var t := float(i) / RATE
+				lp += (randf_range(-1.0, 1.0) - lp) * 0.35
+				samples.append(lp * sin(t / 0.25 * PI) * 0.6)
 		"squeak":
 			var n := int(RATE * 0.35)
 			var ph := 0.0

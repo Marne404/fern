@@ -93,6 +93,9 @@ func run() -> void:
 	if "--only_boulders" in OS.get_cmdline_user_args():
 		await _test_boulders(p, gen)
 		return
+	if "--only_river" in OS.get_cmdline_user_args():
+		await _test_river(p, gen, ob)
+		return
 	await _test_fallen_tree(p, gen, ob)
 	await _test_river(p, gen, ob)
 	await _test_rope(p, gen, ob)
@@ -196,7 +199,20 @@ func _test_river(p: Wanderer, gen: WorldGen, ob: ObstacleManager) -> void:
 	back.y = gen.height(back.x, back.z) + 0.3
 	await place(p, back, k)
 	var before := lg.global_position
+	# walk into the end of the log and keep pushing along it (the log may have rolled a little after
+	# being laid down, so aim at its end instead of a fixed direction)
 	steer(p, axis)
+	p.autopilot = func() -> Vector3:
+		var ax := lg.global_basis.z
+		ax.y = 0.0
+		ax = ax.normalized()
+		if ax.dot(Vector3(axis.x, 0, axis.z)) < 0.0:
+			ax = -ax
+		# stay in line with the log: correct sideways drift, then push along it
+		var rel := p.global_position - lg.global_position
+		rel.y = 0.0
+		var side := rel - ax * rel.dot(ax)
+		return (ax - side * 1.2).normalized()
 	await secs(10.0)
 	p.autopilot = Callable()
 	var moved := (lg.global_position - before).dot(axis)
@@ -225,6 +241,12 @@ func _test_river(p: Wanderer, gen: WorldGen, ob: ObstacleManager) -> void:
 	start.y = gen.height(start.x, start.z) + 0.3
 	await place(p, start, k)
 	steer(p, lax)
+	# walk along the middle of the log: correct any sideways drift (players do the same with the mouse)
+	p.autopilot = func() -> Vector3:
+		var rel := p.global_position - lg.global_position
+		rel.y = 0.0
+		var side := rel - lax * rel.dot(lax)
+		return (lax - side * 1.5).normalized()
 	var swam := false
 	for i in 20 * 60:
 		await get_tree().physics_frame

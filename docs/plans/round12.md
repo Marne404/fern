@@ -616,3 +616,14 @@ New items (hand-built models and icons like the others):
   bunches of red currants, blueberries or blackberries ("Pick …", 3 handfuls, the berries disappear),
   mushroom clusters (30 % fly agarics – poisonous: −30 health, dizzy), flat pebbles on brook and pond shores
   (also in find-spot loot). Taken things stay gone for the journey. `--forage` lists them.
+- 8c/8d result: cairns beside the trail (every ~520 m cell with 60 %, 3–6 stacked flat stones on a bare patch,
+  a songbird perch on top); "Add a stone" with a pebble or pretty stone stacks one more; using a stone away
+  from cairns and water starts an own cairn. Built stones are saved per world in user://cairns.cfg (not in
+  test runs). Using a flat pebble facing water (3–14 m ahead) throws it: it skips (mostly 3–7, rarely 8–12,
+  sometimes straight down), rings the water at every touch, with little synthesized sounds (click, tip,
+  plop, whoosh) and a message counting the skips. `--usestone=frame`.
+- The obtest's river log checks failed deterministically this morning – also with the code of v0.10.0, so
+  not caused by this round (the environment changed; not found which part). The log itself pushes and
+  floats fine; the test walked into its rounded end off-center and the log yawed away. Pushing and
+  balancing now keep the scout in line with the log (like a player steering), both pass again.
+  `--obtest --only_river`.

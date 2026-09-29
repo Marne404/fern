@@ -272,6 +272,11 @@ func _build_tile(t: Vector2i, lod: int) -> MultiMeshInstance3D:
 		var fd := Vector3(fp["x"], fp["z"], 3.2 if fp["type"] in ["lagerfeuer", "unterstand"] else 2.0)
 		if Rect2(wx, wz, TILE, TILE).grow(fd.z).has_point(Vector2(fd.x, fd.y)):
 			disks.append(fd)
+	var ck0 := floori(-(wz + TILE) / Cairns.CELL) - 1
+	for ck in range(maxi(ck0, 1), ck0 + 3):
+		var cpl := Cairns.plan(gen, ck)
+		if not cpl.is_empty() and Rect2(wx, wz, TILE, TILE).grow(1.6).has_point(Vector2(cpl["x"], cpl["z"])):
+			disks.append(Vector3(cpl["x"], cpl["z"], 1.5))
 	var c0 := floori(wz / ForageManager.CELL)
 	for cz in range(c0 - 1, c0 + 2):
 		var rr := gen.row((cz + 0.5) * ForageManager.CELL, false)

@@ -338,6 +338,17 @@ func _find_clearings() -> void:
 			var r := 1.4 if p["type"] == "schild" else (3.4 if p["type"] in ["lagerfeuer", "unterstand"] else 2.6)
 			clearings.append(Vector3(lx, lz, r))
 			blockers.append(Vector3(lx, lz, r + 1.0))
+	# cairns stand on a small bare patch
+	var c0 := floori(-(corner.y + SIZE) / Cairns.CELL) - 1
+	for ck in range(maxi(c0, 1), c0 + 3):
+		var cp := Cairns.plan(gen, ck)
+		if cp.is_empty():
+			continue
+		var cx: float = cp["x"] - corner.x
+		var cz: float = cp["z"] - corner.y
+		if cx > -3.0 and cz > -3.0 and cx < SIZE + 3.0 and cz < SIZE + 3.0:
+			clearings.append(Vector3(cx, cz, 1.6))
+			blockers.append(Vector3(cx, cz, 2.0))
 	# mud hollows: no plants in the mud (three circles along the path cover the ellipse)
 	for o in gen.obstacles_near(corner.y + SIZE * 0.5):
 		if o["type"] != "mud":

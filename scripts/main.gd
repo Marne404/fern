@@ -21,6 +21,7 @@ var hud: Hud
 var backpack: Backpack
 var pois: PoiManager
 var forage: ForageManager
+var cairns: Cairns
 var landmarks: LandmarkManager
 var dropped: Node3D
 var footprints: Footprints
@@ -152,6 +153,10 @@ func _ready() -> void:
 					if nf <= 10 or (fp["type"] == "kiesel" and nf < 400):
 						print("Forage %s v%d z=%.0f x=%.0f (%s)" % [fp["type"], fp["variant"], fp["z"], fp["x"], gen.biomes[gen.dominant_biome(fp["z"])]["name"]])
 		print("Forage spots in 43 km: %d" % nf)
+		for ck in range(1, 30):
+			var cp := Cairns.plan(gen, ck)
+			if not cp.is_empty():
+				print("Cairn %s z=%.0f x=%.0f stones %d" % [cp["key"], cp["z"], cp["x"], cp["stones"]])
 	if _args.has("findspots"):
 		# test helper: --findspots=type lists the first find spots of that type
 		var n_found := 0
@@ -184,6 +189,9 @@ func _ready() -> void:
 	forage = ForageManager.new()
 	add_child(forage)
 	forage.setup(gen, world, lib)
+	cairns = Cairns.new()
+	add_child(cairns)
+	cairns.setup(gen, world)
 	landmarks = LandmarkManager.new()
 	add_child(landmarks)
 	landmarks.setup(gen, world, lib)
@@ -383,6 +391,7 @@ func start_journey() -> void:
 		music.stinger("kollaps"))
 	player.recovered.connect(func(): hud.collapse_fade(false))
 	player.message.connect(hud.show_message)
+	player.use_stone.connect(func(it: Dictionary): cairns.use_stone(player, it))
 	player.sleep_fade.connect(func(on):
 		hud.collapse_fade(on, "Zzz …")
 		# sleeping through the night: you wake up in the morning (the clock jumps while the screen is dark)
@@ -647,6 +656,11 @@ func _process_inner(delta: float) -> void:
 	if _args.has("weatherstate") and _args["weatherstate"] == "flash":
 		atmosphere.weather.flash = 1.0
 		atmosphere.weather.flash_dir = Vector2(0.3, -1).normalized()
+	if _args.has("usestone") and _frame == int(_args["usestone"]) and player:
+		# test helper: use a pebble from the backpack at this frame (skip it / cairn)
+		var peb := ItemDefs.make("kiesel")
+		player.inventory.add(peb)
+		cairns.use_stone(player, peb)
 	if _args.has("shoot"):
 		atmosphere.sky_mat.set_shader_parameter("shooting_seed", float(_args["shoot"]))
 	if _args.has("tm"):
