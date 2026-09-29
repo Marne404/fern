@@ -314,6 +314,8 @@ export class Hero {
       this.scout = new Scout(tpl, this._savedLook());
       this.scout.root.scale.setScalar(1.0);
       s.add(this.scout.root);
+      // the feet find the island's ground
+      this.scout.groundAt = (x, z) => groundH(x, z);
       this.scoutS = 0; this.scoutPause = 9; this.scoutJump = null;
       this.scout.root.traverse((o) => { if (o.isMesh) o.userData.scout = true; });
     }).catch((e) => console.warn('scout', e));
