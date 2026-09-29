@@ -19,6 +19,8 @@ var world: ChunkManager
 var activity := 1.0
 ## biome allows birds
 var allowed := true
+## 0..1: how long you have been crouching quietly – birds come close and hop about near you
+var patience := 0.0
 var _birds: Array[Dictionary] = []
 var _rng := RandomNumberGenerator.new()
 var _timer := 0.0
@@ -185,7 +187,13 @@ func _update_bird(b: Dictionary, cam: Vector3, delta: float) -> void:
 			# too close: off to another perch
 			var d := pos.distance_to(cam)
 			var sprinting := d < 9.0 and _cam_speed > 4.0
-			if d < 5.5 or sprinting:
+			if patience > 0.8 and d > 4.0 and _rng.randf() < delta * 0.12:
+				# curious: it drops down onto the grass right next to you
+				var a := _rng.randf() * TAU
+				var near := cam + Vector3(cos(a), 0.0, sin(a)) * _rng.randf_range(1.6, 3.0)
+				near.y = world.ground_y(near.x, near.z)
+				_fly_to(b, near)
+			elif d < lerpf(5.5, 1.1, patience) or sprinting:
 				var np := _choose_perch(cam, pos)
 				if np == Vector3.INF or _rng.randf() < 0.25:
 					_leave(b, cam)
@@ -272,98 +280,95 @@ func _idle(b: Dictionary, pos: Vector3, delta: float) -> void:
 # ---------------------------------------------------------------- model
 
 func _make_bird(kind: int) -> Node3D:
+	if not _meshes.has(kind):
+		_meshes[kind] = _bird_meshes(kind)
+	var m: Dictionary = _meshes[kind]
 	var root := Node3D.new()
 	var body := Node3D.new()
 	body.name = "Body"
 	root.add_child(body)
-	var cols: Array = KINDS[kind]
-	var s := 0.11   # a bird is ~13 cm long, drawn a little plump
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.vertex_color_is_srgb = true
-	mat.roughness = 0.9
-	# body: round, back color on top, breast in front below
-	var bm := _blob(Vector3(0.55, 0.5, 0.75) * s, func(n: Vector3) -> Color:
-		var breast := smoothstep(-0.1, 0.5, -n.z * 0.6 - n.y * 0.8)
-		return (cols[0] as Color).lerp(cols[1], breast))
 	var bmi := MeshInstance3D.new()
-	bmi.mesh = bm
-	bmi.material_override = mat
-	bmi.position = Vector3(0, 0.07, 0)
+	bmi.mesh = m["body"]
 	body.add_child(bmi)
 	var head := Node3D.new()
 	head.name = "Head"
-	head.position = Vector3(0, 0.12, -0.055)
+	head.position = Vector3(0, 0.125, -0.06)
 	body.add_child(head)
-	var hm := MeshInstance3D.new()
-	hm.mesh = _blob(Vector3(0.36, 0.34, 0.36) * s, func(n: Vector3) -> Color:
-		return (cols[2] as Color).lerp(cols[1], smoothstep(0.0, 0.6, -n.y * 0.7 - n.z * 0.4) * 0.6))
-	hm.material_override = mat
-	head.add_child(hm)
-	# eyes and beak
-	for side: float in [-1.0, 1.0]:
-		var eye := MeshInstance3D.new()
-		var em := SphereMesh.new()
-		em.radius = 0.0065
-		em.height = 0.013
-		eye.mesh = em
-		var emat := StandardMaterial3D.new()
-		emat.albedo_color = Color("141414")
-		emat.roughness = 0.2
-		eye.material_override = emat
-		eye.position = Vector3(side * 0.03, 0.008, -0.022)
-		head.add_child(eye)
-	var beak := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = 0.0
-	cm.bottom_radius = 0.009
-	cm.height = 0.028
-	cm.radial_segments = 6
-	beak.mesh = cm
-	var beak_mat := StandardMaterial3D.new()
-	beak_mat.albedo_color = Color("3a3028")
-	beak.material_override = beak_mat
-	beak.rotation.x = -PI * 0.5
-	beak.position = Vector3(0, -0.004, -0.05)
-	head.add_child(beak)
-	# wings on the shoulders (they fold along the body)
+	var hmi := MeshInstance3D.new()
+	hmi.mesh = m["head"]
+	head.add_child(hmi)
 	for side: float in [-1.0, 1.0]:
 		var w := Node3D.new()
 		w.name = "WingL" if side < 0 else "WingR"
-		w.position = Vector3(side * 0.04, 0.1, -0.01)
+		w.position = Vector3(side * 0.045, 0.1, -0.015)
 		body.add_child(w)
-		var wm := MeshInstance3D.new()
-		wm.mesh = _blob(Vector3(0.36, 0.08, 0.6) * s, func(_n: Vector3) -> Color: return cols[3])
-		wm.material_override = mat
-		wm.position = Vector3(side * 0.025, 0.0, 0.03)
-		w.add_child(wm)
+		var wmi := MeshInstance3D.new()
+		wmi.mesh = m["wing_l" if side < 0 else "wing_r"]
+		w.add_child(wmi)
 	var tail := Node3D.new()
 	tail.name = "Tail"
-	tail.position = Vector3(0, 0.09, 0.07)
+	tail.position = Vector3(0, 0.09, 0.065)
 	body.add_child(tail)
-	var tm := MeshInstance3D.new()
-	tm.mesh = _blob(Vector3(0.22, 0.05, 0.5) * s, func(_n: Vector3) -> Color: return (cols[3] as Color).darkened(0.15))
-	tm.material_override = mat
-	tm.position = Vector3(0, 0.0, 0.045)
-	tm.rotation.x = 0.35
-	tail.add_child(tm)
-	# thin legs
-	for side: float in [-1.0, 1.0]:
-		var leg := MeshInstance3D.new()
-		var lm := CylinderMesh.new()
-		lm.top_radius = 0.003
-		lm.bottom_radius = 0.003
-		lm.height = 0.035
-		lm.radial_segments = 4
-		leg.mesh = lm
-		leg.material_override = beak_mat
-		leg.position = Vector3(side * 0.015, 0.017, 0.0)
-		body.add_child(leg)
+	var tmi := MeshInstance3D.new()
+	tmi.mesh = m["tail"]
+	tail.add_child(tmi)
 	for c in root.find_children("*", "GeometryInstance3D", true, false):
 		(c as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# a little larger than life: reads better next to the round scout
 	root.scale = Vector3.ONE * 1.4
 	return root
+
+
+## The bird's parts in the toon style: plump body with the breast color flowing into the back,
+## a round head with cap and cheeks, a glossy pointed beak, layered wings with pale feather edges, a fan tail
+func _bird_meshes(kind: int) -> Dictionary:
+	var cols: Array = KINDS[kind]
+	var back_c: Color = cols[0]
+	var breast_c: Color = cols[1]
+	var head_c: Color = cols[2]
+	var wing_c: Color = cols[3]
+	var beak_c := Color("3a3028") if kind != 3 else Color("2a2a30")
+	var out := {}
+	var b := CreatureMesh.new()
+	b.add(Mesh3.blob(Vector3(0.06, 0.058, 0.085), 2.2, 12, 16), func(n: Vector3, _p: Vector3) -> Color:
+		var breast := smoothstep(-0.15, 0.55, -n.z * 0.6 - n.y * 0.8)
+		return back_c.lerp(breast_c, breast).lerp(breast_c.lightened(0.35), smoothstep(0.6, 0.95, -n.y) * 0.6),
+		Transform3D(Basis(Vector3.RIGHT, -0.25), Vector3(0, 0.075, 0)))
+	# little legs with toes gripping the perch
+	for side: float in [-1.0, 1.0]:
+		b.add(Mesh3.tube([Vector3(side * 0.016, 0.04, 0.0), Vector3(side * 0.017, 0.002, 0.004)], [0.0045, 0.0035], 5), beak_c, Transform3D.IDENTITY, CreatureMesh.PLAIN)
+		for toe: float in [-0.5, 0.0, 0.5]:
+			b.add(Mesh3.tube([Vector3(side * 0.017, 0.002, 0.004), Vector3(side * 0.017 + sin(toe) * 0.012, 0.0, 0.004 - cos(toe) * 0.014)], 0.0025, 4), beak_c, Transform3D.IDENTITY, CreatureMesh.PLAIN)
+	out["body"] = b.commit()
+	var h := CreatureMesh.new()
+	h.add(Mesh3.blob(Vector3(0.042, 0.04, 0.043), 2.1, 10, 14), func(n: Vector3, _p: Vector3) -> Color:
+		var c := head_c.lerp(breast_c, smoothstep(0.0, 0.6, -n.y * 0.7 - n.z * 0.4) * 0.7)
+		# pale cheeks for the tit
+		if kind == 1 and absf(n.x) > 0.55 and n.y < 0.35 and n.y > -0.4:
+			c = c.lerp(Color("f4f1e8"), 0.9)
+		return c)
+	h.add(Mesh3.lathe([Vector2(0.0, 0.0), Vector2(0.011, 0.0), Vector2(0.008, 0.012), Vector2(0.0, 0.03)], 8, 0.8, Transform3D(Basis(Vector3.RIGHT, -PI * 0.5), Vector3(0, -0.004, -0.036))), beak_c, Transform3D.IDENTITY, CreatureMesh.GLOSS)
+	for side: float in [-1.0, 1.0]:
+		h.eye(0.008, Transform3D(Basis(Vector3.UP, side * -1.2), Vector3(side * 0.031, 0.008, -0.022)))
+	out["head"] = h.commit()
+	for side: float in [-1.0, 1.0]:
+		var w := CreatureMesh.new()
+		# three layers: coverts, secondaries, long primaries – each with a paler edge
+		for layer in 3:
+			var len := 0.05 + layer * 0.022
+			var wid := 0.034 - layer * 0.005
+			w.add(Mesh3.blob(Vector3(wid, 0.008, len), 2.3, 6, 12), func(n: Vector3, p: Vector3) -> Color:
+				var c := wing_c.darkened(layer * 0.12)
+				return c.lerp(c.lightened(0.45), smoothstep(len * 0.75, len, p.z) * 0.8),
+				Transform3D(Basis(Vector3.UP, side * 0.12), Vector3(side * 0.02, -0.004 * layer, 0.025 + layer * 0.02)))
+		out["wing_l" if side < 0 else "wing_r"] = w.commit()
+	var t := CreatureMesh.new()
+	for f in 5:
+		var a := (f - 2) * 0.13
+		t.add(Mesh3.blob(Vector3(0.011, 0.004, 0.05), 2.2, 5, 10), wing_c.darkened(0.2).lerp(wing_c, float(f % 2) * 0.3),
+			Transform3D(Basis(Vector3.UP, a) * Basis(Vector3.RIGHT, 0.35), Vector3(sin(a) * 0.01, 0.0, 0.045)))
+	out["tail"] = t.commit()
+	return out
 
 
 ## Ellipsoid with vertex colors from its normal

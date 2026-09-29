@@ -21,6 +21,7 @@ var hud: Hud
 var backpack: Backpack
 var pois: PoiManager
 var forage: ForageManager
+var _patience := 0.0
 var cairns: Cairns
 var landmarks: LandmarkManager
 var dropped: Node3D
@@ -697,6 +698,22 @@ func _process_inner(delta: float) -> void:
 	# deer like dawn and dusk, but not the dark night or heavy rain
 	deer.activity = (1.0 - float(atmosphere.shown.get("night", 0.0)) * 0.8) * (1.0 - clampf(atmosphere.weather.rain * 1.5, 0.0, 1.0))
 	songbirds.allowed = atmosphere.current.get("birds", true)
+	# patience: crouching still in the grass lets the animals come closer
+	if player and mode == Mode.PLAYING and player.crouching and Vector2(player.velocity.x, player.velocity.z).length() < 0.3:
+		_patience = minf(_patience + delta / 4.0, 1.0)
+	else:
+		_patience = maxf(_patience - delta * 2.0, 0.0)
+	if _args.has("patient"):
+		_patience = 1.0
+	deer.patience = _patience
+	songbirds.patience = _patience
+	butterflies.patience = _patience
+	# a butterfly can land on your hat (third person) or on your knee (first person, so you can see it)
+	if player and _patience > 0.5:
+		var knee := player.global_position + (-player.global_basis.z) * 0.45 + Vector3(0.12, 0.55, 0)
+		butterflies.rest_spot = knee if not Settings.values.get("third_person", false) else player.global_position + Vector3(0, 1.28, 0)
+	else:
+		butterflies.rest_spot = Vector3.INF
 	songbirds.activity = (1.0 - float(atmosphere.shown.get("night", 0.0))) * (1.0 - clampf(atmosphere.weather.rain * 3.0, 0.0, 1.0))
 	# butterflies and bees hide at night and in the rain
 	butterflies.activity = (1.0 - float(atmosphere.shown.get("night", 0.0))) * (1.0 - clampf(atmosphere.weather.rain * 3.0, 0.0, 1.0))

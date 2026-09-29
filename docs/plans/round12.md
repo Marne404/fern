@@ -627,3 +627,21 @@ New items (hand-built models and icons like the others):
   floats fine; the test walked into its rounded end off-center and the log yawed away. Pushing and
   balancing now keep the scout in line with the log (like a player steering), both pass again.
   `--obtest --only_river`.
+
+## Step 9 – Patience and new animal models (result)
+
+- Patience: crouching still builds a value over 4 s (drops fast when you move). Deer notice you much later
+  (alert at 7 m instead of 30), flee only below 4.5 m, calm down again after 3 s and sometimes step curiously
+  closer; songbirds stay until ~1 m and drop down onto the grass 1.6–3 m from you; butterflies stay put and one
+  may land on your knee (first person) or hat (third person). `--patient` forces it for renders.
+- Models in the scout's toon shader via the new `CreatureMesh` kit (Mesh3 shapes colored per vertex, merged
+  per animated node, soft/gloss flags like the items):
+  - deer: barrel with deep chest and round haunch, darker spine, pale belly, white rump patch, fawn spots,
+    curved neck with pale throat, tapered muzzle, glossy nose, eyes with catch lights and pale rings, leaf
+    ears with pale insides and dark tips, jointed legs with hocks and glossy hooves; young bucks (30 %) with
+    small antlers; breathing and a head bob while walking.
+  - songbirds: plump body with breast colour flowing into the back, round head (the tit with white cheeks),
+    glossy pointed beak, eyes with catch lights, three-layer wings with pale feather edges, fan tail, legs
+    with toes.
+  - butterflies: scalloped wings with dark rims, white dots, veins and an eye spot; a real body with head
+    and antennae. Bees: golden fuzzy thorax, striped abdomen, dark head with big eyes, antennae and legs.

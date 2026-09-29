@@ -19,6 +19,11 @@ var _flowers: Array = []
 var _bees: MultiMeshInstance3D
 var _bee_state: Array[Dictionary] = []
 var _buzz: AudioStreamPlayer3D
+## 0..1: how long you have been crouching quietly – butterflies stay, and one may land on you
+var patience := 0.0
+## where one could land on you (local), INF if nowhere
+var rest_spot := Vector3.INF
+var _body_mesh: ArrayMesh
 
 
 func _ready() -> void:
@@ -64,6 +69,11 @@ func spawn(count: int) -> void:
 		mi.scale = Vector3.ONE * _rng.randf_range(0.09, 0.14)
 		mi.visible = false
 		add_child(mi)
+		# a furry body with head and antennae between the wings
+		var body := MeshInstance3D.new()
+		body.mesh = _butterfly_body()
+		body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.add_child(body)
 		_items.append({"node": mi, "pos": Vector3.INF, "target": Vector3.INF, "rest": 0.0, "rest_t": 0.0,
 			"seed": _rng.randf() * 100.0, "speed": _rng.randf_range(0.9, 1.5), "yaw": _rng.randf() * TAU, "wander": false})
 
@@ -81,37 +91,38 @@ func _wing_mesh() -> ArrayMesh:
 	return st.commit()
 
 
-## A tiny bee: striped body (yellow/black) as an opaque surface, two glassy wings as a second one
+func _butterfly_body() -> ArrayMesh:
+	if _body_mesh == null:
+		var b := CreatureMesh.new()
+		var dark := Color("2a2220")
+		b.add(Mesh3.tube([Vector3(0, 0.03, -0.32), Vector3(0, 0.03, -0.1), Vector3(0, 0.02, 0.2), Vector3(0, 0.0, 0.55)], [0.07, 0.085, 0.06, 0.03], 8),
+			func(_n: Vector3, p: Vector3) -> Color: return dark.lerp(Color("5a4638"), smoothstep(0.0, 0.5, sin(p.z * 40.0)) * 0.4))
+		b.add(Mesh3.blob(Vector3.ONE * 0.07, 2.0, 6, 8), dark, Transform3D(Basis(), Vector3(0, 0.04, -0.38)))
+		for side: float in [-1.0, 1.0]:
+			b.add(Mesh3.tube([Vector3(side * 0.02, 0.06, -0.42), Vector3(side * 0.12, 0.18, -0.62), Vector3(side * 0.16, 0.22, -0.72)], [0.012, 0.01, 0.01], 4), dark, Transform3D.IDENTITY, CreatureMesh.PLAIN)
+			b.add(Mesh3.blob(Vector3.ONE * 0.025, 2.0, 4, 6), dark, Transform3D(Basis(), Vector3(side * 0.16, 0.22, -0.72)))
+		_body_mesh = b.commit()
+	return _body_mesh
+
+
+## A tiny bee in the toon style: fuzzy golden thorax, striped abdomen with a dark tip, a dark head with big
+## eyes and antennae, little legs; two glassy wings as a second surface
 func _bee_mesh() -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var rings := 7
-	var segs := 8
-	var pts := []
-	for r in rings + 1:
-		var t := float(r) / rings
-		var z := lerpf(-0.5, 0.5, t)
-		var rad := sin(t * PI) * 0.26 + 0.02
-		var row := []
-		for s in segs:
-			var a := TAU * s / segs
-			row.append(Vector3(cos(a) * rad, sin(a) * rad * 0.9, z))
-		pts.append(row)
-	for r in rings:
-		var t := (r + 0.5) / rings
-		var col := Color("2a2118") if t < 0.22 else (Color("f2b632") if int(t * 7.0) % 2 == 0 else Color("2a2118"))
-		for s in segs:
-			var s2 := (s + 1) % segs
-			for v: Vector3 in [pts[r][s], pts[r + 1][s2], pts[r + 1][s], pts[r][s], pts[r][s2], pts[r + 1][s2]]:
-				st.set_color(col)
-				st.set_normal(Vector3(v.x, v.y, 0).normalized())
-				st.add_vertex(v)
-	var mesh := st.commit()
-	var body := StandardMaterial3D.new()
-	body.vertex_color_use_as_albedo = true
-	body.vertex_color_is_srgb = true
-	body.roughness = 0.85
-	mesh.surface_set_material(0, body)
+	var b := CreatureMesh.new()
+	var gold := Color("f2b632")
+	var dark := Color("2a2118")
+	b.add(Mesh3.blob(Vector3(0.2, 0.19, 0.3), 2.1, 8, 12), func(_n: Vector3, p: Vector3) -> Color:
+		var band := int(floor((p.z + 0.3) / 0.12))
+		return dark if (band % 2 == 1 or p.z > 0.22) else gold, Transform3D(Basis(), Vector3(0, 0, 0.18)))
+	b.add(Mesh3.blob(Vector3(0.17, 0.16, 0.16), 2.0, 7, 10), Color("d99a2a").lerp(Color("7a5a2a"), 0.3), Transform3D(Basis(), Vector3(0, 0.03, -0.14)))
+	b.add(Mesh3.blob(Vector3(0.13, 0.12, 0.11), 2.0, 6, 10), dark, Transform3D(Basis(), Vector3(0, 0.02, -0.33)))
+	for side: float in [-1.0, 1.0]:
+		b.add(Mesh3.blob(Vector3(0.05, 0.08, 0.06), 2.0, 5, 8), Color("3a3230"), Transform3D(Basis(), Vector3(side * 0.09, 0.04, -0.35)), CreatureMesh.GLOSS)
+		b.add(Mesh3.tube([Vector3(side * 0.04, 0.1, -0.4), Vector3(side * 0.09, 0.22, -0.5), Vector3(side * 0.11, 0.2, -0.58)], 0.012, 4), dark, Transform3D.IDENTITY, CreatureMesh.PLAIN)
+		for leg in 3:
+			var z := -0.2 + leg * 0.09
+			b.add(Mesh3.tube([Vector3(side * 0.1, -0.08, z), Vector3(side * 0.19, -0.2, z + 0.03), Vector3(side * 0.2, -0.3, z + 0.06)], 0.014, 4), dark, Transform3D.IDENTITY, CreatureMesh.PLAIN)
+	var mesh := b.commit()
 	var sw := SurfaceTool.new()
 	sw.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for side in [-1.0, 1.0]:
@@ -174,6 +185,17 @@ func _update_butterflies(cam: Vector3, delta: float) -> void:
 			it["target"] = Vector3.INF
 			it["rest"] = 0.0
 		var target: Vector3 = it["target"]
+		if target == Vector3.INF and patience > 0.9 and rest_spot != Vector3.INF and not _someone_on_you() and _rng.randf() < 0.3:
+			# you've been so still: it lands on you
+			target = rest_spot
+			it["target"] = target
+			it["wander"] = false
+			it["on_you"] = true
+		if it.get("on_you", false) and rest_spot != Vector3.INF:
+			target = rest_spot
+			it["target"] = target
+			if float(it["rest"]) > 0.0:
+				pos = rest_spot
 		if target == Vector3.INF:
 			target = _pick_flower(pos, 9.0, false)
 			if target == Vector3.INF or target.distance_to(pos) > 12.0:
@@ -190,8 +212,11 @@ func _update_butterflies(cam: Vector3, delta: float) -> void:
 			# sitting on the flower: wings slowly open and close; fly off early if you come close
 			it["rest"] = float(it["rest"]) - delta
 			it["rest_t"] = minf(float(it["rest_t"]) + delta * 3.0, 1.0)
-			if pos.distance_to(cam) < 2.2:
+			if pos.distance_to(cam) < 2.2 and patience < 0.6 and not it.get("on_you", false):
 				it["rest"] = 0.0
+			if it.get("on_you", false) and (rest_spot == Vector3.INF or patience < 0.5):
+				it["rest"] = 0.0
+				it["on_you"] = false
 			if it["rest"] <= 0.0:
 				it["target"] = Vector3.INF
 				pos.y += 0.05
@@ -221,6 +246,13 @@ func _update_butterflies(cam: Vector3, delta: float) -> void:
 		node.rotation = Vector3(0, float(it["yaw"]), 0)
 		node.scale = s
 		node.set_instance_shader_parameter("rest", float(it["rest_t"]))
+
+
+func _someone_on_you() -> bool:
+	for it in _items:
+		if it.get("on_you", false):
+			return true
+	return false
 
 
 func _update_bees(cam: Vector3, delta: float) -> void:

@@ -24,18 +24,32 @@ void vertex() {
 void fragment() {
 	// UV.x: 0 = body, 1 = wing tip; UV.y: front (0) to back (1)
 	vec2 p = vec2(UV.x, UV.y * 2.0 - 1.0);
-	float fore = length((p - vec2(0.5, -0.35)) * vec2(1.0, 1.25));
-	float hind = length((p - vec2(0.38, 0.45)) * vec2(1.25, 1.4));
+	// forewing: a rounded triangle sweeping forward; hindwing: a scalloped lobe behind it
+	vec2 fp = (p - vec2(0.48, -0.38)) * vec2(1.0, 1.3);
+	float fore = length(fp) - 0.08 * sin(atan(fp.y, fp.x) * 3.0);
+	vec2 hp = (p - vec2(0.36, 0.42)) * vec2(1.3, 1.35);
+	float scallop = 0.03 * sin(atan(hp.y, hp.x) * 7.0);
+	float hind = length(hp) + scallop;
 	float wing = min(fore, hind);
-	float body = step(UV.x, 0.06) * step(abs(p.y), 0.6);
-	ALPHA = max(step(wing, 0.5), body);
+	ALPHA = step(wing, 0.5);
 	ALPHA_SCISSOR_THRESHOLD = 0.5;
-	vec3 col = wing_color;
-	float rim = smoothstep(0.36, 0.46, wing);
+	// color: deep at the base, bright in the middle, a dark rim with pale dots, faint veins
+	vec3 base = wing_color * 0.55;
+	vec3 col = mix(base, wing_color * 1.08, smoothstep(0.05, 0.4, UV.x));
+	float vein = smoothstep(0.035, 0.0, abs(fract(atan(p.y + 0.1, p.x) * 2.2) - 0.5)) * smoothstep(0.15, 0.4, UV.x) * 0.25;
+	col *= 1.0 - vein;
+	float rim = smoothstep(0.38, 0.46, wing);
 	col = mix(col, vec3(0.08, 0.06, 0.05), rim);
-	float spot = step(length(p - vec2(0.72, -0.45)), 0.07) + step(length(p - vec2(0.58, -0.62)), 0.05);
-	col = mix(col, vec3(1.0), clamp(spot, 0.0, 1.0) * rim);
-	col = mix(col, vec3(0.1, 0.08, 0.06), body);
+	float dots = 0.0;
+	for (int i = 0; i < 5; i++) {
+		float a = -1.25 + float(i) * 0.3;
+		dots += step(length(p - vec2(0.48, -0.38) - vec2(cos(a), sin(a)) * 0.42 / vec2(1.0, 1.3)), 0.035);
+	}
+	col = mix(col, vec3(1.0, 0.98, 0.9), clamp(dots, 0.0, 1.0) * rim);
+	// an eye spot on the hindwing
+	float eye_d = length(p - vec2(0.42, 0.55));
+	col = mix(col, vec3(0.1, 0.12, 0.25), step(eye_d, 0.075));
+	col = mix(col, vec3(0.95, 0.9, 0.6), step(eye_d, 0.04));
 	ALBEDO = col;
 	BACKLIGHT = col * 0.6;
 	ROUGHNESS = 1.0;
