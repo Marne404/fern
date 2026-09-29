@@ -1065,7 +1065,10 @@ func animate(delta: float) -> void:
 					"stretch":
 						chest_rot.x += 0.15 * k
 						head_rot.x += 0.35 * k
-						rig_pos.y += 0.02 * k
+						# up on the toes
+						rig_pos.y += 0.045 * k
+						feet_fx[0].y -= 0.4 * k
+						feet_fx[1].y -= 0.4 * k
 					"look":
 						head_rot.y += sin(_fidget_t * 2.6) * 0.8 * k
 						head_rot.x += 0.1 * k
@@ -1098,6 +1101,10 @@ func animate(delta: float) -> void:
 		elif standing and on_floor and _emote not in ["wave", "yawn", "sit", "lie"]:
 			var off := _emote_pose(_emote, _emote_t, dur, arm, leg, face, feet_fx)
 			rig_pos += off["rig"]
+			# a hop takes the feet along (the planted legs would hold the body down)
+			var hop := maxf(off["rig"].y, 0.0)
+			feet_fx[0].x += hop
+			feet_fx[1].x += hop
 			hip_rot += off["hip"]
 			chest_rot += off["chest"]
 			head_rot += off["head"]
@@ -1106,7 +1113,8 @@ func animate(delta: float) -> void:
 		arm[1] = [0.3, 2.7, 0.2]
 		head_rot.z = 0.18
 		chest_rot.z = -0.06
-		rig_pos.y += absf(sin(_t * 5.0)) * 0.012
+		# a happy little bounce in the knees
+		rig_pos.y -= absf(sin(_t * 5.0)) * 0.025
 		face["eyes"] = "happy"
 		face["mouth"] = "open"
 		face["open"] = 0.7
@@ -1427,7 +1435,9 @@ func _emote_pose(e: String, t: float, dur: float, arm: Array, leg: Array, face: 
 		"cheer":
 			to.call(0, [2.9, -0.4 + sin(t * 9.0) * 0.1, 0.2])
 			to.call(1, [2.9, 0.4 - sin(t * 9.0) * 0.1, 0.2])
-			off["rig"] = Vector3(0, maxf(sin(t * TAU / 0.55), 0.0) * 0.14 * (1.0 - smoothstep(1.1, 1.3, t)), 0) * k
+			# hops with a little crouch before each one
+			var hs := sin(t * TAU / 0.55)
+			off["rig"] = Vector3(0, (maxf(hs, 0.0) * 0.14 + minf(hs, 0.0) * 0.06) * (1.0 - smoothstep(1.1, 1.3, t)), 0) * k
 			off["head"] = Vector3(0.15, 0, 0) * k
 			set_face.call({"eyes": "happy", "mouth": "open", "open": 1.0, "brow_r": 0.8})
 		"laugh":
@@ -1436,7 +1446,7 @@ func _emote_pose(e: String, t: float, dur: float, arm: Array, leg: Array, face: 
 			var sh := absf(sin(t * 14.0))
 			off["chest"] = Vector3(0.12 + sh * 0.05, 0, 0) * k
 			off["head"] = Vector3(0.25 + sh * 0.06, 0, sin(t * 3.0) * 0.08) * k
-			off["rig"] = Vector3(0, sh * 0.02, 0) * k
+			off["rig"] = Vector3(0, -sh * 0.025, 0) * k
 			set_face.call({"eyes": "happy", "mouth": "open", "open": 0.55 + sh * 0.45, "brow_r": 0.7})
 		"shrug":
 			to.call(0, [0.35, -0.55, 1.4])
