@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fern – an endless, cozy hiking game</title>
-<meta name="description" content="Fern is a cozy, endless hiking game. Customize your scout, pack your bag and follow a trail that never ends – through fifteen biomes, over rivers, cliffs, fences, mud and boulder fields.">
+<meta name="description" content="Fern is a cozy, endless hiking game. Customize your scout, pack your bag and follow a trail that never ends – through twenty-two biomes, over rivers, cliffs, fences, mud and boulder fields.">
 <meta name="theme-color" content="#3f8fe0">
 <meta property="og:title" content="Fern – an endless, cozy hiking game">
 <meta property="og:description" content="Customize your scout, pack your bag and follow a trail that never ends.">
@@ -28,6 +28,7 @@
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-win" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.1 10.4 4v7.2H3V5.1Zm8.4-1.3L21 2.5v8.7h-9.6V3.8ZM3 12.4h7.4v7.2L3 18.6v-6.2Zm8.4 0H21v8.9l-9.6-1.3v-7.6Z"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24"><path fill="currentColor" d="M16.4 12.7c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.3 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.8-1.1-2.8-4.1ZM14 5.3c.7-.8 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4Z"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m-6-6 6 6 6-6M5 20h14"/></symbol>
   <symbol id="i-left" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="m15 5-7 7 7 7"/></symbol>
   <symbol id="i-right" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7"/></symbol>
@@ -44,6 +45,7 @@
     <a href="#scout">Your scout</a>
     <a href="#world">The trail</a>
     <a href="#day">A day</a>
+    <a href="#outthere">Out there</a>
     <a href="#obstacles">Obstacles</a>
     <a href="#guide">Field guide</a>
     <a href="#badges">Features</a>
@@ -66,7 +68,7 @@
 
 <main>
 <section class="hero" id="top">
-  <div class="hero-fallback" style="background-image:url(screenshots/menu.jpg)"></div>
+  <div class="hero-fallback" style="background-image:url(screenshots/autumn.jpg)"></div>
   <canvas id="hero-canvas" aria-label="A little floating piece of the trail with your scout hiking around it"></canvas>
   <div class="hero-copy">
     <p class="kicker"><b>FREE</b> A cozy hiking game for Windows &amp; Linux</p>
@@ -132,8 +134,8 @@
   <div class="wrap gallery-head reveal">
     <div>
       <span class="eyebrow">The trail</span>
-      <h2 class="display sticker leafy">Fifteen moods,<br>one endless path</h2>
-      <p class="lead">Autumn meadows melt into lavender hills, white birch woods, misty heather moors, sunset coasts, glowing forests and deserts that go on forever. Every world grows from a seed, so type in a word and your friends get the very same trail.</p>
+      <h2 class="display sticker leafy">Twenty-two moods,<br>one endless path</h2>
+      <p class="lead">Autumn meadows melt into wheat fields, cherry valleys, white birch woods, forests of giant pines, mushroom woods, rock gorges and heather moors under northern lights. Every biome has its own corners – a birch stand here, a fern hollow there – and the next one grows in slowly, grove by grove. Every world grows from a seed, so type in a word and your friends get the very same trail.</p>
     </div>
     <div class="arrows">
       <button id="prev" aria-label="Previous"><svg><use href="#i-left"/></svg></button>
@@ -156,6 +158,26 @@
       <figure class="ui-shot reveal" data-lb="screenshots/l_brook.jpg" data-title="A brook beside the trail" data-text="It wells up from a spring, babbles along with you and bends away into the valley."><img src="screenshots/thumb/l_brook.jpg" alt="A clear brook winding beside the trail" loading="lazy" width="800" height="450"><figcaption><b>Brooks, reeds &amp; lilies</b><span>Clear brooks babble beside the path, cattails sway at the shore, water lilies bloom on still ponds.</span></figcaption></figure>
       <figure class="ui-shot reveal" data-lb="screenshots/l_shafts.jpg" data-title="Sunbeams" data-text="Low light falls through the crowns in soft beams."><img src="screenshots/thumb/l_shafts.jpg" alt="Warm sunbeams falling through pine trees" loading="lazy" width="800" height="450"><figcaption><b>Light through the leaves</b><span>Beams fall through the crowns, strongest in the morning and the golden hour.</span></figcaption></figure>
       <figure class="ui-shot reveal" data-lb="screenshots/l_lilies.jpg" data-title="Still water" data-text="Fish rise now and then; wade in and your steps ring the water."><img src="screenshots/thumb/l_lilies.jpg" alt="A pond with lily pads and cattails" loading="lazy" width="800" height="450"><figcaption><b>Water that reacts</b><span>Rings where you wade and where fish rise, wet shores, puddles after the rain.</span></figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section class="day pad" id="outthere">
+  <div class="wrap">
+    <div class="center reveal">
+      <span class="eyebrow">Out there</span>
+      <h2 class="display sticker leafy">Stop for a while</h2>
+      <p class="lead" style="margin-inline:auto">The trail is full of reasons to linger: skies that change with the hour, snow and fog and far-off storms, campfires and shelters, ancient trees, berries to pick, cairns to build – and animals that trust you if you sit still.</p>
+    </div>
+    <div class="life-grid">
+      <figure class="ui-shot reveal" data-lb="screenshots/s_towers.jpg" data-title="Towering clouds" data-text="Summer afternoons pile up cumulus towers all around the horizon."><img src="screenshots/thumb/s_towers.jpg" alt="Towering clouds" loading="lazy" width="800" height="450"><figcaption><b>Skies that change</b><span>Towering clouds in the afternoon, mackerel skies at dawn, pastel bands in the golden hour.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/s_aurora.jpg" data-title="Northern lights" data-text="Clear nights in the highlands and mountains: curtains of light and shooting stars."><img src="screenshots/thumb/s_aurora.jpg" alt="Northern lights" loading="lazy" width="800" height="450"><figcaption><b>Northern lights</b><span>On clear nights in the north: green and violet curtains, and shooting stars everywhere.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/w_snow.jpg" data-title="Snowfall" data-text="In the mountains it snows instead of raining; the land turns white and melts again."><img src="screenshots/thumb/w_snow.jpg" alt="Snowfall" loading="lazy" width="800" height="450"><figcaption><b>Snow, fog & distant storms</b><span>Snowfall in the mountains, fog days in the valleys, heat lightning on warm evenings.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/w_shelter.jpg" data-title="A rain shelter" data-text="Wait out the shower under a shingle roof, with a bench and a lantern."><img src="screenshots/thumb/w_shelter.jpg" alt="A rain shelter" loading="lazy" width="800" height="450"><figcaption><b>Somewhere dry</b><span>Wooden shelters with a bench and a lantern: wait out the rain and stay dry.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/c_campfire.jpg" data-title="A campfire" data-text="Light it with matches or a lighter, sit down, warm up – and roast marshmallows."><img src="screenshots/thumb/c_campfire.jpg" alt="A campfire" loading="lazy" width="800" height="450"><figcaption><b>Campfires</b><span>Fire rings by the trail: light one, warm up, dry off and roast marshmallows.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/a_ancient.jpg" data-title="An ancient tree" data-text="A giant of the biome, ringed by mossy boulders, with a bench to rest."><img src="screenshots/thumb/a_ancient.jpg" alt="An ancient tree" loading="lazy" width="800" height="450"><figcaption><b>Special places</b><span>Ancient trees, fallen giants to walk along and quiet circles of trees.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/c_cairn.jpg" data-title="A cairn" data-text="Add a stone, or start your own – they stay in your world."><img src="screenshots/thumb/c_cairn.jpg" alt="A cairn" loading="lazy" width="800" height="450"><figcaption><b>Cairns & skipping stones</b><span>Stack stones on the cairns, gather berries and mushrooms, skip flat pebbles over ponds.</span></figcaption></figure>
+      <figure class="ui-shot reveal" data-lb="screenshots/a_patient.jpg" data-title="Patience" data-text="Crouch still in the grass and the animals come closer."><img src="screenshots/thumb/a_patient.jpg" alt="Patience" loading="lazy" width="800" height="450"><figcaption><b>Patience pays</b><span>Crouch quietly and deer come closer, birds hop right next to you, a butterfly may land on you.</span></figcaption></figure>
     </div>
   </div>
 </section>
@@ -230,7 +252,7 @@
   <div class="wrap">
     <div class="center reveal">
       <span class="eyebrow">Field guide</span>
-      <h2 class="display sticker sun">Fifty things worth carrying</h2>
+      <h2 class="display sticker sun">Fifty-five things worth carrying</h2>
       <p class="lead" style="margin-inline:auto">Cheese and cocoa, a compass that points to the next obstacle, a lantern for the dusk, a kite for windy hills, a harmonica for the long evenings. Everything weighs something, and your body keeps count.</p>
     </div>
     <div class="items reveal" id="items"></div>
@@ -258,7 +280,7 @@
       <div class="badge reveal">
         <svg class="patch" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="#ec8a34" stroke="#22301f" stroke-width="3"/><circle cx="60" cy="60" r="49" fill="none" stroke="#fffaf0" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="60" cy="60" r="40" fill="#fbf4e3" stroke="#22301f" stroke-width="2.5"/><rect x="40" y="40" width="40" height="44" rx="12" fill="#f2c230" stroke="#22301f" stroke-width="3"/><path d="M48 40v-4a12 8 0 0 1 24 0v4" fill="none" stroke="#22301f" stroke-width="3"/><rect x="47" y="60" width="26" height="16" rx="5" fill="#d9a735" stroke="#22301f" stroke-width="3"/><rect x="36" y="31" width="48" height="12" rx="6" fill="#5b86b5" stroke="#22301f" stroke-width="3"/></svg>
         <h3>Everything has weight</h3>
-        <p>Pack light and you're quick. Pack for everything and every climb hurts. Fifty items, all with a purpose.</p>
+        <p>Pack light and you're quick. Pack for everything and every climb hurts. Fifty-five items, all with a purpose.</p>
       </div>
       <div class="badge reveal">
         <svg class="patch" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="56" fill="#5b8a4c" stroke="#22301f" stroke-width="3"/><circle cx="60" cy="60" r="49" fill="none" stroke="#fffaf0" stroke-width="2.5" stroke-dasharray="5 4"/><circle cx="60" cy="60" r="40" fill="#bfe6fb" stroke="#22301f" stroke-width="2.5"/><path d="M26 80 48 48l10 14 10-18 24 36Z" fill="#88a9cf" stroke="#22301f" stroke-width="3" stroke-linejoin="round"/><path d="m63 52 5-8 6 9-5 3-3-3-3 3Z" fill="#fff" stroke="#22301f" stroke-width="2" stroke-linejoin="round"/><path d="M38 82c8-8 14-2 22-8s16 2 24 8" fill="#9ccc4a" stroke="#22301f" stroke-width="3" stroke-linejoin="round"/><path d="M60 92c-4 0-4-6 0-6s4 6 8 6 4-6 0-6-4 6-8 6Z" fill="none" stroke="#22301f" stroke-width="2.4"/></svg>
@@ -321,10 +343,12 @@
       <div class="cta">
         <a class="btn" href="https://github.com/Marne404/fern/releases/latest/download/Fern-Windows.zip"><svg><use href="#i-win"/></svg>Windows</a>
         <a class="btn green" href="https://github.com/Marne404/fern/releases/latest/download/Fern-Linux.zip"><svg><use href="#i-down"/></svg>Linux</a>
+        <a class="btn orange" href="https://github.com/Marne404/fern/releases/latest/download/Fern-macOS.zip"><svg><use href="#i-apple"/></svg>macOS</a>
         <a class="btn cream" href="https://github.com/Marne404/fern/releases"><svg><use href="#i-gh"/></svg>All releases</a>
       </div>
-      <div class="dl-notes"><span>Windows 10+ or Linux x86_64</span><span>Vulkan graphics</span><span>about 350 MB</span></div>
+      <div class="dl-notes"><span>Windows 10+, Linux x86_64 or macOS 11+ (Apple Silicon &amp; Intel)</span><span>Vulkan / Metal graphics</span><span>about 400 MB</span></div>
       <p class="smartscreen">Windows may say "Windows protected your PC" because the game isn't signed. Click <b>More info → Run anyway</b>.</p>
+      <p class="smartscreen">On a Mac, move Fern.app to Applications, then <b>right-click → Open → Open</b> the first time (it isn't signed by Apple). If macOS calls it "damaged", run <code>xattr -cr /Applications/Fern.app</code> once in Terminal.</p>
     </div>
     <div class="troop"><img src="scouts.png" alt="Five scouts in different colors and hats, waving, cheering and laughing" width="1320" height="518" loading="lazy"><div class="hill"></div></div>
   </div>

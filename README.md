@@ -4,12 +4,12 @@
 
 <p align="center">
   <b>An endless, cozy hiking game through hand-painted-looking nature.</b><br>
-  Walk one never-ending trail through fifteen biomes, solve physical problems with ropes, logs and knots,<br>
+  Walk one never-ending trail through twenty-two biomes, solve physical problems with ropes, logs and knots,<br>
   and see how far you get.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Marne404/fern/releases/latest"><b>⬇ Download for Windows / Linux</b></a> ·
+  <a href="https://github.com/Marne404/fern/releases/latest"><b>⬇ Download for Windows / Linux / macOS</b></a> ·
   <a href="https://marne404.github.io/fern/"><b>🌿 Website</b></a> ·
   <a href="docs/GAME_DESIGN.md">Game design</a> ·
   <a href="docs/DEVLOG.md">Devlog</a>
@@ -64,9 +64,16 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 - **Voice groundwork** – microphone detection with push to talk, always on or voice activation, a level meter and
   optional monitoring; your scout's mouth moves with your voice. Nothing is sent anywhere yet (multiplayer comes later).
 - **Endless, seed-based world** – type any word or number as your world seed and share it with friends.
-- **15 biomes** that blend smoothly: Autumn Meadow, Spring Meadow, Lavender Hills, Forest Trail, Birch Wood,
-  Red Maple Wood, Blossom Grove, Mountain Pines, Heather Highlands, Cliff Lands, Sunset Coast, Lake Country,
-  Deadwood Bog, Glowing Forest and Desert Valley.
+- **22 biomes** that grow into each other grove by grove: Autumn Meadow, Spring Meadow, Wheat Fields, Lavender Hills,
+  Cherry Valley, Blossom Grove, Birch Wood, Golden Birch Slopes, Red Maple Wood, Forest Trail, Giants' Old Forest,
+  Mushroom Wood, Blue Fern Hollow, Glowing Forest, Heather Highlands, Mountain Pines, Rock Gorge, Cliff Lands,
+  Sunset Coast, Lake Country, Deadwood Bog and Desert Valley – each with 3–4 variants of its own (a birch stand,
+  a fern hollow, a flower carpet, a mushroom ring …) and a small effect of its own (gossamer, petals in the gusts,
+  dandelion seeds, spinning maple seeds, will-o'-wisps, glowing spores, gulls, swallows, dragonflies, heat haze).
+- **Skies** – towering clouds on summer afternoons, mackerel skies, pastel bands in the golden hour, northern lights
+  and shooting stars on clear nights.
+- **Places to stop** – ancient trees, fallen giants to walk along, circles of trees, rain shelters, campfires to
+  light (roast marshmallows!), berries and mushrooms to gather, cairns to build, flat pebbles to skip over ponds.
 - **A living landscape** – a winding trail with long climbs and descents, forested hills and mountain ranges,
   endless dunes with mesas, ponds, rivers, waterfalls, landmarks like rock arches and ruins.
 - **A living day** – the sun travels over every valley: misty dawns, golden hours, dusk with fireflies and short
@@ -74,15 +81,16 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 - **Weather and wind** – showers come and go (glossy trail, puddles with raindrop rings, a rainbow afterwards), gusts
   roll through the grass and chase the cloud shadows, colorful trees drop their leaves, tumbleweeds and dust devils
   cross the desert, drizzle drifts over the highlands.
-- **Wildlife** – deer at the edge of the woods, songbirds on fence posts and stones, butterflies that land on flowers,
-  bees in the lavender.
+- **Wildlife** – deer (fawns, young bucks), songbirds, butterflies and bees in the scout's toon style. Crouch quietly
+  and they come closer; a butterfly may even land on you.
+- **More weather** – fog days, snowfall in the mountains (the land turns white), silent heat lightning on warm evenings.
 - **Water** – clear brooks beside the trail, reeds with cattails, water lilies, rings where you wade and fish rise.
 - **Small things** – footprints in sand, snow and mud, dust puffs, footstep sounds for every ground, fallen leaves and
   petals on the path, wet shores, erosion gullies, scree slopes, hummocky meadows and lone boulders, sunbeams
   through the crowns, waterfalls on the far mountains, color grading per biome and time of day, soft focus while
   you rest.
 - **Body and backpack** – stamina, hunger, thirst, tiredness, felt temperature and luggage weight, shown PEAK-style
-  as a stamina bar with the causes marked. 50 hand-modeled items with properties (waterproof, fragile, perishable, …)
+  as a stamina bar with the causes marked. 55 hand-modeled items with properties (waterproof, fragile, perishable, …)
   and effects (warm tea, sunscreen, a lantern, a kite, a harmonica, a compass …). Swimming soaks what isn't
   waterproof; cameras break.
 - **Physics obstacles** – pushable, floating logs, ropes with a knot minigame (knot quality decides whether it holds),

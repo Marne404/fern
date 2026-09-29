@@ -3,21 +3,28 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 const BIOME_CARDS = [
-  ['autumn.jpg', 'Autumn Meadow', 'Golden grass, red maples and leaves in the wind'],
-  ['spring.jpg', 'Spring Meadow', 'Fresh green hills and wildflowers'],
-  ['lavender.jpg', 'Lavender Hills', 'Purple rows, olive trees and warm evening light'],
-  ['blossom.jpg', 'Blossom Grove', 'Pink crowns over a flowery sunken lane'],
-  ['birch.jpg', 'Birch Wood', 'White trunks, ferns and golden haze'],
-  ['maple.jpg', 'Red Maple Wood', 'Deep reds in the late afternoon'],
-  ['forest.jpg', 'Forest Trail', 'Tall pines and a narrow path'],
-  ['highlands.jpg', 'Heather Highlands', 'Misty moors, drizzle and granite'],
-  ['pines.jpg', 'Mountain Pines', 'Tall pines and snowy peaks'],
-  ['cliffs.jpg', 'Cliff Lands', 'Terraces, ledges and long views'],
-  ['coast.jpg', 'Sunset Coast', 'Sea stacks glowing in the evening sun'],
-  ['lakes.jpg', 'Lake Country', 'Birches, reeds and still water'],
-  ['bog.jpg', 'Deadwood Bog', 'Bare trees and dark ponds'],
-  ['desert.jpg', 'Desert Valley', 'Endless dunes, mesas and tumbleweeds'],
-  ['glow.jpg', 'Glowing Forest', 'Dusk, fireflies and glowing mushrooms'],
+  ['autumn.jpg', 'Autumn Meadow', 'Golden birch stands, hedged stubble fields and gossamer in the air'],
+  ['spring.jpg', 'Spring Meadow', 'Flower carpets, blossoming orchards and dandelion seeds'],
+  ['wheat.jpg', 'Wheat Fields', 'Golden wheat to the horizon, poppies and swallows'],
+  ['lavender.jpg', 'Lavender Hills', 'Lavender rows, wheat strips, olives and cypresses'],
+  ['cherry.jpg', 'Cherry Valley', 'Cherry trees by lily ponds in the evening light'],
+  ['blossom.jpg', 'Blossom Grove', 'Real cherry avenues and petals in every gust'],
+  ['birch.jpg', 'Birch Wood', 'White birches, fern floors and golden corners'],
+  ['goldenbirch.jpg', 'Golden Birch Slopes', 'Orange birches on golden hills under a clear sky'],
+  ['maple.jpg', 'Red Maple Wood', 'Crimson maples, golden clearings, spinning seeds'],
+  ['forest.jpg', 'Forest Trail', 'Giant pines, fern hollows and sunny clearings'],
+  ['oldforest.jpg', "Giants' Old Forest", 'A cathedral of giant pines, moss and light'],
+  ['mushroom.jpg', 'Mushroom Wood', 'Mushrooms as big as trees, glowing at night'],
+  ['bluefern.jpg', 'Blue Fern Hollow', 'Teal ferns, pale birches and fireflies by day'],
+  ['glow.jpg', 'Glowing Forest', 'Fairy rings, glowing plants and rising spores'],
+  ['highlands.jpg', 'Heather Highlands', 'Heather, granite tors and northern lights'],
+  ['pines.jpg', 'Mountain Pines', 'Alpine meadows, giant pines and snowfall'],
+  ['gorge.jpg', 'Rock Gorge', 'Grey rock walls, a brook and waterfalls'],
+  ['cliffs.jpg', 'Cliff Lands', 'Terraces, boulder fields and swallows'],
+  ['coast.jpg', 'Sunset Coast', 'Windswept pines, dunes and circling gulls'],
+  ['lakes.jpg', 'Lake Country', 'Birch shores, reed bays and dragonflies'],
+  ['bog.jpg', 'Deadwood Bog', "Silver deadwood, fern islands and will-o'-wisps"],
+  ['desert.jpg', 'Desert Valley', 'Buttes, rock gardens and shimmering heat'],
 ];
 const DAY_STRIP = [
   ['t_mist.jpg', 'Dawn', 'Mist lies in the valley'],
@@ -27,7 +34,7 @@ const DAY_STRIP = [
   ['t_rain.jpg', 'A shower', 'Glossy trail, puddles and rain'],
   ['t_rainbow.jpg', 'After the rain', 'A rainbow over the hills'],
 ];
-const ITEMS = [["apfel", "Apple"], ["beeren", "Berries"], ["brot", "Bread"], ["muesliriegel", "Granola bar"], ["bohnen", "Can of beans"], ["wasserflasche", "Water bottle"], ["limonade", "Lemonade"], ["verband", "Bandage"], ["regenjacke", "Rain jacket"], ["pullover", "Wool sweater"], ["muetze", "Wool hat"], ["sonnenhut", "Sun hat"], ["seil", "Rope"], ["taschenlampe", "Flashlight"], ["fernglas", "Binoculars"], ["kamera", "Camera"], ["feldhandbuch", "Field guide"], ["wasserpistole", "Water pistol"], ["gummihuhn", "Rubber chicken"], ["stein", "Pretty stone"], ["kaese", "Cheese wedge"], ["pilze", "Mushrooms"], ["honig", "Jar of honey"], ["trockenobst", "Dried fruit"], ["schokolade", "Chocolate bar"], ["sandwich", "Sandwich"], ["moehre", "Carrot"], ["keks", "Cookie tin"], ["tee", "Thermos of tea"], ["kakao", "Cocoa"], ["saft", "Juice box"], ["pflaster", "Plasters"], ["erste_hilfe", "First aid kit"], ["sonnencreme", "Sunscreen"], ["schal", "Scarf"], ["handschuhe", "Gloves"], ["stiefel", "Hiking boots"], ["poncho", "Rain poncho"], ["kompass", "Compass"], ["karte", "Trail map"], ["messer", "Pocket knife"], ["stock", "Walking stick"], ["laterne", "Lantern"], ["pfeife", "Whistle"], ["mundharmonika", "Harmonica"], ["drachen", "Kite"], ["federn", "Feather"], ["muschel", "Seashell"], ["tannenzapfen", "Pinecone"], ["glueckskeks", "Fortune cookie"]];
+const ITEMS = [["apfel", "Apple"], ["beeren", "Berries"], ["brot", "Bread"], ["muesliriegel", "Granola bar"], ["bohnen", "Can of beans"], ["wasserflasche", "Water bottle"], ["limonade", "Lemonade"], ["verband", "Bandage"], ["regenjacke", "Rain jacket"], ["pullover", "Wool sweater"], ["muetze", "Wool hat"], ["sonnenhut", "Sun hat"], ["seil", "Rope"], ["taschenlampe", "Flashlight"], ["fernglas", "Binoculars"], ["kamera", "Camera"], ["feldhandbuch", "Field guide"], ["wasserpistole", "Water pistol"], ["gummihuhn", "Rubber chicken"], ["stein", "Pretty stone"], ["kaese", "Cheese wedge"], ["pilze", "Mushrooms"], ["honig", "Jar of honey"], ["trockenobst", "Dried fruit"], ["schokolade", "Chocolate bar"], ["sandwich", "Sandwich"], ["moehre", "Carrot"], ["keks", "Cookie tin"], ["tee", "Thermos of tea"], ["kakao", "Cocoa"], ["saft", "Juice box"], ["pflaster", "Plasters"], ["erste_hilfe", "First aid kit"], ["sonnencreme", "Sunscreen"], ["schal", "Scarf"], ["handschuhe", "Gloves"], ["stiefel", "Hiking boots"], ["poncho", "Rain poncho"], ["kompass", "Compass"], ["karte", "Trail map"], ["messer", "Pocket knife"], ["stock", "Walking stick"], ["laterne", "Lantern"], ["pfeife", "Whistle"], ["mundharmonika", "Harmonica"], ["drachen", "Kite"], ["federn", "Feather"], ["muschel", "Seashell"], ["tannenzapfen", "Pinecone"], ["glueckskeks", "Fortune cookie"], ["streichhoelzer", "Matches"], ["feuerzeug", "Lighter"], ["marshmallows", "Marshmallows"], ["kiesel", "Flat pebble"], ["fliegenpilz", "Fly agaric"]];
 const EMOTE_BAR = [['wave', 'Wave'], ['cheer', 'Cheer'], ['laugh', 'Laugh'], ['thumbs', 'Thumbs up'], ['point', 'Point'], ['shrug', 'Shrug'],
   ['facepalm', 'Facepalm'], ['clap', 'Clap'], ['think', 'Think'], ['salute', 'Salute'], ['stomp', 'Stomp'], ['cower', 'Cower']];
 

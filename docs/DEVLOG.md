@@ -156,6 +156,27 @@ reasonably flat ground, grove structure with clearings, landmarks (rock arches, 
 
 ![Your scouts](scouts.png)
 
+## Round 12 – The Pro kit: 22 biomes, skies, places to stop (v0.11.0)
+
+The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans and results per step in
+`docs/plans/round12.md`.
+
+- **Patches and soft borders:** every biome has 3–4 variants (cellular cells of ~130 m), and the next biome reaches
+  in as tongues and groves. All 15 biomes reworked one by one (real birches and cherries, giant pines, hedgerows,
+  wheat, big rocks, fern hollows, fairy rings …), each with its own small effect.
+- **Seven new biomes:** Giants' Old Forest, Mushroom Wood, Wheat Fields, Cherry Valley, Golden Birch Slopes, Rock Gorge,
+  Blue Fern Hollow.
+- **Performance:** the Pro textures had been imported without mipmaps (materials are built in code, so Godot didn't
+  detect them as 3D) – leaves cost 5–10× until fixed; dense new tree layers thin out with distance; sparser wheat.
+  High stays at ~40–47 ms like round 11.
+- **Skies:** towering cumulus, mackerel skies, pastel strata, northern lights, shooting stars – per biome and hour.
+- **Weather:** fog days, snowfall with snow cover on ground, rocks, crowns and grass, heat lightning, rain shelters.
+- **Places:** ancient trees, fallen giants, grove circles; campfires with flames, sparks, embers, light and crackle;
+  berries, mushrooms and pebbles to gather; cairns (saved per world) and skipping stones.
+- **Wildlife:** patience (crouch still and animals come closer); deer, songbirds, butterflies and bees remodelled with a
+  new `CreatureMesh` kit in the scout's toon shader.
+- **macOS build** (universal, ad-hoc signed; ASTC textures for Apple Silicon).
+
 ## Round 11 – A living day
 
 - **Impostors:** distant trees are baked in the background into 8 views (albedo, normals, bark mask) and drawn as
