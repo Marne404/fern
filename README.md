@@ -79,6 +79,10 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
   endless dunes with mesas, ponds, rivers, waterfalls, landmarks like rock arches and ruins.
 - **A living day** – the sun travels over every valley: misty dawns, golden hours, dusk with fireflies and short
   moonlit nights under the stars; sleeping takes you to the next morning.
+- **Every biome at its best** – the biomes ahead are planned from your real pace and the hour, so each tends to
+  arrive at its finest time (cherry valley at dawn, golden birch slopes in the golden hour, glowing woods at night,
+  the deadwood bog in the rain); the clock bends a little so the moment lasts. The time setting *Each biome at its
+  best* lets the hour simply follow the trail.
 - **Weather and wind** – showers come and go (glossy trail, puddles with raindrop rings, a rainbow afterwards), gusts
   roll through the grass and chase the cloud shadows, colorful trees drop their leaves, tumbleweeds and dust devils
   cross the desert, drizzle drifts over the highlands.
@@ -174,7 +178,7 @@ Command-line options after `--`, e.g. `godot --path . -- --play --z=-15000`:
 `--debugfx` weather state · `--biomes` / `--pois` / `--ponds` / `--landmarks` print lists · `--music` log track changes ·
 `--third` third person · `--scout` open the scout editor · `--pitch=-10 --yaw=15` camera angle at the start ·
 `--obstacles` print obstacle positions ·
-`--hour=19.5` time of day · `--rain` / `--afterrain` weather · `--deer=20` a deer ahead ·
+`--hour=19.5` time of day · `--schedinfo` print the biome plan and clock pace · `--rain` / `--afterrain` weather · `--deer=20` a deer ahead ·
 `--body=stamina:30,food:10` / `--give=kaese,seil` / `--drop=laterne` test states · `--emote=cheer` · `--wheel` ·
 `--backpack` · `--settings=Graphics` · `--fakevoice=-20` · `--voicetest` microphone check ·
 `--off=shadows,trees,…` profiling ·
@@ -182,7 +186,8 @@ Command-line options after `--`, e.g. `godot --path . -- --play --z=-15000`:
 
 Standalone tools: `godot --path . -s res://scripts/tests/scout_studio.gd -- --mode=lineup --out=x.png` renders scouts
 (modes `lineup`, `poses`, `face`, `back`, `walk`, `side`, `group`, `idle`, `gait` filmstrip, `clip` frame sequence),
-`scripts/tests/gait_probe.gd` measures foot slip per speed, `scripts/tests/scout_export.gd` exports the scout
+`scripts/tests/gait_probe.gd` measures foot slip per speed, `scripts/tests/schedule_sim.gd` simulates hikes through
+the biome schedule (share of biome time in its best window), `scripts/tests/scout_export.gd` exports the scout
 as `docs/models/scout.glb` for the website.
 
 ## Credits

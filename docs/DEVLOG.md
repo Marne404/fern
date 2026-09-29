@@ -206,6 +206,23 @@ The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans an
   rocking on the toes), hops that leave the ground.
 - **Tools:** a gait probe measures slip per speed; the scout studio renders filmstrips and scripted clips.
 
+## Round 14 – Every biome at its best hour (v0.12.0)
+
+- **Biome schedule:** the biomes ahead are planned from the real hour, the day length and your pace (breaks
+  included), so each tends to arrive at its finest time – cherry valley and spring meadow in the morning, lavender
+  and rock gorge at midday, golden birch slopes and wheat fields in the golden hour, the sunset coast at dusk, the
+  glowing, mushroom and fern woods at night. Never always: every biome keeps coming. Segments are locked 2.4 km
+  ahead, so nothing that was built ever changes.
+- **Time director:** the clock runs a little faster or slower (0.6–1.45×) so a biome's window lasts to its border –
+  a long golden hour on the golden slopes, a long night in the glowing woods. In simulated 70 km hikes the share
+  of good visits rose from 26 % to 71 % (36-minute days).
+- **Weather director:** the deadwood bog mostly gets its rain, the giants' old forest its fog, the golden and night
+  biomes a clear sky.
+- **"Each biome at its best":** a new time setting – no running clock, the hour follows the trail and moves
+  forward at every border (golden hour → dusk → night → dawn).
+- The title screen shows the first biome at its best hour; world 1 opens in hour order (spring meadow, cliffs,
+  autumn meadow, sunset coast). All website biome pictures show their biome at its best.
+
 ---
 
 ## Ideas for later
