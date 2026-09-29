@@ -10,6 +10,8 @@ var day_minutes := 36.0
 var hour := 7.0
 ## 0 = runs, else fixed: 1 morning, 2 midday, 3 golden hour, 4 dusk, 5 night
 var fixed := 0
+## set by the time director (BiomeSchedule): the clock runs a little faster or slower so a biome shows its best hour
+var rate_scale := 1.0
 
 const SUNRISE := 5.6
 const SUNSET := 19.6
@@ -58,7 +60,7 @@ func advance(dt: float) -> void:
 	var night_h := 24.0 - day_h
 	var total := day_minutes * 60.0
 	var rate := day_h / (total * 0.8) if is_day() else night_h / (total * 0.2)
-	hour = fmod(hour + dt * rate, 24.0)
+	hour = fmod(hour + dt * rate * rate_scale, 24.0)
 
 
 func is_day() -> bool:

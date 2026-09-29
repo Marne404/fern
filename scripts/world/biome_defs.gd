@@ -41,6 +41,38 @@ const HEDGE := ["Bush_Long_1", "Bush_Long_2"]
 const WILDFLOWERS := ["Flower_1_Group", "Flower_2_Group", "Flower_7_Group", "Flower_1_Single", "Flower_2_Single", "Flower_7_Single"]
 
 
+## When each biome looks its best: time windows [from, to] in hours (may wrap past midnight) and weather
+## wishes (chance per visit). Used by BiomeSchedule to order the biomes and by the time/weather directors.
+const MORNING := [6.0, 9.5]
+const MIDDAY := [10.5, 15.0]
+const GOLDEN := [16.5, 19.33]
+const NIGHT := [21.0, 4.5]
+const BEST := [
+	{"hours": [GOLDEN], "weather": {"clear": 0.7}},                    # Autumn Meadow
+	{"hours": [MORNING], "weather": {}},                               # Forest Trail (sunbeams)
+	{"hours": [[18.5, 21.5]], "weather": {"clear": 0.8}},              # Desert Valley (heat lightning)
+	{"hours": [MORNING], "weather": {"clear": 0.6}},                   # Blossom Grove
+	{"hours": [MORNING], "weather": {}},                               # Spring Meadow
+	{"hours": [GOLDEN], "weather": {"clear": 0.7}},                    # Red Maple Wood
+	{"hours": [NIGHT], "weather": {"clear": 0.6}},                     # Mountain Pines (aurora, snowfall)
+	{"hours": [], "weather": {"rain": 0.75, "fog": 0.15}},             # Deadwood Bog
+	{"hours": [[18.5, 20.67]], "weather": {"clear": 0.8}},             # Sunset Coast
+	{"hours": [MIDDAY], "weather": {"clear": 0.5}},                    # Cliff Lands
+	{"hours": [NIGHT], "weather": {"clear": 0.7}},                     # Glowing Forest
+	{"hours": [MORNING], "weather": {}},                               # Lake Country (morning mist)
+	{"hours": [MIDDAY], "weather": {"clear": 0.7}},                    # Lavender Hills
+	{"hours": [], "weather": {}},                                      # Birch Wood
+	{"hours": [GOLDEN], "weather": {"clear": 0.5}},                    # Heather Highlands
+	{"hours": [], "weather": {"fog": 0.55, "rain": 0.2}},              # Giants' Old Forest
+	{"hours": [NIGHT], "weather": {"clear": 0.7}},                     # Mushroom Wood
+	{"hours": [GOLDEN], "weather": {"clear": 0.8}},                    # Wheat Fields
+	{"hours": [MORNING], "weather": {"clear": 0.8}},                   # Cherry Valley
+	{"hours": [GOLDEN], "weather": {"clear": 0.8}},                    # Golden Birch Slopes
+	{"hours": [MIDDAY], "weather": {"clear": 0.5}},                    # Rock Gorge
+	{"hours": [NIGHT], "weather": {"clear": 0.7}},                     # Blue Fern Hollow
+]
+
+
 static func all() -> Array[Dictionary]:
 	var list: Array[Dictionary] = [meadow(), forest(), desert(), blossom(), spring(), maple(), alpine(), bog(), coast(), cliffs(), glow(), lakes(),
 		lavender(), birch_wood(), highlands(), old_forest(), mushroom_wood(), wheat_fields(), cherry_valley(), golden_slopes(), rock_gorge(), blue_hollow()]
@@ -50,6 +82,8 @@ static func all() -> Array[Dictionary]:
 		for layer: Dictionary in list[bi]["layers"]:
 			if layer["kind"] == "tree" and not layer.has("falloff") and (layer.has("patch") or bi >= 15) and float(layer["dist"][1]) > 150.0:
 				layer["falloff"] = [20.0, 150.0, 0.45]
+	for bi in list.size():
+		list[bi]["best"] = BEST[bi]
 	return list
 
 

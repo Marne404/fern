@@ -68,6 +68,13 @@ var start_z := 0.0
 var best_distance := 0.0
 var journey_distance := 0.0
 var _last_biome := -1
+# biome schedule while hiking: live re-planning, the hiker's pace (m/s along -z, breaks included), time director
+var _schedule_live := true
+var _sched_t := 0.0
+var _dir_t := 0.0
+var _dir_want := 1.0
+var _pace := BiomeSchedule.PACE
+var _last_d := 0.0
 var _args := {}
 var _frame := 0
 var _spawn_pending := false
@@ -98,7 +105,15 @@ func _ready() -> void:
 		Settings.next_seed = -1
 	if _args.has("seed"):
 		seed_v = Settings.parse_seed(_args["seed"])
+	# the biome order is planned for a hike that starts at 7:00 with the player's day length
+	WorldGen.plan_defaults = {"start_hour": float(_args.get("hour", "7.0")), "day_minutes": float(Settings.values.get("day_minutes", 36.0)),
+		"fixed": int(Settings.values.get("time_of_day", 0)), "pace": BiomeSchedule.PACE}
+	if _args.has("obtest") or _args.has("selftest"):
+		# tests always see the same world, whatever the player's day settings
+		WorldGen.plan_defaults = {"start_hour": 7.0, "day_minutes": 36.0, "fixed": 0, "pace": BiomeSchedule.PACE}
 	gen = WorldGen.new(seed_v)
+	# tests keep the plan made at world creation (a deterministic world)
+	_schedule_live = not (_args.has("obtest") or _args.has("selftest"))
 	if _args.has("profile"):
 		for i in 30:
 			var pz := -i * 100.0
@@ -408,6 +423,10 @@ func start_journey() -> void:
 	_spawn_pending = true
 	journey_distance = 0.0
 	_last_biome = -1
+	_pace = BiomeSchedule.PACE
+	_last_d = -start_z
+	_sched_t = 0.0
+	_dir_t = 0.0
 	music.start_biome(gen.dominant_biome(start_z))
 	mode = Mode.PLAYING
 	# a journey begins in the morning (test helper: --hour=19.5)
@@ -775,6 +794,8 @@ func _process_inner(delta: float) -> void:
 				music.stinger("geschafft")
 				hud.show_message("Made it!")
 		journey_distance = maxf(journey_distance, gen.arc_length(pw.z) - gen.arc_length(start_z))
+		if mode == Mode.PLAYING and not get_tree().paused:
+			_update_schedule(delta, pw)
 		hud.set_distance(journey_distance)
 		hud.set_hour(atmosphere.day.hour)
 		player.air_temp = atmosphere.shown.get("temperature", 16.0)
@@ -1220,6 +1241,41 @@ func _autopilot() -> Vector3:
 	var d := target - w
 	d.y = 0.0
 	return d.normalized()
+
+
+# ================================================================ Biome schedule
+
+## While hiking: the biomes ahead are re-planned from the real hour and pace, the clock bends a little so
+## the biome you are in shows its best hour (see BiomeSchedule)
+func _update_schedule(delta: float, pw: Vector3) -> void:
+	var sch := gen.schedule
+	var d := -pw.z
+	if delta > 0.0:
+		_pace = lerpf(_pace, clampf((d - _last_d) / delta, -2.0, 8.0), 1.0 - exp(-delta / 600.0))
+	_last_d = d
+	var day := atmosphere.day
+	if not _schedule_live:
+		day.rate_scale = 1.0
+		return
+	_sched_t -= delta
+	if _sched_t <= 0.0:
+		_sched_t = 3.0
+		sch.fixed = day.fixed
+		sch.day_minutes = day.day_minutes
+		sch.pace = clampf(_pace, 0.8, 5.0)
+		sch.lock_up_to(gen, d)
+		sch.plan(gen, d, day.hour, 5)
+	_dir_t -= delta
+	if _dir_t <= 0.0:
+		_dir_t = 2.0
+		_dir_want = sch.director_scale(gen, d, day.hour)
+	day.rate_scale = lerpf(day.rate_scale, _dir_want, 1.0 - exp(-delta / 6.0))
+	if _args.has("schedinfo") and _frame % 300 == 0:
+		var k := gen.segment_at(d)
+		var ahead := []
+		for kk in range(k, k + 4):
+			ahead.append(gen.biomes[gen.segment_biome(kk)]["name"])
+		print("[Schedule] d=%.0f hour %.2f clock x%.2f pace %.2f  %s  (open from %d)" % [d, day.hour, day.rate_scale, _pace, " → ".join(ahead), sch.first_open])
 
 
 # ================================================================ Records

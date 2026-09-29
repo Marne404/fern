@@ -42,6 +42,11 @@ var _patch := FastNoiseLite.new()      # cells of ~130 m: the patches (variants)
 
 var _segment_biome := PackedInt32Array()
 var _segment_start := PackedFloat32Array()
+## Orders the biomes so each shows its best hour (see BiomeSchedule); the opening segments stay fixed
+var schedule: BiomeSchedule
+var intro_len := 0
+## Settings for the reference plan made at world creation (main sets them from the player's settings)
+static var plan_defaults := {"start_hour": 7.0, "day_minutes": 36.0, "fixed": 0, "pace": BiomeSchedule.PACE}
 
 # ponds and mountain lakes (cache, shared by worker threads)
 const POND_CELL := 240.0
@@ -206,12 +211,15 @@ func _build_biome_table() -> void:
 	_segment_start.resize(BIOME_TABLE + 1)
 	var prev := -1
 	var order: Array[int] = []
-	# fixed, especially beautiful opening: Autumn Meadow, Spring Meadow, Cliff Lands, Sunset Coast
-	var intro := [0, 4, 9, 8]
+	# fixed, especially beautiful opening, each at its hour of a journey that starts at 7:00:
+	# Spring Meadow (morning), Cliff Lands (midday), Autumn Meadow (golden hour), Sunset Coast (dusk)
+	var intro := [4, 9, 0, 8]
 	if seed_value != 1:
-		# other worlds: start with a friendly biome, random afterwards
-		var friendly := [0, 3, 4, 9, 11]
+		# other worlds: start in a friendly morning biome (Blossom Grove, Spring Meadow, Lake Country,
+		# Cherry Valley, Forest Trail)
+		var friendly := [3, 4, 11, 18, 1]
 		intro = [friendly[_hash(1, 5) % friendly.size()]]
+	intro_len = intro.size()
 	for k in BIOME_TABLE:
 		if k < intro.size():
 			_segment_biome[k] = intro[k]
@@ -246,6 +254,51 @@ func _build_biome_table() -> void:
 		var jitter := 0.0 if k == 0 else (float(_hash(k, 13) % 1000) / 1000.0 - 0.5) * 700.0
 		_segment_start[k] = k * SEGMENT + jitter - 400.0
 	_segment_start[BIOME_TABLE] = BIOME_TABLE * SEGMENT
+	# the first few hundred segments (far beyond any hike) are ordered by the biomes' best hours
+	schedule = BiomeSchedule.new()
+	schedule.configure(plan_defaults)
+	if not plan_defaults.get("legacy", false):
+		schedule.plan_reference(self)
+
+
+# ---------------------------------------------------------------- segment API (for BiomeSchedule)
+# Segments are addressed by the forward distance d = -z.
+
+func segment_count() -> int:
+	return BIOME_TABLE
+
+
+func segment_at(d: float) -> int:
+	return _segment_at(d)
+
+
+func segment_start(k: int) -> float:
+	return _segment_start[clampi(k, 0, BIOME_TABLE)]
+
+
+func segment_biome(k: int) -> int:
+	return _segment_biome[clampi(k, 0, BIOME_TABLE - 1)]
+
+
+## Changes the biome of a segment that nothing has built yet (the schedule keeps a safe distance): the table is
+## written in place (worker threads only ever read segments near the camera) and cached obstacles, ponds and
+## brooks around it are forgotten so they are computed with the new biome.
+func set_segment_biome(k: int, b: int) -> void:
+	if k < 0 or k >= BIOME_TABLE or _segment_biome[k] == b:
+		return
+	_segment_biome[k] = b
+	var d0 := _segment_start[k] - 900.0
+	var d1 := _segment_start[k + 1] + 300.0
+	_forget(_obst, _ob_mutex, OB_CELL, d0, d1)
+	_forget(_ponds, _pond_mutex, POND_CELL, d0, d1)
+	_forget(_brooks, _br_mutex, BROOK_CELL, d0, d1)
+
+
+static func _forget(cache: Dictionary, m: Mutex, cell: float, d0: float, d1: float) -> void:
+	m.lock()
+	for k in range(floori(d0 / cell) - 1, floori(d1 / cell) + 2):
+		cache.erase(k)
+	m.unlock()
 
 
 ## Segment index for a forward distance d = -z

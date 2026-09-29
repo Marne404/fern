@@ -92,9 +92,18 @@ func run() -> void:
 
 	if "--only_boulders" in OS.get_cmdline_user_args():
 		await _test_boulders(p, gen)
+		print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
+		get_tree().quit(1 if _fails > 0 else 0)
 		return
 	if "--only_river" in OS.get_cmdline_user_args():
 		await _test_river(p, gen, ob)
+		print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
+		get_tree().quit(1 if _fails > 0 else 0)
+		return
+	if "--only_mud" in OS.get_cmdline_user_args():
+		await _test_mud(p, gen)
+		print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
+		get_tree().quit(1 if _fails > 0 else 0)
 		return
 	await _test_fallen_tree(p, gen, ob)
 	await _test_river(p, gen, ob)
@@ -248,17 +257,26 @@ func _test_river(p: Wanderer, gen: WorldGen, ob: ObstacleManager) -> void:
 		var side := rel - lax * rel.dot(lax)
 		return (lax - side * 1.5).normalized()
 	var swam := false
+	var jump_hold := 0
 	for i in 20 * 60:
 		await get_tree().physics_frame
 		if p.swimming:
 			swam = true
 		if i > 120 and (Vector2(wpos(p).x, wpos(p).z) - far).dot(n) > 0.5:
 			break
-		# step up at the log's end
-		if i == 90:
+		if "--trace" in OS.get_cmdline_user_args() and i % 30 == 0:
+			var w := wpos(p)
+			print("  i=%d  to far bank %.2f  y %.2f  ground %.2f  log y %.2f  floor %s  vel %.2f" % [i, (Vector2(w.x, w.z) - far).dot(n), w.y, gen.height(w.x, w.z), main.world.local_to_world(lg.global_position).y, p.is_on_floor(), p.velocity.length()])
+		# step up onto the log's end with a jump when standing in front of it (the banks differ in height)
+		var rel_end := (p.global_position - lg.global_position).dot(lax) + length * 0.5
+		var above := lg.global_position.y - p.global_position.y
+		if jump_hold > 0:
+			jump_hold -= 1
+			if jump_hold == 0:
+				key(KEY_SPACE, false)
+		elif p.is_on_floor() and above > 0.1 and rel_end > -1.1 and rel_end < 0.3 and i > 30:
 			key(KEY_SPACE, true)
-		if i == 94:
-			key(KEY_SPACE, false)
+			jump_hold = 4
 	p.autopilot = Callable()
 	var d_far := (Vector2(wpos(p).x, wpos(p).z) - far).dot(n)
 	check("Balanced across the log to the far bank", not swam and d_far > -1.0, "distance to bank %.1f m" % d_far)
@@ -542,6 +560,9 @@ func _walk_through(p: Wanderer, gen: WorldGen, o: Dictionary, limit: float, trac
 		var lp := p.global_position
 		track["climb"] = maxf(track.get("climb", 0.0), lp.y - main.world.ground_y(lp.x, lp.z))
 		track["mud"] = maxf(track.get("mud", 0.0), p.mud)
+		if "--trace" in OS.get_cmdline_user_args() and int(t * 10.0) % 20 == 0:
+			var w := wpos(p)
+			print("  t=%.0f  z=%.1f (obstacle %.1f)  x-path %.1f  speed %.2f  mud %.2f" % [t, w.z, z0, w.x - gen.path_x(w.z), p.velocity.length(), p.mud])
 	p.autopilot = Callable()
 	return t if wpos(p).z <= z0 - 12.0 else -1.0
 
@@ -578,7 +599,8 @@ func _test_mud(p: Wanderer, gen: WorldGen) -> void:
 	var t_ref := await _walk_through(p, gen, ref, 25.0)
 	p.body.wet = 0.0
 	var tr := {}
-	var t := await _walk_through(p, gen, o, 40.0, tr)
+	# long hollows can wear you out on the way (a pause to catch your breath is fine)
+	var t := await _walk_through(p, gen, o, 60.0, tr)
 	check("Waded through the mud, slower", t > 0.0 and t > t_ref * 1.25 and tr.get("mud", 0.0) > 0.5,
 		"%.1f s vs %.1f s dry, mud %.2f" % [t, t_ref, tr.get("mud", 0.0)])
 	check("Mud makes you wet", p.body.wet >= 0.2, "wet %.2f" % p.body.wet)
