@@ -27,7 +27,7 @@ uniform float ground_normal = 0.0; // grass: bend normals towards vertical
 uniform float near_fade = 0.0;     // fade out blades right in front of the camera
 uniform bool instance_tint = false; // blossom color per instance (INSTANCE_CUSTOM.rgb)
 uniform bool impostor_cut = false;  // distant tree meshes: hand over to the impostor inside the band
-instance uniform float bake_mask = 0.0;  // impostor baking: 1 = draw the bark mask (leaves black)
+uniform float bake_mask = 0.0;  // impostor baking: 1 = draw the bark mask (leaves black)
 uniform float glow = 0.0;           // luminous plants (Glowing Forest): own light, stronger in the dark
 global uniform float daylight;
 

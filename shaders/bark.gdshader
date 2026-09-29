@@ -15,7 +15,7 @@ uniform float stiffness = 4.0;
 uniform float ao_strength = 0.8;
 uniform float birch_marks = 0.0;
 uniform bool impostor_cut = false;
-instance uniform float bake_mask = 0.0;
+uniform float bake_mask = 0.0;
 
 varying float v_ao;
 varying vec3 v_local;

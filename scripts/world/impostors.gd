@@ -145,6 +145,15 @@ func _start_bake(key: String) -> void:
 	var yc := (y0 + y1) * 0.5
 	for c in _holder.get_children():
 		c.free()
+	# the bark-mask twins draw with copies of the materials that have bake_mask set (a plain uniform: as an
+	# instance uniform every tree, bush and grass batch in the world would take a slot of the global buffer)
+	var mask_mats: Array[Material] = []
+	for s in mesh.get_surface_count():
+		var mat := mesh.surface_get_material(s)
+		if mat is ShaderMaterial:
+			mat = mat.duplicate()
+			(mat as ShaderMaterial).set_shader_parameter("bake_mask", 1.0)
+		mask_mats.append(mat)
 	for i in FRAMES:
 		var mi := MeshInstance3D.new()
 		mi.mesh = mesh
@@ -155,7 +164,8 @@ func _start_bake(key: String) -> void:
 		_holder.add_child(mi)
 		var mask := mi.duplicate() as MeshInstance3D
 		mask.layers = 2
-		mask.set_instance_shader_parameter("bake_mask", 1.0)
+		for s in mask_mats.size():
+			mask.set_surface_override_material(s, mask_mats[s])
 		_holder.add_child(mask)
 	var size := Vector2i(cw * FRAMES, ch)
 	for vp: SubViewport in [_vp_albedo, _vp_normal, _vp_mask]:
