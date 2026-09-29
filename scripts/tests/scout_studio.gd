@@ -184,6 +184,21 @@ func _initialize() -> void:
 			_gait_strip(world)
 		"clip":
 			_clip_setup(world, ground)
+		"idle":
+			var names: Array = Scout.FIDGETS.keys()
+			for i in names.size():
+				var sc := Scout.new(Scout.random_look() if i > 0 else Scout.DEFAULT_LOOK)
+				sc.position = Vector3((i - (names.size() - 1) * 0.5) * 0.95, 0, 0)
+				world.add_child(sc)
+				sc.frozen = true
+				for f in 60:
+					sc.animate(1.0 / 60.0)
+				sc.fidget(names[i])
+				for f in int(float(_args.get("at", "1.2")) * 60.0):
+					sc.animate(1.0 / 60.0)
+				_scouts.append(sc)
+			_cam.fov = 30.0
+			_cam.look_at_from_position(Vector3(0, 1.4, -9.0), Vector3(0, 0.8, 0))
 		"walk":
 			for i in 4:
 				var sc := Scout.new(Scout.random_look() if i > 0 else Scout.DEFAULT_LOOK)
@@ -287,7 +302,7 @@ func _clip_setup(world: Node3D, ground: MeshInstance3D) -> void:
 	_clip = Scout.new(Scout.DEFAULT_LOOK)
 	world.add_child(_clip)
 	_clip.frozen = true
-	_clip_len = float(_args.get("len", "17"))
+	_clip_len = float(_args.get("len", "24"))
 	_cam.fov = 40.0
 
 
@@ -299,6 +314,11 @@ func _clip_input(t: float) -> Array:
 	if t < 9.5: return [0.0, 0.0, false]
 	if t < 11.0: return [1.6, 0.0, false]
 	if t < 15.0: return [3.4, 1.4 * sin((t - 11.0) * 1.2), false]
+	if t < 15.8: return [0.0, 0.0, false]
+	if t < 18.5: return [1.6, 0.0, false, Scout.Pose.CROUCH]
+	if t < 19.5: return [0.0, 0.0, false, Scout.Pose.CROUCH]
+	if t < 20.3: return [0.0, 0.0, false]
+	if t < 23.0: return [2.9, 0.0, false, Scout.Pose.STAND, Scout.Mood.TIRED]
 	return [0.0, 0.0, false]
 
 
@@ -315,6 +335,8 @@ func _clip_step() -> bool:
 	_clip.speed = _clip_v.length()
 	_clip.sprint = inp[2]
 	_clip.turn_rate = float(inp[1])
+	_clip.pose = inp[3] if inp.size() > 3 else Scout.Pose.STAND
+	_clip.mood = inp[4] if inp.size() > 4 else Scout.Mood.NORMAL
 	for k in 2:
 		_clip.animate(dt * 0.5)
 	# camera: from the side and a little ahead, following smoothly

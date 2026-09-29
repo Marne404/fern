@@ -209,9 +209,12 @@ func emote_playing() -> String:
 	return _emote
 
 
-## Plays an idle gesture right away ("stretch", "look", "straps", "scratch", "tap"; empty = random)
+## Idle gestures and how long they take
+const FIDGETS := {"stretch": 2.2, "look": 2.2, "straps": 2.2, "scratch": 2.2, "tap": 2.2, "hum": 3.4, "rock": 2.6}
+
+## Plays an idle gesture right away (a key of FIDGETS; empty = random)
 func fidget(which := "") -> void:
-	var all := ["stretch", "look", "straps", "scratch", "tap"]
+	var all := FIDGETS.keys()
 	_fidget = which if which != "" else all[randi() % all.size()]
 	_fidget_t = 0.0
 
@@ -693,14 +696,14 @@ func _build_hats(space: Node3D) -> void:
 	var beanie := _node(inner, "HatBeanie")
 	var dome := []
 	for i in 17:
-		var y := lerpf(1.37, 1.56, i / 16.0)
+		var y := lerpf(1.42, 1.575, i / 16.0)
 		dome.append(Vector2(head_r(y) + 0.022, y))
-	dome.append(Vector2(0.1, 1.585))
-	dome.append(Vector2(0.0, 1.592))
+	dome.append(Vector2(0.1, 1.598))
+	dome.append(Vector2(0.0, 1.605))
 	_add(beanie, Mesh3.lathe(dome, 36, dz), "hat")
-	var r0 := head_r(1.37) + 0.028
-	_add(beanie, Mesh3.lathe([Vector2(r0 - 0.01, 1.34), Vector2(r0 + 0.012, 1.352), Vector2(r0 + 0.012, 1.42), Vector2(r0 - 0.012, 1.432)], 36, dz), "hatband")
-	_add(beanie, Mesh3.blob(Vector3(0.072, 0.068, 0.072), 2.0, 10, 14, Transform3D(Basis(), Vector3(0, 1.64, 0))), "hat")
+	var r0 := head_r(1.42) + 0.03
+	_add(beanie, Mesh3.lathe([Vector2(r0 - 0.012, 1.4), Vector2(r0 + 0.012, 1.412), Vector2(r0 + 0.012, 1.475), Vector2(r0 - 0.012, 1.487)], 36, dz), "hatband")
+	_add(beanie, Mesh3.blob(Vector3(0.072, 0.068, 0.072), 2.0, 10, 14, Transform3D(Basis(), Vector3(0, 1.65, 0))), "hat")
 	_hats.append(beanie)
 	# cap with visor
 	var cdome := []
@@ -932,7 +935,7 @@ func animate(delta: float) -> void:
 		_fidget = ""
 	if _fidget != "":
 		_fidget_t += delta
-		if _fidget_t > 2.2:
+		if _fidget_t > float(FIDGETS.get(_fidget, 2.2)):
 			_fidget = ""
 
 	# ------------------------------------------------ pose targets
@@ -964,6 +967,15 @@ func animate(delta: float) -> void:
 
 	# face targets: brow_r raise (-1 low .. 1 high), brow_a angle (-1 worried .. 1 angry), lid 0..1, mouth, open 0..1
 	var face := _face_base()
+	var brake := smoothstep(4.0, 9.0, -fwd_acc) * smoothstep(0.8, 2.5, v)
+	if brake > 0.0 and pose == Pose.STAND:
+		for i in 2:
+			arm[i] = [lerpf(arm[i][0], 0.9, brake), lerpf(arm[i][1], (0.35 if i == 1 else -0.35), brake), lerpf(arm[i][2], 0.4, brake)]
+		if brake > 0.4:
+			face["eyes"] = "wide"
+			face["mouth"] = "open"
+			face["open"] = 0.6
+			face["brow_r"] = 0.9
 	if land > 0.18 and pose == Pose.STAND:
 		face["eyes"] = "wide"
 		face["mouth"] = "open"
@@ -974,11 +986,15 @@ func animate(delta: float) -> void:
 		Pose.CROUCH:
 			hip_rot.x = -0.25
 			chest_rot.x = -0.2
-			head_rot.x = 0.3
+			head_rot = Vector3(0.3, sin(_t * 0.9) * 0.35 * (1.0 - minf(a * 2.0, 1.0)), 0.0)
 			leg = [[1.15, -1.7], [1.15, -1.7]]
-			arm = [[0.75, -0.2, 1.3], [0.75, 0.2, 1.3]]
-			face["brow_a"] = 0.3
-			_pupil = Vector2(_pupil.x, -0.2)
+			arm = [[0.95, -0.28, 1.75], [0.95, 0.28, 1.75]]
+			# sneaking on tiptoes
+			feet_fx = [Vector2(0.0, -0.3), Vector2(0.0, -0.3)]
+			face["brow_a"] = 0.35
+			face["mouth"] = "flat"
+			face["eyes"] = "sclera"
+			_pupil = Vector2(sin(_t * 0.9) * 0.6, -0.1)
 		Pose.SIT:
 			var asleep := mood == Mood.ASLEEP
 			rig_pos = Vector3(0, -0.4, 0.05)
@@ -1057,6 +1073,15 @@ func animate(delta: float) -> void:
 						head_rot.x -= 0.3 * k
 					"scratch":
 						head_rot.z -= 0.15 * k
+					"hum":
+						var hm := sin(_fidget_t * 3.6)
+						head_rot.z += hm * 0.16 * k
+						chest_rot.z += hm * 0.05 * k
+						rig_pos.x += hm * 0.02 * k
+						head_rot.x += 0.08 * k
+					"rock":
+						head_rot.x += 0.06 * k
+						rig_pos.y += 0.05 * maxf(sin(_fidget_t * 5.0), 0.0) * k
 				# cold: arms hugged in, shivering
 				if mood == Mood.COLD:
 					arm[0] = [0.55, 0.35, 1.9]
@@ -1175,7 +1200,7 @@ func _gait_params(v: float) -> Dictionary:
 	var beta := lerpf(lerpf(0.64, 0.46, smoothstep(0.5, 3.4, v)), lerpf(0.36, 0.3, fast), run)
 	# how far the body travels over a planted foot (limited by the leg's reach)
 	var d := lerpf(lerpf(0.2, 0.5, smoothstep(0.0, 1.6, v)), lerpf(0.42, 0.56, fast), run)
-	var lift := lerpf(0.045 + 0.012 * minf(v, 3.4), 0.15, run)
+	var lift := lerpf(0.045 + 0.012 * minf(v, 3.4), 0.15, run) * (0.6 if mood == Mood.TIRED else 1.0)
 	var h0 := lerpf(0.578 - 0.006 * minf(v, 3.4), 0.55, run)
 	if crouch:
 		beta = lerpf(0.66, 0.56, smoothstep(0.3, 1.6, v))
@@ -1468,7 +1493,8 @@ func _emote_pose(e: String, t: float, dur: float, arm: Array, leg: Array, face: 
 
 
 func _fidget_k() -> float:
-	return smoothstep(0.0, 0.35, _fidget_t) * (1.0 - smoothstep(1.7, 2.2, _fidget_t))
+	var len: float = FIDGETS.get(_fidget, 2.2)
+	return smoothstep(0.0, 0.35, _fidget_t) * (1.0 - smoothstep(len - 0.5, len, _fidget_t))
 
 
 func _idle_pose(arm: Array, leg: Array, face: Dictionary, fx: Array) -> void:
@@ -1492,6 +1518,21 @@ func _idle_pose(arm: Array, leg: Array, face: Dictionary, fx: Array) -> void:
 			arm[1] = [lerpf(arm[1][0], 2.3, k), lerpf(arm[1][1], 0.9, k), lerpf(arm[1][2], 1.9 + sin(ft * 18.0) * 0.2, k)]
 			face["brow_a"] = -0.5
 			face["mouth"] = "wavy"
+		"hum":
+			# humming a little tune: swaying, head tilted, eyes happily closed
+			face["eyes"] = "happy" if k > 0.4 else face["eyes"]
+			face["mouth"] = "smile"
+			face["brow_r"] = 0.3
+			arm[0] = [lerpf(arm[0][0], -0.15, k), lerpf(arm[0][1], -0.2, k), lerpf(arm[0][2], 0.4, k)]
+			arm[1] = [lerpf(arm[1][0], -0.15, k), lerpf(arm[1][1], 0.2, k), lerpf(arm[1][2], 0.4, k)]
+		"rock":
+			# rocking up onto the toes and back onto the heels, hands behind the back
+			var r := sin(ft * 5.0)
+			fx[0] = Vector2(0.0, (-0.45 * maxf(r, 0.0) + 0.25 * maxf(-r, 0.0)) * k)
+			fx[1] = fx[0]
+			arm[0] = [lerpf(arm[0][0], -0.5, k), lerpf(arm[0][1], 0.25, k), lerpf(arm[0][2], 0.9, k)]
+			arm[1] = [lerpf(arm[1][0], -0.5, k), lerpf(arm[1][1], -0.25, k), lerpf(arm[1][2], 0.9, k)]
+			face["brow_r"] = 0.35
 		"tap":
 			leg[1] = [0.15 * k, -0.2 * k - absf(sin(ft * 9.0)) * 0.25 * k]
 			# tapping the toe, the heel stays down
@@ -1513,6 +1554,9 @@ func _glance(delta: float, a: float) -> Vector3:
 		_look = Vector2(randf_range(-0.5, 0.5), randf_range(-0.15, 0.2)) if randf() < 0.5 else Vector2.ZERO
 		_pupil = Vector2(signf(_look.x) * 0.7 if absf(_look.x) > 0.1 else randf_range(-0.5, 0.5), randf_range(-0.4, 0.4))
 	var k := 1.0 - minf(a, 1.0) * 0.7
+	# eyes lead into a turn
+	if absf(turn_rate) > 0.4 and a > 0.2:
+		_pupil.x = lerpf(_pupil.x, clampf(turn_rate * 0.4, -0.8, 0.8), 1.0 - exp(-8.0 * delta))
 	return Vector3(_look.y * k, _look.x * k, 0.0)
 
 
@@ -1624,7 +1668,8 @@ func _update_face(delta: float, f: Dictionary) -> void:
 		eye.transform = (eye.get_meta("rest") as Transform3D).scaled_local(Vector3(eye_s, eye_s, 1.0))
 		var lidn: Node3D = _face["lid" + s]
 		lidn.position.y = lerpf(LID_UP, 0.02, clampf(lid, 0.0, 1.0))
-		lidn.visible = lid > 0.03 and eyes in ["dot", "sclera", "wide"]
+		# only while it covers the eye (at rest it would be a bump on the forehead)
+		lidn.visible = lid > 0.1 and eyes in ["dot", "sclera", "wide"]
 		var pupil: Node3D = _face["pupil" + s]
 		var r := 0.013 if eyes != "dot" else 0.005
 		# local +X of the face frame points to the character's left
