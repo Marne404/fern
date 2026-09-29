@@ -156,6 +156,21 @@ reasonably flat ground, grove structure with clearings, landmarks (rock arches, 
 
 ![Your scouts](scouts.png)
 
+## Round 11 – A living day
+
+- **Impostors:** distant trees are baked in the background into 8 views (albedo, normals, bark mask) and drawn as
+  billboards lit like the crowns; every tree hands over at its own distance. Ultra −6 ms, Extreme −14 ms.
+- **Times of day:** misty dawns (a height-fog pass that lies in the valleys), golden hours, dusk with fireflies in
+  every biome, short moonlit nights with stars; a sun/moon dial in the HUD, sleeping skips to the morning.
+- **Weather:** showers with rain, splashes and sound; glossy soil, puddles with raindrop rings, wet rocks and
+  leaves; a rainbow afterwards. Never in the desert, often on the moors.
+- **Sunbeams** through the tree crowns, **waterfalls** on the far mountains, **cloud shadows** racing in gusts.
+- **Wildlife:** deer at the forest edge, songbirds on fence posts, signposts and stones, butterflies landing on
+  flowers, bees in the lavender.
+- **Water:** clear brooks beside the trail, reeds with cattails, water lilies.
+- **Terrain:** erosion gullies, hummocky meadows, scree slopes, lone boulders.
+- **Mood:** color grading per biome and time of day, soft focus while resting.
+
 ## Round 12 – The Pro kit: 22 biomes, skies, places to stop (v0.11.0)
 
 The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans and results per step in
@@ -177,20 +192,19 @@ The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans an
   new `CreatureMesh` kit in the scout's toon shader.
 - **macOS build** (universal, ad-hoc signed; ASTC textures for Apple Silicon).
 
-## Round 11 – A living day
+## Round 13 – A cuter scout that really walks
 
-- **Impostors:** distant trees are baked in the background into 8 views (albedo, normals, bark mask) and drawn as
-  billboards lit like the crowns; every tree hands over at its own distance. Ultra −6 ms, Extreme −14 ms.
-- **Times of day:** misty dawns (a height-fog pass that lies in the valleys), golden hours, dusk with fireflies in
-  every biome, short moonlit nights with stars; a sun/moon dial in the HUD, sleeping skips to the morning.
-- **Weather:** showers with rain, splashes and sound; glossy soil, puddles with raindrop rings, wet rocks and
-  leaves; a rainbow afterwards. Never in the desert, often on the moors.
-- **Sunbeams** through the tree crowns, **waterfalls** on the far mountains, **cloud shadows** racing in gusts.
-- **Wildlife:** deer at the forest edge, songbirds on fence posts, signposts and stones, butterflies landing on
-  flowers, bees in the lavender.
-- **Water:** clear brooks beside the trail, reeds with cattails, water lilies.
-- **Terrain:** erosion gullies, hummocky meadows, scree slopes, lone boulders.
-- **Mood:** color grading per biome and time of day, soft focus while resting.
+- **Model:** cleaner and cuter, not busier – legs that actually reach the ground (the boots floated a few
+  centimeters), a soft bean-shaped trunk, puffy sleeves, no clutter on the chest, eyes lower and bigger with a
+  second sparkle, rosier cheeks.
+- **Gait:** the feet are planted in the world and never slide, whatever the speed: two-bone IK, heel-strike and
+  toe-off roll, stride and cadence from the real speed – a stroll, the brisk trot of the walking speed and a
+  bounding sprint with a flight phase, pumping arms and kicked-up heels. The feet find slopes, logs and stones,
+  take a settling step when you stop and turn on the spot in little steps; footprints land where the boot was.
+- **Expression:** arms swing against the legs, hips and shoulders twist, the head leads into turns, a hard stop
+  throws the arms forward, sneaking goes on tiptoes with raised hands, tired feet drag; new idle gestures (humming,
+  rocking on the toes), hops that leave the ground.
+- **Tools:** a gait probe measures slip per speed; the scout studio renders filmstrips and scripted clips.
 
 ---
 

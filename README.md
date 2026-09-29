@@ -57,8 +57,9 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 ## Features
 
 - **Your scout** – customizable hiker (11 colors, 8 shirts and shorts, sash and scarf colors, 8 hats, 5 faces, glasses and
-  neckerchiefs) with procedural animation: walking, running, crouching, sitting, swimming, climbing, flailing through the
-  air, idle fidgets; faces react to exhaustion, fear, cold and sleep.
+  neckerchiefs) with procedural animation: feet planted with IK that never slide (stroll, trot, bounding sprint,
+  sneaking on tiptoes), sitting, swimming, climbing, flailing through the air, idle gestures; faces react to
+  exhaustion, fear, cold and sleep.
 - **Emotes** – a wheel (hold **G**) with 16 gestures and expressions: wave, point, thumbs up, cheer, laugh, shrug,
   facepalm, clap, salute, think, cower, stomp, sit down, lie down, … The eight slots are configurable.
 - **Voice groundwork** – microphone detection with push to talk, always on or voice activation, a level meter and
@@ -180,7 +181,8 @@ Command-line options after `--`, e.g. `godot --path . -- --play --z=-15000`:
 `--obtest` obstacle test (40 checks) · `--selftest` body/backpack/items/emotes/voice test.
 
 Standalone tools: `godot --path . -s res://scripts/tests/scout_studio.gd -- --mode=lineup --out=x.png` renders scouts
-(modes `lineup`, `poses`, `face`, `back`, `walk`, `side`, `group`), `scripts/tests/scout_export.gd` exports the scout
+(modes `lineup`, `poses`, `face`, `back`, `walk`, `side`, `group`, `idle`, `gait` filmstrip, `clip` frame sequence),
+`scripts/tests/gait_probe.gd` measures foot slip per speed, `scripts/tests/scout_export.gd` exports the scout
 as `docs/models/scout.glb` for the website.
 
 ## Credits

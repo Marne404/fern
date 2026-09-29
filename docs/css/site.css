@@ -184,6 +184,9 @@ h2.display { font-size: clamp(2.5rem, 6vw, 4.6rem); }
 @keyframes pop { from { transform: translateY(40px) scale(.6) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .hero .lede { font-size: clamp(1.08rem, 1.5vw, 1.32rem); font-weight: 700; color: var(--ink); margin: 18px 0 26px; max-width: 34ch; }
 .cta { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+/* hero: Windows plus two compact buttons for macOS and Linux in one row */
+.hero .cta { gap: 10px; }
+.hero .cta .btn.cream { padding-left: 17px; padding-right: 17px; gap: 8px; }
 .meta { margin-top: 16px; font-size: 0.9rem; font-weight: 700; color: var(--ink-soft); }
 
 .hero-ui {
@@ -488,8 +491,9 @@ footer .credits { max-width: 70ch; opacity: .9; }
   .hint { display: none; }
   .badge-grid, .keys { grid-template-columns: 1fr; }
   .stats { grid-template-columns: 1fr; gap: 26px; }
-  .hero .cta { flex-wrap: nowrap; gap: 10px; }
-  .hero .cta .btn { flex: 1 1 auto; padding: 11px 14px; font-size: .95rem; }
+  .hero .cta { flex-wrap: wrap; gap: 10px; }
+  .hero .cta .btn { flex: 1 1 0; padding: 11px 14px; font-size: .95rem; }
+  .hero .cta .btn:first-child { flex-basis: 100%; }
   .hero .meta { display: none; }
   .hero-copy { top: 84px; }
   .hero-ui { bottom: 70px; gap: 8px; }
