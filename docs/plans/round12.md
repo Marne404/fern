@@ -612,3 +612,7 @@ New items (hand-built models and icons like the others):
   faster; with marshmallows you roast them (+14 food, +20 stamina). New items with hand-built models and
   icons: matches (start kit), lighter, marshmallows, flat pebble, fly agaric (poisonous). `--lightfires`.
   The selftest's voice-gate check no longer depends on the live microphone.
+- 8b result: ForageManager (48 m cells along the trail, ~180 spots in 43 km of seed 1): berry bushes with
+  bunches of red currants, blueberries or blackberries ("Pick …", 3 handfuls, the berries disappear),
+  mushroom clusters (30 % fly agarics – poisonous: −30 health, dizzy), flat pebbles on brook and pond shores
+  (also in find-spot loot). Taken things stay gone for the journey. `--forage` lists them.

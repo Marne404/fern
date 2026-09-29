@@ -272,6 +272,13 @@ func _build_tile(t: Vector2i, lod: int) -> MultiMeshInstance3D:
 		var fd := Vector3(fp["x"], fp["z"], 3.2 if fp["type"] in ["lagerfeuer", "unterstand"] else 2.0)
 		if Rect2(wx, wz, TILE, TILE).grow(fd.z).has_point(Vector2(fd.x, fd.y)):
 			disks.append(fd)
+	var c0 := floori(wz / ForageManager.CELL)
+	for cz in range(c0 - 1, c0 + 2):
+		var rr := gen.row((cz + 0.5) * ForageManager.CELL, false)
+		for cx in range(floori((float(rr["px"]) - 20.0) / ForageManager.CELL), floori((float(rr["px"]) + 20.0) / ForageManager.CELL) + 1):
+			var fg := ForageManager.plan(gen, cx, cz)
+			if not fg.is_empty() and fg["type"] in ["pilze", "kiesel"] and Rect2(wx, wz, TILE, TILE).grow(1.2).has_point(Vector2(fg["x"], fg["z"])):
+				disks.append(Vector3(fg["x"], fg["z"], 1.0))
 	disks.sort_custom(func(a, b): return a.z > b.z)
 	for i in 4:
 		var d: Vector3 = disks[i] if i < disks.size() else Vector3(0, 0, 0)

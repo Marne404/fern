@@ -107,7 +107,7 @@ static func _loot(type: String, biome: int, rng: RandomNumberGenerator) -> Array
 		clothes = ["sonnenhut", "sonnenhut", "sonnencreme", "sonnencreme", "stiefel", "poncho"]
 	if cold:
 		clothes = ["pullover", "muetze", "regenjacke", "pullover", "schal", "handschuhe", "stiefel"]
-	var fun := ["wasserpistole", "gummihuhn", "kamera", "fernglas", "stein", "mundharmonika", "drachen", "federn", "pfeife"]
+	var fun := ["wasserpistole", "gummihuhn", "kamera", "fernglas", "stein", "mundharmonika", "drachen", "federn", "pfeife", "kiesel", "kiesel"]
 	if coast:
 		fun += ["muschel", "muschel", "muschel", "drachen"]
 	if biome == 6:

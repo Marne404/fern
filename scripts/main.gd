@@ -20,6 +20,7 @@ var player: Wanderer
 var hud: Hud
 var backpack: Backpack
 var pois: PoiManager
+var forage: ForageManager
 var landmarks: LandmarkManager
 var dropped: Node3D
 var footprints: Footprints
@@ -139,6 +140,18 @@ func _ready() -> void:
 		return
 	if _args.has("lightfires"):
 		Campfire.debug_lit = true
+	if _args.has("forage"):
+		# test helper: --forage lists the first things to gather along the trail
+		var nf := 0
+		for cz in range(-1, -900, -1):
+			var r0 := gen.row((cz + 0.5) * ForageManager.CELL)
+			for cx in range(floori((float(r0["px"]) - 20.0) / ForageManager.CELL), floori((float(r0["px"]) + 20.0) / ForageManager.CELL) + 1):
+				var fp := ForageManager.plan(gen, cx, cz)
+				if not fp.is_empty():
+					nf += 1
+					if nf <= 10 or (fp["type"] == "kiesel" and nf < 400):
+						print("Forage %s v%d z=%.0f x=%.0f (%s)" % [fp["type"], fp["variant"], fp["z"], fp["x"], gen.biomes[gen.dominant_biome(fp["z"])]["name"]])
+		print("Forage spots in 43 km: %d" % nf)
 	if _args.has("findspots"):
 		# test helper: --findspots=type lists the first find spots of that type
 		var n_found := 0
@@ -168,6 +181,9 @@ func _ready() -> void:
 	pois = PoiManager.new()
 	add_child(pois)
 	pois.setup(gen, world, lib)
+	forage = ForageManager.new()
+	add_child(forage)
+	forage.setup(gen, world, lib)
 	landmarks = LandmarkManager.new()
 	add_child(landmarks)
 	landmarks.setup(gen, world, lib)
