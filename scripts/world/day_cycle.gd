@@ -8,7 +8,8 @@ extends RefCounted
 var day_minutes := 36.0
 ## Hour of the day (0..24)
 var hour := 7.0
-## 0 = runs, else fixed: 1 morning, 2 midday, 3 golden hour, 4 dusk, 5 night
+## 0 = runs, else fixed: 1 morning, 2 midday, 3 golden hour, 4 dusk, 5 night,
+## 6 each biome at its best (the hour follows the trail, set from outside: BiomeSchedule.best_hour_at)
 var fixed := 0
 ## set by the time director (BiomeSchedule): the clock runs a little faster or slower so a biome shows its best hour
 var rate_scale := 1.0
@@ -16,6 +17,7 @@ var rate_scale := 1.0
 const SUNRISE := 5.6
 const SUNSET := 19.6
 const FIXED_HOURS := [0.0, 7.2, 12.5, 17.6, 19.95, 23.0]
+const AT_BEST := 6
 
 # Key moods. Colors are targets the biome's own colors are pulled towards (by the weight *_w).
 #   sun: tint of the sun/moon light, e: light energy factor, zen/hor: sky, amb: ambient factor + tint,
@@ -53,6 +55,8 @@ const KEYS := [
 
 ## Advance the clock (real seconds). Nights pass about three times as fast as days.
 func advance(dt: float) -> void:
+	if fixed == AT_BEST:
+		return
 	if fixed != 0:
 		hour = FIXED_HOURS[fixed]
 		return

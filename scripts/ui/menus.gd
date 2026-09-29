@@ -461,7 +461,7 @@ func _build_settings() -> Control:
 	_slider(list, "veg_density", "Vegetation density", 0.25, 2.5, 0.05, func(v): return "%d %%" % roundi(v * 100))
 	_slider(list, "grass_distance", "Grass distance", 25, 250, 5, func(v): return "%d m" % int(v))
 	_slider(list, "impostor_distance", "Trees as impostors from", 120, 500, 10, func(v): return "%d m" % int(v))
-	_option(list, "time_of_day", "Time of day", ["Day cycle", "Always morning", "Always midday", "Always golden hour", "Always dusk", "Always night"])
+	_option(list, "time_of_day", "Time of day", ["Day cycle", "Always morning", "Always midday", "Always golden hour", "Always dusk", "Always night", "Each biome at its best"])
 	_slider(list, "day_minutes", "Length of a day", 12, 120, 2, func(v): return "%d min" % int(v))
 	_option(list, "weather", "Weather", ["Changing", "Always fair", "Always rain"])
 	_check(list, "rest_blur", "Soft focus while resting")

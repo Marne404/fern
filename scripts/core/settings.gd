@@ -75,7 +75,7 @@ var values := {
 	"music": true,
 	"music_volume": 0.7,
 	"sfx_volume": 0.8,
-	"time_of_day": 0,           # 0 day cycle, 1 morning, 2 midday, 3 golden hour, 4 dusk, 5 night
+	"time_of_day": 0,           # 0 day cycle, 1 morning, 2 midday, 3 golden hour, 4 dusk, 5 night, 6 each biome at its best
 	"day_minutes": 36.0,        # real minutes for a whole day
 	"weather": 0,               # 0 changing, 1 always fair, 2 always rain
 	"rest_blur": true,          # the distance blurs softly while you rest

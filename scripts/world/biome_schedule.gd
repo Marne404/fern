@@ -173,7 +173,7 @@ func plan(gen: WorldGen, d: float, hour: float, count: int) -> void:
 			var wins: Array = gen.biomes[b]["best"]["hours"]
 			var key := hash(wins)
 			if not rated.has(key):
-				rated[key] = best_span(wins, h, secs)
+				rated[key] = best_span(wins, h, secs) if fixed != AT_BEST else [_at_best_match(gen, b, k), 1.0]
 			var span: Array = rated[key]
 			var m: float = span[0]
 			var w := 0.04 + 3.0 * m * m * m + 0.08 * maxf(float(age) - 22.0, 0.0)
@@ -248,3 +248,63 @@ func weather_wish(gen: WorldGen, k: int) -> String:
 		if r < 0.0:
 			return kind
 	return ""
+
+
+# ---------------------------------------------------------------- "each biome at its best" (time mode 6)
+# No running clock: the hour follows the trail. Inside a biome it drifts slowly through the heart of its
+# window; around every border (±BLEND) it moves forward to the next biome's hour – golden hour → dusk →
+# night → dawn. A biome without a window bridges its neighbours' hours.
+
+const AT_BEST := 6
+const BLEND := 350.0
+
+
+## Hours at which a biome begins and ends in this mode (0..24)
+func _in_out(wins: Array) -> Vector2:
+	var win: Array = wins[0]
+	var s := float(win[0])
+	var e := float(win[1])
+	if e < s:
+		e += 24.0
+	var l := e - s
+	return Vector2(fposmod(s + 0.25 * l, 24.0), fposmod(e - 0.2 * l, 24.0))
+
+
+func segment_hours(gen: WorldGen, k: int) -> Vector2:
+	var wins := _wins(gen, k)
+	if not wins.is_empty():
+		return _in_out(wins)
+	# bridge: from the previous biome's hour to the next one's
+	var wp := _wins(gen, maxi(k - 1, 0))
+	var wn := _wins(gen, k + 1)
+	return Vector2(_in_out(wp).y if not wp.is_empty() else 12.0, _in_out(wn).x if not wn.is_empty() else 12.0)
+
+
+## The hour at forward distance d in this mode
+func best_hour_at(gen: WorldGen, d: float) -> float:
+	var k := gen.segment_at(d)
+	var s0 := gen.segment_start(k)
+	var s1 := gen.segment_start(k + 1)
+	var hk := segment_hours(gen, k)
+	if d < s0 + BLEND and k > 0:
+		var hp := segment_hours(gen, k - 1)
+		return fposmod(hp.y + fposmod(hk.x - hp.y, 24.0) * smoothstep(s0 - BLEND, s0 + BLEND, d), 24.0)
+	if d > s1 - BLEND:
+		var hn := segment_hours(gen, k + 1)
+		return fposmod(hk.y + fposmod(hn.x - hk.y, 24.0) * smoothstep(s1 - BLEND, s1 + BLEND, d), 24.0)
+	var u := clampf((d - s0 - BLEND) / maxf(s1 - s0 - 2.0 * BLEND, 1.0), 0.0, 1.0)
+	return fposmod(hk.x + fposmod(hk.y - hk.x, 24.0) * u, 24.0)
+
+
+## In this mode the order favors small steps forward in time (a natural day: morning, midday, golden hour,
+## dusk, night, dawn …): match of biome b after the previous segment
+func _at_best_match(gen: WorldGen, b: int, k: int) -> float:
+	var wins: Array = gen.biomes[b]["best"]["hours"]
+	if wins.is_empty():
+		return NEUTRAL
+	var wp := _wins(gen, k - 1)
+	var prev_out := _in_out(wp).y if not wp.is_empty() else 12.0
+	var delta := fposmod(_in_out(wins).x - prev_out, 24.0)
+	if delta < 0.4:
+		return 0.5
+	return 1.0 if delta <= 7.0 else maxf(0.0, 1.0 - (delta - 7.0) / 8.0)

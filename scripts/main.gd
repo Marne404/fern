@@ -106,7 +106,7 @@ func _ready() -> void:
 	if _args.has("seed"):
 		seed_v = Settings.parse_seed(_args["seed"])
 	# the biome order is planned for a hike that starts at 7:00 with the player's day length
-	WorldGen.plan_defaults = {"start_hour": float(_args.get("hour", "7.0")), "day_minutes": float(Settings.values.get("day_minutes", 36.0)),
+	WorldGen.plan_defaults = {"start_hour": 7.0, "day_minutes": float(Settings.values.get("day_minutes", 36.0)),
 		"fixed": int(Settings.values.get("time_of_day", 0)), "pace": BiomeSchedule.PACE}
 	if _args.has("obtest") or _args.has("selftest"):
 		# tests always see the same world, whatever the player's day settings
@@ -650,6 +650,9 @@ func _process_inner(delta: float) -> void:
 		atmosphere.env.ambient_light_energy = float(atmosphere.shown.get("ambient_energy", 0.5)) + wf.flash * 0.12
 		_rain_on_player(delta)
 		_campfire_warmth(delta)
+	# time mode "each biome at its best": the hour follows the trail
+	if atmosphere.day.fixed == DayCycle.AT_BEST:
+		atmosphere.day.hour = gen.schedule.best_hour_at(gen, -wpos.z)
 	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
 	# test helpers for tuning the lighting
