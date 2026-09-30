@@ -667,6 +667,15 @@ func _process_inner(delta: float) -> void:
 		if _args.has("give"):
 			for id in _args["give"].split(","):
 				player.inventory.add(ItemDefs.make(id))
+		# test helper: --hold=karte,laterne (in the hands; lights are switched on)
+		if _args.has("hold"):
+			for id in _args["hold"].split(","):
+				var it := ItemDefs.make(id)
+				player.inventory.add(it)
+				if id in ["laterne", "taschenlampe"]:
+					player._toggle_light(id)
+				else:
+					player.hold_item(it)
 		if _args.has("drop"):
 			var fwd := -player.global_transform.basis.z
 			_spawn_dropped(ItemDefs.make(_args["drop"]), player.global_position + fwd * 1.6 + Vector3(0, 0.4, 0), Vector3.ZERO)
@@ -897,6 +906,9 @@ func _process_inner(delta: float) -> void:
 			_update_schedule(delta, pw)
 		hud.set_distance(journey_distance)
 		hud.set_hour(atmosphere.day.hour)
+		var in_hand: String = player.held_item("R").get("id", "")
+		var free_view := player.can_act() and not menus.is_open() and not backpack.is_open() and mode == Mode.PLAYING
+		hud.trail_map.update_view(gen, pw, player._yaw, free_view and in_hand == "karte", free_view and in_hand == "kompass", delta)
 		player.air_temp = atmosphere.shown.get("temperature", 16.0)
 		hud.update_body(player.body.stamina, player.body.state, delta)
 		hud.set_prompt(player.prompt, player.prompt_title, player.prompt_action)

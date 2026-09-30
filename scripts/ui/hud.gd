@@ -23,6 +23,8 @@ var _perf_acc := {}
 var _perf_n := 0
 var _hint: Label
 var _prompt: HBoxContainer
+## map and compass views while you hold them
+var trail_map: TrailMap
 var _prompt_title: Label
 var _prompt_key: PanelContainer
 var _prompt_action: Label
@@ -108,6 +110,8 @@ func _ready() -> void:
 	add_child(_status)
 
 	# prompt: OBJECT NAME [E] action
+	trail_map = TrailMap.new()
+	add_child(trail_map)
 	_prompt = HBoxContainer.new()
 	_prompt.set_anchors_preset(Control.PRESET_CENTER)
 	_prompt.grow_horizontal = Control.GROW_DIRECTION_BOTH

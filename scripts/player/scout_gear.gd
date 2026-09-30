@@ -151,6 +151,8 @@ func hold(side: String, id: String) -> void:
 		var d: Array = HOLD[id] if HOLD.has(id) else ["R", "hold", Vector3(0, -0.105, -0.035), Vector3.ZERO, 1.0]
 		var parent: Node3D = _spaces["chest"] if anchored(id) else hand
 		_held[side] = _attach(parent, id, d[2], d[3], d[4], grip_of(id) == "hang")
+		if id == "kompass":
+			_needle = _needle_node(_held[side])
 	_refresh_hung_keep()
 	_update_glow()
 
@@ -384,8 +386,33 @@ func _remove(n: Node3D) -> void:
 	n.queue_free()
 
 
+## The compass needle points north (world -Z) on the compass's face
+var _needle: Node3D
+
+
+func _needle_node(pivot: Node3D) -> Node3D:
+	var n := Node3D.new()
+	n.name = "Needle"
+	var body: Node3D = pivot.get_child(0)
+	body.add_child(n)
+	n.position = Vector3(0, 0.02, 0)
+	var b := ItemModels.B.new()
+	b.add(Mesh3.blob(Vector3(0.0045, 0.003, 0.024), 2.0, 5, 8, Transform3D(Basis(), Vector3(0, 0, -0.012))), Color("d8453e"))
+	b.add(Mesh3.blob(Vector3(0.0045, 0.003, 0.024), 2.0, 5, 8, Transform3D(Basis(), Vector3(0, 0, 0.012))), Color("f4f1ea"))
+	var m := b.commit()
+	m.surface_set_material(0, ItemModels.material())
+	_attach_mesh(n, m, Vector3.ZERO, Vector3.ZERO, 1.0)
+	return n
+
+
 ## Dangling things swing like a pendulum when their hook accelerates
 func update(delta: float) -> void:
+	if is_instance_valid(_needle) and _needle.is_inside_tree():
+		var up := _needle.get_parent_node_3d().global_basis.y.normalized()
+		var north := Vector3(0, 0, -1) - up * up.z * -1.0
+		if north.length() > 0.01:
+			var z := -north.normalized()
+			_needle.global_basis = Basis(up.cross(z).normalized(), up, z) * Basis.from_scale(_needle.get_parent_node_3d().global_basis.get_scale())
 	if delta <= 0.0:
 		return
 	for n: Node3D in _dangle:
