@@ -678,12 +678,25 @@ func _process_inner(delta: float) -> void:
 		if _args.has("reach"):
 			get_tree().create_timer(3.0).timeout.connect(func():
 				var fw2 := -player.global_basis.z
-				var gp := player.global_position + fw2 * 0.5 + player.global_basis.x * 0.15
+				var gp := player.global_position + (player.global_basis.x * 0.6 if _args["reach"] == "side" else fw2 * 0.5 + player.global_basis.x * 0.15)
 				gp.y = world.ground_y(gp.x, gp.z) + 0.05
+				# a real tuft close to that point
+				var tf: Dictionary = world.grass_near(gp, 2.0)
+				if not tf.is_empty():
+					gp = (tf["xf"] as Transform3D).origin + Vector3(0, 0.05, 0)
 				player.hands.aim_override = gp
+				# --pullback: walk backwards after a moment (pulling)
+				if _args.has("pullback"):
+					get_tree().create_timer(1.2).timeout.connect(func():
+						var back := (player.global_position - gp) * Vector3(1, 0, 1)
+						back = back.normalized()
+						player.autopilot = func() -> Vector3: return back)
 				player.hands.press(1)
 				if _args["reach"] == "both":
-					player.hands.press(0))
+					player.hands.press(0)
+				# --camyaw=deg: swing the camera around afterwards to watch the hands from another side
+				if _args.has("camyaw"):
+					player.set_look(player.rotation.y + deg_to_rad(float(_args["camyaw"])), deg_to_rad(float(_args.get("pitch", "-15")))))
 		# test helper: --pad shows the controller glyphs
 		if _args.has("pad"):
 			GameInput._set_pad(true)
@@ -936,6 +949,7 @@ func _process_inner(delta: float) -> void:
 		var free_view := player.can_act() and not menus.is_open() and not backpack.is_open() and mode == Mode.PLAYING
 		hud.trail_map.update_view(gen, pw, player._yaw, free_view and in_hand == "karte", free_view and in_hand == "kompass", delta)
 		player.air_temp = atmosphere.shown.get("temperature", 16.0)
+		player.body.hour = atmosphere.day.hour
 		hud.update_body(player.body.stamina, player.body.state, delta)
 		hud.set_prompt(player.prompt, player.prompt_title, player.prompt_action)
 		hud.set_needs(player.body.needs())

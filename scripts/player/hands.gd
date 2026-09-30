@@ -32,6 +32,9 @@ var hover := ""
 var tension := 0.0
 ## tests: a fixed world point the hands aim at (INF = the crosshair)
 var aim_override := Vector3.INF
+var _kg := 0.0
+var _probe_t := 0.0
+var _hover := ""
 
 
 func setup(owner_player: Wanderer) -> void:
@@ -40,6 +43,17 @@ func setup(owner_player: Wanderer) -> void:
 	for i in 2:
 		h.append({"down": false, "t": 0.0, "mode": "idle", "punch_t": 0.0, "ext": 0.0, "grip": {}, "pos": Vector3.ZERO, "fist": false,
 			"vel": Vector3.ZERO})
+
+
+## Where the busy hands are (average), INF when both are idle – the body turns towards it
+func busy_point() -> Vector3:
+	var sum := Vector3.ZERO
+	var n := 0
+	for i in 2:
+		if h[i]["mode"] in ["reach", "hold", "punch"]:
+			sum += _grip_world(h[i]["grip"]) if h[i]["mode"] == "hold" else _aim_point(i)
+			n += 1
+	return sum / n if n > 0 else Vector3.INF
 
 
 func holding(i: int) -> bool:
@@ -124,9 +138,9 @@ func _aim_point(i: int, centered := false) -> Vector3:
 
 func physics(delta: float) -> void:
 	zooming = false
-	hover = ""
 	tension = 0.0
 	var carry := 0.0
+	_kg = 0.0
 	for i in 2:
 		var s := h[i]
 		if s["down"]:
@@ -168,9 +182,18 @@ func physics(delta: float) -> void:
 			s["pos"] = sh
 		s["vel"] = (s["pos"] - prev) / maxf(delta, 1e-4)
 		s["fist"] = s["mode"] == "punch"
-	if hover == "" and not (holding(0) and holding(1)):
-		hover = _probe_kind(_aim_point(1))
+	# what's under the crosshair, a few times a second (the grass search isn't free)
+	_probe_t -= delta
+	if _probe_t <= 0.0:
+		_probe_t = 0.15
+		_hover = _probe_kind(_aim_point(1)) if not (holding(0) and holding(1)) else ""
+	hover = _hover
 	p.body.carry_block = carry
+	p.body.carry_kg = _kg
+	if OS.get_cmdline_user_args().has("--handlog") and Engine.get_physics_frames() % 10 == 0 and (h[0]["mode"] != "idle" or h[1]["mode"] != "idle"):
+		var r: Dictionary = h[1]
+		print("[Hands] t=%.1f R %s %s ext %.2f tension %.2f hand %s shoulder %s grip %s" % [Time.get_ticks_msec() / 1000.0, r["mode"], r["grip"].get("what", r["grip"].get("kind", "")),
+			r["ext"], tension, (r["pos"] as Vector3).snapped(Vector3.ONE * 0.01), _shoulder(1).snapped(Vector3.ONE * 0.01), _grip_world(r["grip"]).snapped(Vector3.ONE * 0.01) if not r["grip"].is_empty() else ""])
 
 
 ## A stretched hand grips the first thing it touches
@@ -178,7 +201,8 @@ func _reach(i: int, delta: float) -> void:
 	var s := h[i]
 	s["ext"] = minf(float(s["ext"]) + delta * 4.0, 1.0)
 	var pos: Vector3 = s["pos"]
-	var g := _grip_at(pos, i)
+	# grass only where the hand arrives (on the way it would snatch a tuft next to the stone you meant)
+	var g := _grip_at(pos, i, float(s["ext"]) >= 1.0)
 	if not g.is_empty():
 		# how far you can move away: the arm's length when it gripped (bent down for low things)
 		g["slack"] = maxf(REACH, (pos - _shoulder(i)).length()) + 0.08
@@ -191,7 +215,7 @@ func _reach(i: int, delta: float) -> void:
 # ================================================================ finding something to grip
 
 ## What is at a point: {kind, node, local (grip point in the node's space), …} or {}
-func _grip_at(pos: Vector3, i: int) -> Dictionary:
+func _grip_at(pos: Vector3, i: int, ground := true) -> Dictionary:
 	var space := p.get_world_3d().direct_space_state
 	var sq := PhysicsShapeQueryParameters3D.new()
 	var sphere := SphereShape3D.new()
@@ -202,11 +226,16 @@ func _grip_at(pos: Vector3, i: int) -> Dictionary:
 	sq.collide_with_areas = true
 	sq.exclude = [p.get_rid()]
 	var res := space.intersect_shape(sq, 8)
+	# where exactly the hand touches solid things: the closest point on their surface (+ half a palm)
+	var touch := pos
+	var rest := space.get_rest_info(sq)
+	if not rest.is_empty():
+		touch = (rest["point"] as Vector3) + (rest["normal"] as Vector3) * 0.045
 	var best := {}
 	var best_pri := -1
 	for r in res:
 		var c: Object = r["collider"]
-		var g := _classify(c, pos)
+		var g := _classify(c, pos if c is Area3D else touch)
 		if g.is_empty():
 			continue
 		var pri: int = {"tear": 4, "loose": 3, "heavy": 2, "anchor": 1}.get(g["kind"], 0)
@@ -216,7 +245,7 @@ func _grip_at(pos: Vector3, i: int) -> Dictionary:
 		if pri > best_pri:
 			best_pri = pri
 			best = g
-	if best.is_empty():
+	if best.is_empty() and ground:
 		best = _ground_grip(pos)
 	return best
 
@@ -249,18 +278,20 @@ func _classify(c: Object, pos: Vector3) -> Dictionary:
 	return {}
 
 
-## Grass on the ground under the hand: a tuft to tear out
+## A real grass tuft under the hand: gripped by its stalks, pulled out of the ground
 func _ground_grip(pos: Vector3) -> Dictionary:
 	if p.world == null:
 		return {}
 	var gy := p.world.ground_y(pos.x, pos.z)
-	if pos.y > gy + 0.16:
+	if pos.y > gy + 0.35:
 		return {}
-	var w := p.world.local_to_world(pos)
-	var kind := p.world.gen.ground_kind(w.x, w.z)
-	if kind != "grass" or p.world.gen.water_level(w.x, w.z) > -INF:
+	var t := p.world.grass_near(pos, 0.6)
+	if t.is_empty():
 		return {}
-	return {"kind": "tear", "what": "grass", "node": null, "world": Vector3(pos.x, gy, pos.z), "resist": 0.35, "stretch": 0.55, "pull": 0.12}
+	var xf: Transform3D = t["xf"]
+	var h: float = maxf((t["mmi"] as MultiMeshInstance3D).multimesh.mesh.get_aabb().end.y * xf.basis.get_scale().y, 0.1)
+	return {"kind": "tear", "what": "grass", "node": null, "grass": t, "xf0": xf,
+		"world": xf.origin + Vector3.UP * minf(h * 0.35, 0.18), "resist": 0.35, "stretch": 0.55, "pull": 0.12}
 
 
 func _probe_kind(aim: Vector3) -> String:
@@ -308,6 +339,9 @@ func _let_go(i: int) -> void:
 	if g.is_empty():
 		return
 	var n = g.get("node")
+	if g.has("grass") and is_instance_valid((g["grass"] as Dictionary)["mmi"]):
+		# let go before it tore: the tuft springs back
+		_grass_set(g, g["xf0"])
 	match g["kind"]:
 		"loose":
 			if n != null and is_instance_valid(n):
@@ -364,6 +398,7 @@ func _hold(i: int, delta: float) -> float:
 			rb.global_position = rb.global_position.lerp(at, 1.0 - exp(-20.0 * delta))
 			g["local"] = Vector3.ZERO
 			p.body.spend(rb.mass * 0.02 * delta)
+			_kg += rb.mass
 			return rb.mass * 1.5
 		"heavy":
 			var rb := n as RigidBody3D
@@ -387,11 +422,14 @@ func _hold(i: int, delta: float) -> float:
 			g["vmax"] = vmax
 			var moving := Vector2(p.velocity.x, p.velocity.z).length() > 0.3
 			p.body.spend(share * (0.06 if lifted else (0.03 if moving else 0.008)) * delta)
+			_kg += share * (1.0 if lifted else 0.3)
 			return share * (0.8 if lifted else 0.35)
 		"tear":
 			# pulling the arm back tears a little by itself, walking away much more (see constrain())
 			g["done"] = float(g["done"]) + float(g.get("pull", 0.1)) * delta
 			tension = maxf(tension, float(g["done"]) / float(g.get("stretch", 0.3)))
+			if g.has("grass"):
+				_bend_grass(g, sh, clampf(float(g["done"]) / float(g["stretch"]), 0.0, 1.0))
 			if float(g["done"]) >= float(g.get("stretch", 0.3)):
 				_tear(i)
 			return 2.0
@@ -444,8 +482,8 @@ func _tear(i: int) -> void:
 	var at := _grip_world(g)
 	if n != null and is_instance_valid(n) and (n as Object).has_meta("on_tear"):
 		((n as Object).get_meta("on_tear") as Callable).call(p)
-	elif g.get("what", "") == "grass":
-		_tuft(at)
+	elif g.has("grass"):
+		_rip_grass(g, i)
 	Sfx.play(p, "whoosh", -14.0, 1.4)
 	h[i]["grip"] = {}
 	h[i]["mode"] = "idle"
@@ -454,30 +492,73 @@ func _tear(i: int) -> void:
 	released.emit(i)
 
 
-## A torn tuft of grass tumbles from the hand
-func _tuft(at: Vector3) -> void:
-	var tuft := MeshInstance3D.new()
-	var b := ItemModels.B.new()
-	for k in 7:
-		var a := k * TAU / 7.0
-		var tip := Vector3(cos(a) * 0.05, 0.16 + (k % 3) * 0.03, sin(a) * 0.05)
-		b.add(Mesh3.tube([Vector3.ZERO, tip * 0.5 + Vector3(0, 0.02, 0), tip], [0.008, 0.006, 0.002], 4), Color("6fae3a").lightened((k % 3) * 0.1))
-	b.add(Mesh3.blob(Vector3(0.03, 0.02, 0.03), 2.0, 5, 8), Color("6b4a2e"))
-	tuft.mesh = b.commit()
-	tuft.mesh.surface_set_material(0, ItemModels.material())
+## The tuft stretches towards the pulling hand: taller and leaning, more the closer it is to tearing
+func _grass_set(g: Dictionary, xf: Transform3D) -> void:
+	var t: Dictionary = g["grass"]
+	for mmi in [t["mmi"], (t["mmi"] as Node).get_meta("twin", null)]:
+		if mmi == null or not is_instance_valid(mmi):
+			continue
+		var m := mmi as MultiMeshInstance3D
+		m.multimesh.set_instance_transform(int(t["idx"]), m.global_transform.affine_inverse() * xf)
+
+
+func _bend_grass(g: Dictionary, sh: Vector3, k: float) -> void:
+	var xf0: Transform3D = g["xf0"]
+	var to := sh - xf0.origin
+	var lean_axis := Vector3.UP.cross(Vector3(to.x, 0, to.z)).normalized()
+	var b := xf0.basis
+	if lean_axis.length() > 0.1:
+		b = Basis(lean_axis, 0.55 * k) * b
+	b = b * Basis.from_scale(Vector3(1.0 - 0.15 * k, 1.0 + 0.45 * k, 1.0 - 0.15 * k))
+	# the roots come up a little just before it gives way
+	_grass_set(g, Transform3D(b, xf0.origin + Vector3.UP * 0.03 * k * k))
+
+
+## Torn out: the tuft leaves the ground, flies up with the hand's jerk and tumbles down (roots and all)
+func _rip_grass(g: Dictionary, i: int) -> void:
+	var t: Dictionary = g["grass"]
+	var src := t["mmi"] as MultiMeshInstance3D
+	if not is_instance_valid(src):
+		return
+	var idx := int(t["idx"])
+	var custom := src.multimesh.get_instance_custom_data(idx)
+	var xf0: Transform3D = g["xf0"]
+	_grass_set(g, Transform3D(Basis.from_scale(Vector3.ONE * 0.001), xf0.origin - Vector3.UP * 2.0))
+	# a one-tuft copy with the same mesh, material and colour data
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_custom_data = true
+	mm.mesh = src.multimesh.mesh
+	mm.instance_count = 1
+	mm.set_instance_custom_data(0, custom)
+	var tuft := MultiMeshInstance3D.new()
+	tuft.multimesh = mm
+	tuft.material_override = src.material_override
 	tuft.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.get_parent().add_child(tuft)
-	tuft.global_position = at + Vector3(0, 0.05, 0)
-	var tw := tuft.create_tween()
-	var land := at + Vector3(randf_range(-0.4, 0.4), 0.0, randf_range(-0.4, 0.4))
+	tuft.global_transform = Transform3D(xf0.basis, xf0.origin + Vector3.UP * 0.04)
+	var root := MeshInstance3D.new()
+	root.mesh = Mesh3.blob(Vector3(0.05, 0.03, 0.05), 2.0, 5, 8)
+	root.material_override = ItemModels.material()
+	var sm := StandardMaterial3D.new()
+	sm.albedo_color = Color("5b4030")
+	root.material_override = sm
+	root.position = Vector3(0, -0.02, 0) / xf0.basis.get_scale()
+	tuft.add_child(root)
+	var hand: Vector3 = h[i]["pos"]
+	var land := hand + (hand - _shoulder(i)).normalized() * -0.2 + Vector3(randf_range(-0.3, 0.3), 0.0, randf_range(-0.3, 0.3))
 	if p.world:
 		land.y = p.world.ground_y(land.x, land.z)
-	tw.tween_property(tuft, "global_position", at + Vector3(0, 0.45, 0), 0.25).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.tween_property(tuft, "global_position", land, 0.45).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.parallel().tween_property(tuft, "rotation", Vector3(randf_range(-1.4, 1.4), randf() * TAU, randf_range(-1.4, 1.4)), 0.45)
-	tw.tween_interval(6.0)
-	tw.tween_property(tuft, "scale", Vector3.ONE * 0.01, 1.0)
+	var tw := tuft.create_tween()
+	tw.tween_property(tuft, "global_position", hand + Vector3(0, 0.35, 0), 0.22).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tw.tween_property(tuft, "global_position", land, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(tuft, "rotation", Vector3(randf_range(1.2, 1.6) * (1 if randf() < 0.5 else -1), randf() * TAU, randf_range(-0.4, 0.4)), 0.5)
+	tw.tween_interval(8.0)
+	tw.tween_property(tuft, "scale", Vector3.ONE * 0.01, 1.2)
 	tw.tween_callback(tuft.queue_free)
+	# a little puff of soil
+	if p.footprints:
+		p.footprints.puff(xf0.origin, "path", 0.25)
 
 
 # ================================================================ punching

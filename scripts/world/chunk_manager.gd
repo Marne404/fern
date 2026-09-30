@@ -161,6 +161,38 @@ var _flowers := {}
 
 
 ## Flower tops near a point (local): [top position, kind] with kind 1 = lavender, 0 = other flowers
+## The grass tuft nearest to a point (local): {"mmi", "idx", "xf" (local transform of the tuft)} or {}
+func grass_near(local_pos: Vector3, radius: float) -> Dictionary:
+	var best := {}
+	var best_d := radius * radius
+	var wp := Vector2(local_pos.x + origin.x, local_pos.z + origin.y)
+	var c0 := _coord_of(wp - Vector2(radius, radius))
+	var c1 := _coord_of(wp + Vector2(radius, radius))
+	for cz in range(c0.y, c1.y + 1):
+		for cx in range(c0.x, c1.x + 1):
+			var ch: Dictionary = _chunks.get(Vector2i(cx, cz), {})
+			var node: Node3D = ch.get("node")
+			if node == null or not is_instance_valid(node) or int(ch.get("lod", 1)) != 0:
+				continue
+			for c in node.get_children():
+				if not (c is MultiMeshInstance3D) or not c.has_meta("grass"):
+					continue
+				var mmi := c as MultiMeshInstance3D
+				var box := mmi.global_transform * mmi.get_aabb()
+				if not box.grow(radius).has_point(local_pos):
+					continue
+				var inv := mmi.global_transform.affine_inverse()
+				var lp := inv * local_pos
+				var mm := mmi.multimesh
+				for i in mm.instance_count:
+					var o := mm.get_instance_transform(i).origin
+					var d2 := Vector2(o.x - lp.x, o.z - lp.z).length_squared()
+					if d2 < best_d and absf(o.y - lp.y) < 0.8 and mm.get_instance_transform(i).basis.get_scale().y > 0.01:
+						best_d = d2
+						best = {"mmi": mmi, "idx": i, "xf": mmi.global_transform * mm.get_instance_transform(i)}
+	return best
+
+
 func flowers_near(local_pos: Vector3, radius: float) -> Array:
 	var out := []
 	var wp := Vector2(local_pos.x + origin.x, local_pos.z + origin.y)
@@ -428,7 +460,12 @@ func _make_instances(node: Node3D, data: Dictionary) -> void:
 			# hard limit just behind the shader thinning, without cell blending
 			mmi.visibility_range_end = grass_distance * (1.0 if info["kind"] == "grass" else 1.25) + 24.0
 			node.add_child(mmi)
-			_plant_lod(node, mmi, mm, key.get_slice("#", 0))
+			var twin := _plant_lod(node, mmi, mm, key.get_slice("#", 0))
+			if info["kind"] == "grass":
+				# the hands can pull these tufts out (grass_near)
+				mmi.set_meta("grass", true)
+				if twin:
+					mmi.set_meta("twin", twin)
 			continue
 		var base: String = key.get_slice("#", 0)
 		if info["kind"] == "tree" and not base.ends_with("@far"):
@@ -447,16 +484,16 @@ func _make_instances(node: Node3D, data: Dictionary) -> void:
 ## Grass tufts and flowers beyond plant_detail_distance: a sibling batch with the kit's first level of detail
 ## takes over (same instances and material, 2–5× fewer triangles). The engine picks a batch's LOD from the
 ## nearest point of its 16 m cell, so cells in the middle distance mostly stay at full detail.
-func _plant_lod(node: Node3D, mmi: MultiMeshInstance3D, mm: MultiMesh, base: String) -> void:
+func _plant_lod(node: Node3D, mmi: MultiMeshInstance3D, mm: MultiMesh, base: String) -> MultiMeshInstance3D:
 	if not Settings.values["opt_far_plants"]:
-		return
+		return null
 	var model := base.get_slice("/", base.get_slice_count("/") - 1)
 	if not AssetLibrary.is_plant(model) or not lib.has_lod(model):
-		return
+		return null
 	var d: float = Settings.values["plant_detail_distance"]
 	var end := mmi.visibility_range_end
 	if end > 0.0 and end <= d:
-		return
+		return null
 	var far := _mm_copy(mm, _mesh_for(base + "@lo")["mesh"])
 	far.cast_shadow = mmi.cast_shadow
 	far.visibility_range_begin = d
@@ -468,6 +505,7 @@ func _plant_lod(node: Node3D, mmi: MultiMeshInstance3D, mm: MultiMesh, base: Str
 	mmi.visibility_range_end_margin = 4.0
 	mmi.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_DISABLED
 	node.add_child(far)
+	return far
 
 
 ## Tree levels of detail with visibility ranges (they also apply to the shadow passes):
