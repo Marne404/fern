@@ -251,6 +251,18 @@ The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans an
 - **Energy in blocks** – hunger, thirst, tiredness, cold (growing with the cold), heat, injuries until treated, the
   backpack's weight and what you carry each block their own hatched part of the bar.
 
+## Round 18 – A body with a daily rhythm, real grass, water with the bottle in hand
+
+- **Tiredness by the clock:** it grows in the evening and above all at night; by day only once you're already very
+  tired. **Hunger and thirst** grow slowly, thirst faster, sprinting makes you thirsty above all, carrying (backpack
+  and hands) hungry above all and a little thirsty.
+- **Filling the bottle** at a river or brook only works with the bottle in your hand – kneeling, in three variants
+  with their own tempo and finish (holding it against the light, a sip, shaking the drops off). Without it you scoop
+  water with both hands and drink.
+- **Real grass:** the hand grips the actual grass tuft; it bends and stretches as you pull and is torn out with its
+  roots, leaving a puff of soil. Hands sit on the surface of what they hold.
+- **Third person:** the whole scout turns towards what the hands reach for, not only the arms.
+
 ---
 
 ## Ideas for later
