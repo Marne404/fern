@@ -72,6 +72,33 @@ func run() -> void:
 		p.body.update(1.0, 1, 0.0, inv.total_weight(), 20.0, 0.0, false)
 	check("Hunger rises while hiking", p.body.food < f0 - 10.0, "%.0f -> %.0f" % [f0, p.body.food])
 	check("Thirst rises faster", (w0 - p.body.water) > (f0 - p.body.food), "water %.0f -> %.0f" % [w0, p.body.water])
+	# sprinting makes you thirsty much faster, carrying hungry
+	var drain := func(effort: int, kg: float, hour: float) -> Array:
+		p.body.food = 90.0
+		p.body.water = 90.0
+		p.body.rest = 90.0
+		p.body.carry_kg = kg
+		p.body.hour = hour
+		for i in 300:
+			# (stamina kept up: a collapse would stop the clock)
+			p.body.stamina = 100.0
+			p.body.update(1.0, effort, 0.0, 4.0, 20.0, 0.0, false)
+		p.body.carry_kg = 0.0
+		return [90.0 - p.body.food, 90.0 - p.body.water, 90.0 - p.body.rest]
+	var walk: Array = drain.call(1, 0.0, 12.0)
+	var run: Array = drain.call(2, 0.0, 12.0)
+	var carry: Array = drain.call(1, 20.0, 12.0)
+	var night: Array = drain.call(1, 0.0, 23.0)
+	check("Sprinting: thirst rises much faster", run[1] > walk[1] * 2.2 and run[1] - walk[1] > run[0] - walk[0], "walk %.1f run %.1f" % [walk[1], run[1]])
+	check("Carrying: hunger rises faster (thirst a little)", carry[0] > walk[0] * 1.5 and carry[1] > walk[1] and carry[0] / walk[0] > carry[1] / walk[1], "food %.1f/%.1f water %.1f/%.1f" % [walk[0], carry[0], walk[1], carry[1]])
+	check("Tiredness: not by day, by night", walk[2] < 0.01 and night[2] > 5.0, "day %.1f night %.1f" % [walk[2], night[2]])
+	p.body.rest = 25.0
+	p.body.hour = 12.0
+	for i in 300:
+		p.body.stamina = 100.0
+		p.body.update(1.0, 1, 0.0, 4.0, 20.0, 0.0, false)
+	check("Very tired: it still grows by day", p.body.rest < 24.0, "rest %.1f" % p.body.rest)
+	p.body.rest = 90.0
 	p.body.food = 5.0
 	check("Hunger lowers max stamina", p.body.max_stamina() < 60.0 and p.body.blocks().has("food"), "max %.0f" % p.body.max_stamina())
 	p.body.food = 90.0
@@ -363,8 +390,18 @@ func _test_hands(p: Wanderer) -> void:
 	p.global_position = pos
 	p.look_along(Vector3(0, 0, -1))
 	await frames(10)
-	var grass: Vector3 = p.global_position + Vector3(0.15, 0, -0.45)
-	grass.y = main.world.ground_y(grass.x, grass.z) + 0.05
+	# a real tuft nearby: stand half a metre from it
+	var tuft: Dictionary = main.world.grass_near(p.global_position, 6.0)
+	check("A real grass tuft nearby", not tuft.is_empty())
+	if tuft.is_empty():
+		return
+	var tp: Vector3 = (tuft["xf"] as Transform3D).origin
+	var stand: Vector3 = tp + Vector3(0, 0, 0.55)
+	stand.y = main.world.ground_y(stand.x, stand.z) + 0.1
+	p.global_position = stand
+	p.look_along(Vector3(0, 0, -1))
+	await frames(10)
+	var grass: Vector3 = tp + Vector3(0, 0.05, 0)
 	p.hands.aim_override = grass
 	p.hands.press(1)
 	await frames(40)
@@ -388,6 +425,8 @@ func _test_hands(p: Wanderer) -> void:
 	Input.parse_input_event(k)
 	p.hands.release(1)
 	check("Pulling grass slows you down, then it tears", torn and slow < 2.5, "torn %s, speed %.2f" % [torn, slow])
+	var gone: float = ((tuft["mmi"] as MultiMeshInstance3D).multimesh.get_instance_transform(int(tuft["idx"])).basis.get_scale().y)
+	check("The real tuft is gone from the ground", gone < 0.01, "scale %.3f" % gone)
 	# a loose thing: grip, carry, drop
 	await frames(20)
 	var it := ItemDefs.make("stein")
@@ -422,8 +461,8 @@ func _test_hands(p: Wanderer) -> void:
 	wi.linear_velocity = Vector3.ZERO
 	await frames(40)
 	var before := wi.global_position
-	for attempt in 2:
-		p.hands.aim_override = wi.global_position + Vector3(0, 0.04 * attempt, 0)
+	for attempt in 3:
+		p.hands.aim_override = wi.global_position + Vector3(0, 0.05 * attempt, 0)
 		p.look_along(wi.global_position - p.global_position)
 		p.hands.press(1)
 		await frames(2)

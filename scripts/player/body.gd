@@ -8,10 +8,11 @@ enum State { FIT, TIRED, WEAK, COLLAPSED }
 const STATE_NAMES := ["Fit", "Exhausted", "Weak", "Collapsed"]
 const STATE_COLORS := [Color(0.45, 0.85, 0.35), Color(0.98, 0.82, 0.25), Color(1.0, 0.55, 0.2), Color(0.95, 0.25, 0.2)]
 
-# consumption per second (game time): full → hungry in ~40 min, thirst ~25 min, tiredness ~70 min
-const HUNGER_RATE := 100.0 / 2400.0
-const THIRST_RATE := 100.0 / 1500.0
-const FATIGUE_RATE := 100.0 / 4200.0
+# per second while walking: full → empty in ~60 min (hunger), ~40 min (thirst). Sprinting and carrying speed both up.
+const HUNGER_RATE := 100.0 / 3600.0
+const THIRST_RATE := 100.0 / 2400.0
+# tiredness grows in the evening and at night (by day only when you are already very tired)
+const FATIGUE_RATE := 100.0 / 3000.0
 
 var stamina := 100.0
 var food := 85.0        # 100 = full
@@ -30,6 +31,9 @@ var rest_bonus := 1.0
 ## Set by the owner: kilograms in the backpack, and the carry block from what the hands hold (stamina points)
 var pack_kg := 0.0
 var carry_block := 0.0
+## kilograms the hands carry (share of what they hold) and the hour of the day – set by the owner
+var carry_kg := 0.0
+var hour := 12.0
 
 const MIN_STAMINA := 8.0
 
@@ -94,11 +98,15 @@ func update(delta: float, effort: int, climb: float, load: float, air_temp: floa
 	pack_kg = load
 	if state == State.COLLAPSED:
 		return
-	var busy: float = [0.6, 1.0, 1.8, 2.0][effort]
+	# standing, walking, sprinting, swimming: sprinting makes you thirsty above all
+	var busy_h: float = [0.45, 1.0, 1.8, 1.6][effort]
+	var busy_t: float = [0.45, 1.0, 2.7, 2.2][effort]
 	var heat := clampf((air_temp - 24.0) / 10.0, 0.0, 1.5)
-	food = maxf(food - HUNGER_RATE * busy * delta, 0.0)
-	water = maxf(water - THIRST_RATE * (busy + heat) * delta, 0.0)
-	rest = maxf(rest - FATIGUE_RATE * (0.3 if resting else busy) * delta, 0.0)
+	# carrying: the backpack beyond a few kilos and what the hands hold – hunger above all, thirst too
+	var kg := maxf(load - 4.0, 0.0) + carry_kg
+	food = maxf(food - HUNGER_RATE * busy_h * (1.0 + kg * 0.035) * delta, 0.0)
+	water = maxf(water - THIRST_RATE * (busy_t + heat) * (1.0 + kg * 0.02) * delta, 0.0)
+	rest = maxf(rest - FATIGUE_RATE * fatigue_time() * (0.3 if resting else lerpf(0.6, 1.2, clampf(busy_h - 0.45, 0.0, 1.0))) * delta, 0.0)
 	wet = maxf(wet - delta / (70.0 + maxf(10.0 - air_temp, 0.0) * 8.0), 0.0)
 	# felt temperature: air + clothing + movement - wetness
 	var target: float = air_temp + clothing + [0.0, 2.0, 5.0, -4.0][effort] - wet * 10.0
@@ -121,6 +129,18 @@ func update(delta: float, effort: int, climb: float, load: float, air_temp: floa
 	change *= 1.0 - comfort_penalty() * 0.5 if change > 0.0 else 1.0
 	stamina = clampf(stamina + change * delta, 0.0, mx)
 	_update_state(mx)
+
+
+## How strongly tiredness grows at this hour: evening and night; by day only when already very tired
+func fatigue_time() -> float:
+	var h := fposmod(hour, 24.0)
+	var night := 1.8 if (h >= 21.0 or h < 5.0) else 0.0
+	var evening := smoothstep(17.5, 21.0, h) * 1.2 if h >= 17.5 and h < 21.0 else 0.0
+	var dawn := (1.0 - smoothstep(5.0, 7.0, h)) * 0.8 if h >= 5.0 and h < 7.0 else 0.0
+	var f := maxf(night, maxf(evening, dawn))
+	if rest < 30.0:
+		f = maxf(f, 0.5)
+	return f
 
 
 func _update_state(mx: float) -> void:
