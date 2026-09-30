@@ -117,7 +117,7 @@ var values := {
 	"rest_blur": true,          # the distance blurs softly while you rest
 	"scout": {},                # look of your scout (see Scout.DEFAULT_LOOK)
 	"third_person": false,
-	"emote_wheel": [],          # 8 emote ids for the wheel (empty = Scout.DEFAULT_WHEEL)
+	"emote_wheel": [],          # 24 emote ids for the wheel's three pages (empty = ScoutEmotes.DEFAULT_WHEEL)
 	"emote_camera": true,       # first person: show the emote from behind while it plays
 	"voice_enabled": false,     # local microphone test (nothing is sent)
 	"voice_device": "Default",

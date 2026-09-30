@@ -65,7 +65,7 @@ func _process(_delta: float) -> bool:
 		c.queue_free()
 	var id: String = _ids[_i]
 	var sc := Scout.new(Scout.DEFAULT_LOOK)
-	sc.set_process(false)
+	sc.frozen = true
 	sc.rotation.y = -0.6 if id not in ["lie"] else 0.2
 	_holder.add_child(sc)
 	if id == "sit":
@@ -77,7 +77,7 @@ func _process(_delta: float) -> bool:
 		sc.play_emote(id)
 	# the most expressive moment of each emote
 	var t: float = {"point": 1.0, "thumbs": 0.9, "cheer": 0.35, "laugh": 1.1, "shrug": 1.0, "facepalm": 1.2, "clap": 1.05,
-		"salute": 1.0, "think": 1.4, "yawn": 1.0, "cower": 1.0, "stomp": 0.8, "look": 1.3, "wave": 1.0, "sit": 1.6, "lie": 1.6}.get(id, 1.0)
+		"salute": 1.0, "think": 1.4, "yawn": 1.0, "cower": 1.0, "stomp": 0.8, "look": 1.3, "wave": 1.0, "sit": 1.6, "lie": 1.6}.get(id, maxf(float(Scout.EMOTES[id][1]), 1.0) * 0.45)
 	for f in int(t * 60.0):
 		sc.animate(1.0 / 60.0)
 	var target := Vector3(0, 1.02, 0) if id not in ["sit", "lie"] else Vector3(0.0, 0.6, 0)

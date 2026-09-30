@@ -600,7 +600,8 @@ func _build_settings() -> Control:
 	_check(list, "voice_lipsync", "My scout's mouth moves when I talk")
 	list = _tab("Controls")
 	_check(list, "emote_camera", "Emote camera (first person steps back while an emote plays)")
-	for i in 8:
+	_note(list, "The emote wheel has three pages of eight (hold G / LB; mouse wheel, Q/E or the D-pad flips pages).")
+	for i in 24:
 		_emote_slot(list, i)
 	_slider(list, "mouse_sens", "Mouse sensitivity", 0.2, 3.0, 0.05, func(v): return "%.2f" % v)
 	_note(list, "Controller: left stick walks, right stick looks, A jump, B crouch, L3 sprint, X use, Y backpack, RB use the item in your hand, D-pad items and rest, hold LB for emotes, LT binoculars, R3 view, Start pause.")
@@ -677,19 +678,16 @@ func show_bench_result(report: String, path: String) -> void:
 
 ## One slot of the emote wheel (G)
 func _emote_slot(list: VBoxContainer, i: int) -> void:
-	var row := _row(list, "Emote wheel slot %d" % (i + 1))
+	var row := _row(list, "Page %d · slot %d" % [i / 8 + 1, i % 8 + 1])
 	var ob := OptionButton.new()
 	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var ids: Array = Scout.EMOTES.keys()
 	for id in ids:
 		ob.add_item(Scout.EMOTES[id][0])
-	var cur: Array = Settings.values.get("emote_wheel", [])
-	if cur.size() != 8:
-		cur = Scout.DEFAULT_WHEEL.duplicate()
+	var cur: Array = ScoutEmotes.wheel_slots(Settings.values.get("emote_wheel", []))
 	ob.select(ids.find(cur[i]))
 	ob.item_selected.connect(func(k: int):
-		var w: Array = Settings.values.get("emote_wheel", [])
-		w = w.duplicate() if w.size() == 8 else Scout.DEFAULT_WHEEL.duplicate()
+		var w: Array = ScoutEmotes.wheel_slots(Settings.values.get("emote_wheel", []))
 		w[i] = ids[k]
 		Settings.set_value("emote_wheel", w, false))
 	row.add_child(ob)

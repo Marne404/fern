@@ -1,13 +1,14 @@
 class_name EmoteWheel
 extends CanvasLayer
-## Radial emote menu: hold G, move the mouse towards a slot (no cursor needed), release to play.
-## Keys 1–8 pick a slot directly while the wheel is open.
+## Radial emote menu: hold G (LB), move the mouse (right stick) towards a slot, release to play.
+## Three pages of eight: mouse wheel, Q/E or the D-pad left/right flip them; keys 1–8 pick a slot directly.
 
 signal chosen(id: String)
 
 const RADIUS := 200.0
 const INNER := 74.0
 const SLOTS := 8
+const PAGES := 3
 
 var _root: Control
 var _open := false
@@ -16,6 +17,9 @@ var _sel := -1
 var _ids: Array = []
 var _icons: Array[Texture2D] = []
 var _anim := 0.0
+var _page := 0
+var _all: Array = []
+var _page_anim := 0.0
 
 
 func _ready() -> void:
@@ -31,8 +35,8 @@ func _ready() -> void:
 
 ## Re-read the slots from the settings
 func reload() -> void:
-	var w: Array = Settings.values.get("emote_wheel", [])
-	_ids = w.duplicate() if w.size() == SLOTS else Scout.DEFAULT_WHEEL.duplicate()
+	_all = ScoutEmotes.wheel_slots(Settings.values.get("emote_wheel", []))
+	_ids = _all.slice(_page * SLOTS, _page * SLOTS + SLOTS)
 	_icons.clear()
 	for id in _ids:
 		var path := "res://assets/emotes/%s.png" % id
@@ -67,6 +71,26 @@ func close(play := true) -> void:
 func _input(event: InputEvent) -> void:
 	if not _open:
 		return
+	# flip pages
+	var flip := 0
+	if event is InputEventMouseButton and event.pressed and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+		flip = -1 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1
+	elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode in [KEY_Q, KEY_E]:
+		flip = -1 if event.physical_keycode == KEY_Q else 1
+	elif event is InputEventJoypadButton and event.pressed and event.button_index in [JOY_BUTTON_DPAD_LEFT, JOY_BUTTON_DPAD_RIGHT]:
+		flip = -1 if event.button_index == JOY_BUTTON_DPAD_LEFT else 1
+	elif event is InputEventJoypadButton:
+		# the other pad buttons don't reach the game while the wheel is open
+		if event.button_index != JOY_BUTTON_LEFT_SHOULDER:
+			get_viewport().set_input_as_handled()
+		return
+	if flip != 0:
+		_page = posmod(_page + flip, PAGES)
+		reload()
+		_page_anim = 0.0
+		get_viewport().set_input_as_handled()
+		_root.queue_redraw()
+		return
 	if event is InputEventMouseMotion:
 		# the mouse steers the selection, the camera stays still
 		_aim = (_aim + event.relative * 0.9).limit_length(RADIUS)
@@ -89,6 +113,7 @@ func _input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if _open:
+		_page_anim = minf(_page_anim + delta * 7.0, 1.0)
 		# controller: the right stick points at a slot (it stays selected when the stick springs back)
 		var st := GameInput.right_stick()
 		if st.length() > 0.45:
@@ -126,8 +151,16 @@ func _draw_wheel() -> void:
 		if _icons[i]:
 			_root.draw_texture_rect(_icons[i], Rect2(p - Vector2(s, s) * 0.5, Vector2(s, s)), false)
 		_root.draw_string(font, p + Vector2(-5, s * 0.5 + 6), str(i + 1), HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(line, 0.8 * ease))
+	# page dots under the ring
+	for p in PAGES:
+		var dp := c + Vector2((p - (PAGES - 1) * 0.5) * 22.0, r + 26.0)
+		_root.draw_circle(dp, 7.0 if p == _page else 5.0, Color(1.0, 0.85, 0.3, ease) if p == _page else Color(line, 0.5 * ease))
+	var hint := "%s / %s  page" % ["D-pad ←", "→"] if GameInput.using_pad else "wheel · Q / E  page"
+	var hw := font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x
+	_root.draw_string_outline(font, c + Vector2(-hw * 0.5, r + 56.0), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 5, Color(0.1, 0.13, 0.09, 0.8 * ease))
+	_root.draw_string(font, c + Vector2(-hw * 0.5, r + 56.0), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(line, 0.85 * ease))
 	# name in the middle
-	var text := "Emotes" if _sel < 0 else String(Scout.EMOTES[_ids[_sel]][0])
+	var text := ("Emotes · %d" % (_page + 1)) if _sel < 0 else String(Scout.EMOTES[_ids[_sel]][0])
 	var size := 26 if _sel >= 0 else 22
 	var tw := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	_root.draw_string_outline(font, c + Vector2(-tw * 0.5, 9), text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, 6, Color(0.1, 0.13, 0.09, ease))

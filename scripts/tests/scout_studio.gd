@@ -252,6 +252,38 @@ func _initialize() -> void:
 					sc.gear.hold("L", sets[i][3])
 				_scouts.append(sc)
 			_cam.look_at_from_position(Vector3(0, 1.3, 6.2) * Vector3(1, 1, -1), Vector3(0, 0.85, 0))
+		"emotes":
+			# every emote at --at of its length (default 0.45); --only=a,b for a few
+			var ids: Array = Scout.EMOTES.keys().filter(func(x): return not x in ["sit", "lie"])
+			if _args.has("only"):
+				ids = Array(str(_args["only"]).split(","))
+			var cols := mini(8, ids.size())
+			for i in ids.size():
+				var sc := Scout.new(Scout.DEFAULT_LOOK)
+				sc.set_look_data({"hat": 0})
+				sc.apply_look()
+				sc.position = Vector3(-(i % cols - (cols - 1) * 0.5) * 1.05, -(i / cols) * 2.3, 0)
+				sc.rotation.y = -0.45
+				world.add_child(sc)
+				sc.frozen = true
+				var lab := Label3D.new()
+				lab.text = String(Scout.EMOTES[ids[i]][0])
+				lab.font_size = 56
+				lab.outline_size = 12
+				lab.position = Vector3(0, 2.0, 0)
+				lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+				sc.add_child(lab)
+				for f in 30:
+					sc.animate(1.0 / 60.0)
+				sc.play_emote(ids[i])
+				var dur: float = maxf(float(Scout.EMOTES[ids[i]][1]), 1.0)
+				for f in int(dur * float(_args.get("at", "0.45")) * 60.0):
+					sc.animate(1.0 / 60.0)
+				_scouts.append(sc)
+			var rows := ceili(ids.size() / float(cols))
+			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+			_cam.size = 2.3 * rows + 0.3
+			_cam.look_at_from_position(Vector3(0, 1.1 - (rows - 1) * 1.15, -8.0), Vector3(0, 1.1 - (rows - 1) * 1.15, 0))
 		"actions":
 			# every item action, frozen at --at (share of its length, default 0.55)
 			var kinds: Array = ScoutActions.KINDS.keys()
