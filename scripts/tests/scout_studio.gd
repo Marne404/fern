@@ -252,6 +252,40 @@ func _initialize() -> void:
 					sc.gear.hold("L", sets[i][3])
 				_scouts.append(sc)
 			_cam.look_at_from_position(Vector3(0, 1.3, 6.2) * Vector3(1, 1, -1), Vector3(0, 0.85, 0))
+		"actions":
+			# every item action, frozen at --at (share of its length, default 0.55)
+			var kinds: Array = ScoutActions.KINDS.keys()
+			var items := {"eat": "apfel", "drink": "wasserflasche", "throw": "kiesel", "apply": "verband", "dress": "muetze", "kite": "", "read": "karte"}
+			var cols := 8
+			for i in kinds.size():
+				var sc := Scout.new(Scout.DEFAULT_LOOK)
+				sc.set_look_data({"hat": 0})
+				sc.apply_look()
+				sc.position = Vector3(-(i % cols - (cols - 1) * 0.5) * 1.05, -(i / cols) * 2.3, 0)
+				sc.rotation.y = -0.6
+				world.add_child(sc)
+				sc.frozen = true
+				for f in 30:
+					sc.animate(1.0 / 60.0)
+				var kind: String = kinds[i]
+				var lab := Label3D.new()
+				lab.text = kind
+				lab.font_size = 64
+				lab.outline_size = 12
+				lab.position = Vector3(0, 2.05, 0)
+				lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+				sc.add_child(lab)
+				if kind == "read":
+					sc.gear.set_items([ItemDefs.make("karte")])
+					sc.gear.hold("R", "karte")
+				sc.play_action(kind, items.get(kind, ""), 2.0 if ScoutActions.duration(kind) <= 0.0 else -1.0)
+				var dur: float = ScoutActions.duration(kind) if ScoutActions.duration(kind) > 0.0 else 2.0
+				for f in int(dur * float(_args.get("at", "0.55")) * 60.0):
+					sc.animate(1.0 / 60.0)
+				_scouts.append(sc)
+			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+			_cam.size = 4.9
+			_cam.look_at_from_position(Vector3(0, 0.0, -8.0), Vector3(0, 0.0, 0))
 		"idle":
 			var names: Array = Scout.FIDGETS.keys()
 			for i in names.size():
@@ -376,6 +410,17 @@ func _clip_setup(world: Node3D, ground: MeshInstance3D) -> void:
 	gm.uv1_scale = Vector3(0.25, 0.25, 0.25)
 	_clip = Scout.new(Scout.DEFAULT_LOOK)
 	world.add_child(_clip)
+	# --gear=stock,laterne: carried things, the first two held (right, left)
+	if _args.has("gear"):
+		var ids: PackedStringArray = str(_args["gear"]).split(",")
+		var items := []
+		for id in ids:
+			items.append(ItemDefs.make(id))
+		_clip.gear.set_items(items)
+		if ids.size() > 0:
+			_clip.gear.hold("R", ids[0])
+		if ids.size() > 1:
+			_clip.gear.hold("L", ids[1])
 	_clip.frozen = true
 	_clip_len = float(_args.get("len", "24"))
 	_cam.fov = 40.0

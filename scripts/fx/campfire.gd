@@ -46,6 +46,12 @@ func light() -> void:
 	fires[uid] = Time.get_ticks_msec() / 1000.0 + BURN_TIME
 
 
+## Doused (water pistol): the flames die, the embers still smoke a little
+func douse() -> void:
+	if is_burning():
+		fires[uid] = Time.get_ticks_msec() / 1000.0 - GLOW_TIME * 0.4
+
+
 ## How strong the fire should be: 1 while burning (fading in the last minute), embers glow afterwards
 func _target() -> float:
 	var t := time_left()

@@ -3,6 +3,8 @@ extends Node3D
 ## A kite flying downwind behind its owner for a while, dancing in the gusts, on a string to the hand.
 
 var owner_body: Node3D
+## the hand that holds the string (else the body)
+var hand_node: Node3D
 var life := 22.0
 var _t := 0.0
 var _mesh: MeshInstance3D
@@ -37,7 +39,7 @@ func _process(delta: float) -> void:
 	life -= delta
 	var down := WindGusts.direction()
 	var ws := WindGusts.current_strength
-	var hand := owner_body.global_position + Vector3(0, 1.1, 0)
+	var hand := hand_node.global_transform * Vector3(0, -0.06, 0) if is_instance_valid(hand_node) else owner_body.global_position + Vector3(0, 1.1, 0)
 	# climbs at the start, sinks when time runs out, dances with the gusts
 	var height := lerpf(1.5, 7.5 + ws * 1.5, minf(_t / 3.0, 1.0)) * clampf(life / 3.0, 0.0, 1.0)
 	var dist := 7.0 + ws * 2.0

@@ -144,6 +144,11 @@ var _face_state := ""
 var _prop_angle := 0.0
 var _emote := ""
 var _bubbles: ScoutBubbles
+# item action (ScoutActions): kind, time, duration, state
+var _action := ""
+var _action_t := 0.0
+var _action_dur := 0.0
+var _action_st := {}
 ## Carried, held and worn items (see ScoutGear)
 var gear: ScoutGear
 var _tear_t := 0.0
@@ -205,6 +210,31 @@ func play_emote(id: String) -> void:
 		_wave_t = EMOTES[id][1]
 	elif id == "yawn":
 		fidget("stretch")
+
+
+## Something done with an item (see ScoutActions.KINDS); item: what shows in the hand ("" = the action's own)
+func play_action(kind: String, item := "", dur := -1.0) -> void:
+	if not ScoutActions.KINDS.has(kind):
+		return
+	_action = kind
+	_action_t = 0.0
+	_action_dur = dur if dur >= 0.0 else ScoutActions.duration(kind)
+	_action_st = {}
+	var show: String = ScoutActions.KINDS[kind][1] if item == "" else item
+	if gear:
+		gear.show_temp(show)
+
+
+func stop_action() -> void:
+	if _action == "":
+		return
+	_action = ""
+	if gear:
+		gear.end_temp()
+
+
+func action_playing() -> String:
+	return _action
 
 
 ## A symbol above the head (see ScoutBubbles.KINDS)
@@ -1136,6 +1166,19 @@ func animate(delta: float) -> void:
 		gear.update(delta)
 		if not hands_busy:
 			head_rot.x += _hold_pose(arm, arm_osc, delta)
+	# something done with an item (arms and face; walking goes on)
+	if _action != "":
+		_action_t += delta
+		if (_action_dur > 0.0 and _action_t > _action_dur) or hands_busy:
+			stop_action()
+		else:
+			var aoff := ScoutActions.pose(self, _action, _action_t, _action_dur, arm, face, _action_st)
+			head_rot += aoff["head"]
+			chest_rot += aoff["chest"]
+			rig_pos += aoff["rig"]
+			# the arms doing something don't swing
+			for i in 2:
+				arm_osc[i] = [arm_osc[i][0] * 0.2, arm_osc[i][1] * 0.2, arm_osc[i][2] * 0.2]
 
 	# emotes override arms, legs, head and face (blended in and out)
 	if _emote != "":
@@ -1196,6 +1239,8 @@ func animate(delta: float) -> void:
 	# the big head lags a little behind the body (wobbly, PEAK-like)
 	neck.rotation = Vector3(_spring("nx", head_rot.x, delta, 70.0, 8.0), _spring("ny", head_rot.y, delta, 60.0, 9.0), _spring("nz", head_rot.z, delta, 70.0, 7.0))
 	_apply_legs(gxf, leg, delta)
+	if gear and gear.held("R") == "stock":
+		_update_stick(gxf, delta)
 	for i in 2:
 		var am: Array = _arms[i]
 		var ar: Array = arm[i]
@@ -1464,6 +1509,64 @@ func _apply_legs(gxf: Transform3D, leg: Array, delta: float) -> void:
 			lg[0].position = Vector3((i * 2 - 1) * FOOT_X, HIP_Y, 0)
 
 
+# walking stick: its tip is planted in the world with the left foot and swings forward with the right one
+var _stick_p := Vector3.INF
+var _stick_from := Vector3.ZERO
+var _stick_to := Vector3.ZERO
+var _stick_planted := true
+
+
+func _update_stick(gxf: Transform3D, delta: float) -> void:
+	var n := gear.item_node("stock")
+	if n == null or not n.is_inside_tree() or not n.visible:
+		return
+	var body: Node3D = n.get_child(0)
+	var fwd := -gxf.basis.z
+	var right := gxf.basis.x
+	var v := Vector2(_gait_v.x, _gait_v.z).length()
+	var rest := gxf.origin + right * 0.27 + fwd * 0.12
+	rest.y = _ground_at(rest, gxf)
+	if _stick_p == Vector3.INF or _stick_p.distance_to(gxf.origin) > 1.6:
+		_stick_p = rest
+	if v > 4.2:
+		# sprinting: the stick is carried, tip forward and down
+		_stick_planted = true
+		_stick_p = _stick_p.lerp(n.global_position + fwd * 0.5 + Vector3(0, -0.45, 0), 1.0 - exp(-14.0 * delta))
+	elif _feet.size() == 2 and _ik_w > 0.5 and v > 0.3:
+		var ft: Dictionary = _feet[0]
+		var planted: bool = ft["stance"]
+		if planted and not _stick_planted:
+			_stick_p = _stick_to
+		elif not planted and _stick_planted:
+			_stick_from = _stick_p
+		_stick_planted = planted
+		if not planted:
+			# where the left foot will land, a little to the right and ahead
+			var land: Vector3 = ft["t"]
+			_stick_to = land + right * 0.36 + fwd * 0.1
+			_stick_to.y = _ground_at(_stick_to, gxf)
+			var w: float = ft["w"]
+			var e := w * w * (3.0 - 2.0 * w)
+			_stick_p = _stick_from.lerp(_stick_to, e) + Vector3(0, sin(PI * w) * 0.09, 0)
+	else:
+		_stick_planted = true
+		_stick_p = _stick_p.lerp(rest, 1.0 - exp(-6.0 * delta))
+	var grip := n.global_position
+	var d := _stick_p - grip
+	var dist := d.length()
+	if dist < 0.05:
+		return
+	var dir := d / dist
+	var x := dir.cross(fwd)
+	if x.length() < 0.01:
+		x = right
+	x = x.normalized()
+	# pivot -Y along the stick towards the tip; the grip slides along it
+	n.global_basis = Basis(x, -dir, x.cross(-dir)).orthonormalized()
+	var half := 0.6 * 0.85
+	body.position = Vector3(0, -clampf(dist - half, -0.3, 0.25), 0)
+
+
 ## Arm targets for the items in the hands; returns how far the head looks down (reading)
 func _hold_pose(arm: Array, osc: Array, delta: float) -> float:
 	var look_down := 0.0
@@ -1490,13 +1593,13 @@ func _hold_pose(arm: Array, osc: Array, delta: float) -> float:
 				swing = 0.8
 			"read", "palm":
 				# hands in front of the chest (the item is anchored there), head down to look at it
-				target = [0.75, -sd * 0.12, 1.25, sd * 0.45, 0.2, 0.0] if grip == "read" else [0.5, -sd * 0.1, 1.45, sd * 0.5, 0.45, 0.0]
+				target = reach(i, Vector3(sd * 0.1, 0.8, -0.32), Vector2(0.2, 0)) if grip == "read" else reach(i, Vector3(sd * 0.07, 0.8, -0.3), Vector2(0.9, 0))
 				swing = 0.0
 				look_down = maxf(look_down, 0.42 * w)
 				# the map and the book need both hands
 				if grip == "read":
 					var j := 1 - i
-					arm[j] = _blend_arm(arm[j], [0.75, sd * 0.12, 1.25, -sd * 0.45, 0.2, 0.0], w)
+					arm[j] = _blend_arm(arm[j], reach(j, Vector3(-sd * 0.1, 0.8, -0.32), Vector2(0.2, 0)), w)
 					osc[j] = [osc[j][0] * (1.0 - w), osc[j][1] * (1.0 - w), osc[j][2] * (1.0 - w)]
 			_:
 				target = [0.3, sd * 0.1, 0.85, 0.0, 0.25, 0.0]
@@ -1505,6 +1608,37 @@ func _hold_pose(arm: Array, osc: Array, delta: float) -> float:
 		var k := lerpf(1.0, swing, w)
 		osc[i] = [osc[i][0] * k, osc[i][1] * k, osc[i][2] * k]
 	return look_down
+
+
+## Arm IK: the arm angles [pitch, roll, elbow, twist, wrist pitch, wrist roll] that bring the middle of the mitten
+## to target (chest space, the model's rest coordinates). The elbow stays low and a little outside.
+const UPPER_ARM := 0.2
+const FOREARM := 0.215     # elbow to the middle of the mitten
+const SHOULDER := Vector3(0.205, 0.965, 0.0)
+
+
+func reach(i: int, target: Vector3, wrist := Vector2.ZERO) -> Array:
+	var sd := -1.0 if i == 0 else 1.0
+	var t := target - Vector3(SHOULDER.x * sd, SHOULDER.y, SHOULDER.z)
+	var dist := clampf(t.length(), 0.08, (UPPER_ARM + FOREARM) * 0.995)
+	var ce := clampf((dist * dist - UPPER_ARM * UPPER_ARM - FOREARM * FOREARM) / (2.0 * UPPER_ARM * FOREARM), -1.0, 1.0)
+	var ex := acos(ce)
+	# the arm's end with this elbow bend, before the shoulder turns it (hanging down, forearm forward)
+	var e0 := Vector3(0, -UPPER_ARM - FOREARM * cos(ex), -FOREARM * sin(ex))
+	var td := t.normalized() * e0.length()
+	var base := Basis(Quaternion(e0.normalized(), td.normalized()))
+	# twist around the shoulder-hand line: pick the one with the elbow lowest and slightly outside
+	var best := base
+	var best_v := INF
+	for k in 16:
+		var b := Basis(td.normalized(), TAU * k / 16.0) * base
+		var elbow := b * Vector3(0, -UPPER_ARM, 0)
+		var v := elbow.y - sd * elbow.x * 0.6 + elbow.z * 0.2
+		if v < best_v:
+			best_v = v
+			best = b
+	var e := best.get_euler()
+	return [e.x, e.z, ex, e.y, wrist.x, wrist.y]
 
 
 static func _blend_arm(a: Array, b: Array, w: float) -> Array:

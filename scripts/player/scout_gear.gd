@@ -131,6 +131,8 @@ func _refresh_hung(items: Array) -> void:
 			_remove(_hung[id])
 			_hung.erase(id)
 	for id in want:
+		if not _hung.has(id) and _lit.get(id, false):
+			call_deferred("_update_glow")
 		if not _hung.has(id):
 			var h: Array = HANG[id]
 			_hung[id] = _attach(_spaces[h[0]], id, h[1], h[2], h[3], h[4])
@@ -150,6 +152,7 @@ func hold(side: String, id: String) -> void:
 		var parent: Node3D = _spaces["chest"] if anchored(id) else hand
 		_held[side] = _attach(parent, id, d[2], d[3], d[4], grip_of(id) == "hang")
 	_refresh_hung_keep()
+	_update_glow()
 
 
 func _refresh_hung_keep() -> void:
@@ -157,6 +160,134 @@ func _refresh_hung_keep() -> void:
 	for k in _carried:
 		items.append({"id": k, "equipped": scout.wear_ids.has(k)})
 	_refresh_hung(items)
+
+
+# ---------------------------------------------------------------- items shown during an action (ScoutActions)
+var _temp: Node3D
+var _temp_id := ""
+var _temp_hidden: Array[Node3D] = []
+
+## How an item sits in the right hand during an action: id -> [position, rotation, scale]
+const TEMP := {
+	"kamera": [Vector3(0.05, -0.08, -0.03), Vector3(PI * 0.5, 0, 0), 1.0],
+	"fernglas": [Vector3(0.06, -0.08, -0.02), Vector3(0, 0, 0), 1.0],
+	"mundharmonika": [Vector3(0.05, -0.09, -0.02), Vector3(0, 0, PI * 0.5), 1.1],
+	"pfeife": [Vector3(0.0, -0.1, -0.02), Vector3(0, 0, PI * 0.5), 1.2],
+	"gummihuhn": [Vector3(0.0, -0.12, -0.04), Vector3(0, PI, 0), 1.2],
+	"wasserpistole": [Vector3(0.0, -0.1, -0.02), Vector3(-PI * 0.5, PI * 0.5, 0), 1.2],
+	"wasserflasche": [Vector3(0.0, -0.12, -0.02), Vector3.ZERO, 1.0],
+	"tee": [Vector3(0.0, -0.12, -0.02), Vector3.ZERO, 1.0],
+	"streichhoelzer": [Vector3(0.0, -0.1, -0.03), Vector3.ZERO, 1.2],
+	"roast_stick": [Vector3(0.0, -0.07, -0.02), Vector3(-PI * 0.5, 0, 0), 1.0],
+}
+
+
+## Shows an item in the right hand for an action; what is held or hanging with the same id hides meanwhile
+func show_temp(id: String) -> void:
+	end_temp()
+	if id == "":
+		return
+	_temp_id = id
+	var hand: Node3D = scout._arms[1][2]
+	var d: Array = TEMP.get(id, [Vector3(0, -0.105, -0.035), Vector3.ZERO, 1.0])
+	if id == "roast_stick":
+		_temp = _attach_mesh(hand, _roast_stick(), d[0], d[1], d[2])
+	else:
+		_temp = _attach(hand, id, d[0], d[1], d[2], false)
+	for n in [_held["R"], _hung.get(id)]:
+		if n and (n as Node3D).visible:
+			(n as Node3D).visible = false
+			_temp_hidden.append(n)
+
+
+func end_temp() -> void:
+	if _temp:
+		_remove(_temp)
+		_temp = null
+	_temp_id = ""
+	for n in _temp_hidden:
+		if is_instance_valid(n):
+			n.visible = true
+	_temp_hidden.clear()
+
+
+## Rubber chicken squeezing
+func squash_temp(k: float) -> void:
+	if _temp and _temp_id == "gummihuhn":
+		_temp.scale = Vector3(1.0 + (1.0 - k) * 0.5, k, 1.0 + (1.0 - k) * 0.3)
+
+
+func _attach_mesh(parent: Node3D, m: Mesh, pos: Vector3, rot: Vector3, sc: float) -> Node3D:
+	var pivot := Node3D.new()
+	pivot.position = pos
+	pivot.rotation = rot
+	pivot.scale = Vector3.ONE * sc
+	parent.add_child(pivot)
+	var mi := MeshInstance3D.new()
+	mi.mesh = m
+	mi.set_meta("role", "gear")
+	pivot.add_child(mi)
+	scout._meshes.append(mi)
+	return pivot
+
+
+## A green twig with a marshmallow on the tip (pointing along -Y of the hand, i.e. away from the palm)
+static var _stick_mesh: ArrayMesh
+
+
+static func _roast_stick() -> ArrayMesh:
+	if _stick_mesh:
+		return _stick_mesh
+	var b := ItemModels.B.new()
+	b.add(Mesh3.tube([Vector3(0, 0.1, 0), Vector3(0.01, -0.3, 0.01), Vector3(0, -0.72, 0.03)], 0.011, 6), Color("8b5a36"))
+	b.add(Mesh3.blob(Vector3(0.028, 0.034, 0.028), 3.0, 8, 12, Transform3D(Basis(), Vector3(0, -0.74, 0.03))), Color("fff2dc"))
+	_stick_mesh = b.commit()
+	_stick_mesh.surface_set_material(0, ItemModels.material())
+	return _stick_mesh
+
+
+## The node showing an item (in a hand or hanging), or null
+func item_node(id: String) -> Node3D:
+	for side in ["L", "R"]:
+		if _held_id[side] == id and _held[side]:
+			return _held[side]
+	return _hung.get(id)
+
+
+## A lit lantern glows (a warm light inside the glass)
+var _lit := {}
+
+
+func set_lit(id: String, on: bool) -> void:
+	_lit[id] = on
+	_update_glow()
+
+
+func _update_glow() -> void:
+	for id in ["laterne", "taschenlampe"]:
+		var n := item_node(id)
+		if n == null:
+			continue
+		var g: Node3D = n.get_node_or_null("Glow")
+		var on: bool = _lit.get(id, false)
+		if on and g == null:
+			var mi := MeshInstance3D.new()
+			mi.name = "Glow"
+			var sm := SphereMesh.new()
+			sm.radius = 0.03 if id == "laterne" else 0.018
+			sm.height = sm.radius * 2.0
+			mi.mesh = sm
+			var m := StandardMaterial3D.new()
+			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			m.albedo_color = Color(1.0, 0.85, 0.5) if id == "laterne" else Color(1.0, 0.97, 0.85)
+			mi.material_override = m
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var body: Node3D = n.get_child(0)
+			var inner: MeshInstance3D = body.get_child(0)
+			mi.position = body.position + body.basis * (inner.position + Vector3(0, 0.0, 0))
+			n.add_child(mi)
+		elif not on and g:
+			g.queue_free()
 
 
 ## A holding scout's hands are shown empty while swimming, climbing or lying (the items are back on the pack)

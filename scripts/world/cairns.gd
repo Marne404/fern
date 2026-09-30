@@ -165,6 +165,8 @@ func use_stone(w: Wanderer, it: Dictionary) -> void:
 	for d in [3.0, 5.0, 7.0, 10.0, 14.0]:
 		var q: Vector3 = wp + flat * d
 		if gen.water_level(q.x, q.z) > -INF:
+			if w.scout:
+				w.scout.play_action("throw", it["id"])
 			if it["id"] != "kiesel":
 				w.message.emit("Too round to skip. It sinks with a plop.")
 				w.inventory.remove(it)
@@ -173,6 +175,8 @@ func use_stone(w: Wanderer, it: Dictionary) -> void:
 			w.inventory.remove(it)
 			_throw(w, flat, _roll_skips(), true)
 			return
+	if w.scout:
+		w.scout.play_action("light", it["id"], 1.4)
 	# a cairn close by?
 	for key in _nodes:
 		var n: Node3D = _nodes[key]

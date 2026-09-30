@@ -217,9 +217,13 @@ func _test_all_items(p: Wanderer) -> void:
 		await get_tree().process_frame
 	check("Light goes when the lantern is dropped", p._light == null)
 	# walking stick lowers climbing effort
-	inv.add(ItemDefs.make("stock"))
+	var stick := ItemDefs.make("stock")
+	inv.add(stick)
 	await frames(3)
-	check("Walking stick eases climbs", p.body.climb_factor < 1.0, "%.2f" % p.body.climb_factor)
+	var packed := p.body.climb_factor
+	p.hold_item(stick)
+	await frames(3)
+	check("Walking stick eases climbs (in the hand)", p.body.climb_factor < 1.0 and packed >= 1.0, "%.2f / packed %.2f" % [p.body.climb_factor, packed])
 	for c in main.dropped.get_children():
 		c.free()
 
@@ -319,6 +323,10 @@ func _test_steps(p: Wanderer) -> void:
 ## Gear: only what is in the backpack hangs on the scout or can be held; dropping empties the hand
 func _test_gear(p: Wanderer) -> void:
 	var inv := p.inventory
+	for it in inv.items.duplicate():
+		inv.remove(it)
+	p.hand_r = -1
+	p.hand_l = -1
 	var stick := ItemDefs.make("stock")
 	var lantern := ItemDefs.make("laterne")
 	inv.add(stick)

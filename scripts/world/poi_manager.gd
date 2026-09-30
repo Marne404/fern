@@ -359,6 +359,8 @@ func _campfire(root: Node3D, p: Dictionary) -> void:
 		if fire.is_burning():
 			var mm := _find(w, "marshmallows")
 			if not mm.is_empty():
+				if w.scout:
+					w.scout.play_action("roast")
 				mm["charges"] -= 1
 				w.body.food = minf(w.body.food + 14.0, 100.0)
 				w.body.stamina = minf(w.body.stamina + 20.0, w.body.max_stamina())
@@ -391,6 +393,8 @@ func _light_fire(w: Wanderer, fire: Campfire) -> void:
 	if lighter.is_empty() and matches.get("wet", false):
 		w.message.emit("The matches are soaked. They won't light.")
 		return
+	if w.scout:
+		w.scout.play_action("light", "feuerzeug" if not lighter.is_empty() else "streichhoelzer")
 	if lighter.is_empty():
 		matches["charges"] -= 1
 		if matches["charges"] <= 0:

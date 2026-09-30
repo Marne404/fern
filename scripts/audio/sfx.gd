@@ -345,6 +345,21 @@ static func _make(which: String) -> AudioStreamWAV:
 				var t := float(i) / RATE
 				lp += (randf_range(-1.0, 1.0) - lp) * 0.35
 				samples.append(lp * sin(t / 0.25 * PI) * 0.6)
+		"shutter":
+			# mechanical double click
+			var n := int(RATE * 0.16)
+			for i in n:
+				var t := float(i) / RATE
+				var c1 := exp(-t * 180.0)
+				var c2 := exp(-maxf(t - 0.07, 0.0) * 160.0) * float(t > 0.07)
+				samples.append((randf() - 0.5) * (c1 + c2 * 0.8) * 0.9 + sin(t * TAU * 1900.0) * (c1 + c2) * 0.2)
+		"spray":
+			var n := int(RATE * 0.7)
+			var lp := 0.0
+			for i in n:
+				var t := float(i) / RATE
+				lp += (randf_range(-1.0, 1.0) - lp) * 0.6
+				samples.append(lp * 0.35 * minf(t / 0.03, 1.0) * minf((0.7 - t) / 0.2, 1.0) * (0.8 + 0.2 * sin(t * TAU * 9.0)))
 		"squeak":
 			var n := int(RATE * 0.35)
 			var ph := 0.0

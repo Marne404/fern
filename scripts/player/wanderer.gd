@@ -8,6 +8,8 @@ signal recovered
 signal message(text: String)
 ## a pebble or stone was used: main decides (skip it over water, add it to a cairn, start a cairn)
 signal use_stone(item: Dictionary)
+## the camera clicked: main takes the picture without the HUD
+signal photo_requested
 signal sleep_fade(on: bool)
 
 const WALK_SPEED := 3.4
@@ -187,6 +189,7 @@ func _process(delta: float) -> void:
 			_pitch = clampf(_pitch - lr.y * delta * zf, -1.45, 1.45)
 			_apply_look()
 	_zoom = can_act() and Input.is_action_pressed("zoom") and _has_item("fernglas")
+	_update_hand_things()
 	# the lamp was dropped or thrown: its light goes with it
 	if _light and not _has_item(_light_item):
 		_light.queue_free()
@@ -425,7 +428,7 @@ func _physics_process(delta: float) -> void:
 		_wall_push = 0.0
 
 	# passive item effects: walking stick in the pack, boots worn, harmonica after playing
-	body.climb_factor = (0.85 if _has_item("stock") else 1.0) * (0.8 if _wears("stiefel") else 1.0)
+	body.climb_factor = (0.85 if held_item("R").get("id", "") == "stock" else 1.0) * (0.8 if _wears("stiefel") else 1.0)
 	_harmonica_t = maxf(_harmonica_t - delta, 0.0)
 	body.rest_bonus = 1.5 if _harmonica_t > 0.0 else 1.0
 	var effort := 3 if swimming else (2 if sprint else (1 if dir != Vector3.ZERO else 0))
@@ -992,8 +995,10 @@ func use_item(item: Dictionary) -> void:
 				item["charges"] -= 1
 				body.water = minf(body.water + d.get("water", 0.0), 100.0)
 				inventory.changed.emit()
+				_act("drink", item["id"])
 				message.emit("A few sips of water.")
 				return
+			_act("drink" if d["kind"] == "trinken" else "eat", item["id"])
 			body.food = minf(body.food + d.get("food", 0.0), 100.0)
 			body.water = minf(body.water + d.get("water", 0.0), 100.0)
 			body.stamina = minf(body.stamina + 8.0 + d.get("stamina", 0.0), body.max_stamina())
@@ -1014,6 +1019,7 @@ func use_item(item: Dictionary) -> void:
 			else:
 				message.emit("%s – tasty." % d["name"])
 		"medizin":
+			_act("apply", item["id"])
 			body.health = minf(body.health + d.get("heal", 0.0), 100.0)
 			if d.has("heat_protect"):
 				body.heat_protect_t = d["heat_protect"]
@@ -1022,6 +1028,7 @@ func use_item(item: Dictionary) -> void:
 				message.emit("%s – better." % d["name"])
 			_consume(item, d)
 		"kleidung":
+			_act("dress", "")
 			inventory.toggle_equip(item)
 			message.emit("%s %s." % [d["name"], "put on" if item["equipped"] else "taken off"])
 		_:
@@ -1034,38 +1041,53 @@ func _use_special(item: Dictionary) -> void:
 		return
 	match item["id"]:
 		"kamera":
-			DirAccess.make_dir_recursive_absolute("user://reise")
-			var path := "user://reise/foto_%d.png" % Time.get_unix_time_from_system()
-			get_viewport().get_texture().get_image().save_png(path)
-			message.emit("Click! Photo saved.")
+			# up to the eye, click after a moment: the picture is taken without the HUD
+			_act("photo", "")
+			get_tree().create_timer(0.7).timeout.connect(func():
+				Sfx.play(self, "shutter", -6.0)
+				photo_requested.emit())
 		"gummihuhn":
-			Sfx.play(self, "squeak")
+			_act("squeeze", "")
+			get_tree().create_timer(0.2).timeout.connect(func(): Sfx.play(self, "squeak"))
 			message.emit("SQUEAK!")
 		"pfeife":
-			Sfx.play(self, "whistle", -8.0)
+			_act("whistle", "")
+			get_tree().create_timer(0.25).timeout.connect(func(): Sfx.play(self, "whistle", -8.0))
 			message.emit("FWEEEET!")
 		"mundharmonika":
+			_act("harmonica", "")
 			Sfx.play(self, "harmonica", -4.0)
-			message.emit("A little tune. Resting feels even better now." if resting else "A little tune.")
+			message.emit("A little tune. Resting feels even better now." if resting else "A little tune. The birds listen.")
 			_harmonica_t = 40.0
 		"taschenlampe", "laterne":
 			_toggle_light(item["id"])
 		"kompass":
+			if not is_held(item):
+				hold_item(item)
 			var tan := world.gen.path_point(_world_pos().z - 20.0) - world.gen.path_point(_world_pos().z)
 			message.emit("The trail heads %s." % _dir_name(Vector2(tan.x, tan.z)))
 		"karte":
+			if not is_held(item):
+				hold_item(item)
+			_act("read", "")
 			message.emit(_next_obstacle_text())
 		"messer":
 			_cut_rope()
 		"drachen":
 			_fly_kite()
+			_act("kite", "")
 		"muschel":
 			message.emit("Whoosh... you can hear the sea.")
 		"wasserpistole":
-			message.emit("Pssshh! (In multiplayer this hits your friends.)")
+			_act("spray", "")
+			get_tree().create_timer(0.25).timeout.connect(_spray)
+			message.emit("Pssshh!")
 		"fernglas":
 			message.emit("Hold the right mouse button to look through.")
 		"feldhandbuch":
+			if not is_held(item):
+				hold_item(item)
+			_act("read", "")
 			message.emit("Page 1: knots. Page 2: fire. Page 3: ... the pages are stuck together.")
 		"streichhoelzer", "feuerzeug":
 			message.emit("Look for a fire ring along the trail to light a campfire.")
@@ -1081,6 +1103,77 @@ const FORTUNES := ["The next hill is smaller than it looks.", "A friend will sha
 	"Adventure is just bad planning. Enjoy it.", "Tomorrow's trail starts with today's step."]
 
 var _harmonica_t := 0.0
+
+
+func _act(kind: String, item_id: String) -> void:
+	if scout:
+		scout.play_action(kind, item_id)
+
+
+## Lights follow the lantern / flashlight in the hand (third person), binoculars go up to the eyes
+func _update_hand_things() -> void:
+	if scout == null:
+		return
+	if _zoom and scout.action_playing() != "binoculars":
+		scout.play_action("binoculars")
+	elif not _zoom and scout.action_playing() == "binoculars":
+		scout.stop_action()
+	if _light == null:
+		return
+	var n := scout.gear.item_node(_light_item) if third_person else null
+	if _light_item == "laterne":
+		var at: Vector3 = n.global_position + Vector3(0, -0.14, 0) if n else global_position + global_basis * Vector3(0.25, 1.0, -0.2)
+		_light.global_position = at
+	else:
+		var aim := camera.global_position - camera.global_basis.z * 25.0
+		_light.global_position = n.global_position if n else head.global_position
+		if _light.global_position.distance_to(aim) > 0.5:
+			_light.look_at(aim, Vector3.UP)
+
+
+## Water pistol: a little arc of water; it puts out a campfire right ahead and rings the water
+func _spray() -> void:
+	var from: Vector3 = scout.gear.item_node("wasserpistole").global_position if scout and scout.gear.item_node("wasserpistole") else view_origin()
+	var fwd := -global_basis.z if third_person else -camera.global_basis.z
+	Sfx.play(self, "spray", -8.0)
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.amount = 40
+	p.lifetime = 0.8
+	p.explosiveness = 0.2
+	p.direction = Vector3(0, 0.25, -1)
+	p.spread = 6.0
+	p.initial_velocity_min = 5.0
+	p.initial_velocity_max = 6.0
+	p.gravity = Vector3(0, -9.8, 0)
+	p.scale_amount_min = 0.03
+	p.scale_amount_max = 0.05
+	var sm := SphereMesh.new()
+	sm.radius = 0.5
+	sm.height = 1.0
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.75, 0.9, 1.0, 0.7)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.roughness = 0.1
+	sm.material = mat
+	p.mesh = sm
+	get_parent().add_child(p)
+	p.global_position = from
+	p.look_at(from + fwd, Vector3.UP)
+	p.emitting = true
+	get_tree().create_timer(1.5).timeout.connect(p.queue_free)
+	for f in get_tree().get_nodes_in_group("campfire"):
+		var cf := f as Campfire
+		var rel: Vector3 = cf.global_position - global_position
+		if rel.length() < 4.5 and rel.normalized().dot(fwd) > 0.5 and cf.is_burning():
+			cf.douse()
+			message.emit("Pssshh! The fire hisses out.")
+	if world:
+		for d: float in [2.5, 3.5, 4.5]:
+			var q: Vector3 = global_position + fwd * d
+			var w := world.local_to_world(q)
+			if world.gen.water_level(w.x, w.z) > -INF:
+				add_ring(Vector3(q.x, world.gen.water_level(w.x, w.z), q.z), 0.6)
 
 # ================================================================ Hands
 ## Items in the hands (item uid, -1 = empty): right hand tools and things, left hand the light
@@ -1235,6 +1328,8 @@ func _toggle_light(id: String) -> void:
 	if _light and _light_item == id:
 		_light.queue_free()
 		_light = null
+		if scout:
+			scout.gear.set_lit(_light_item, false)
 		_light_item = ""
 		hand_l = -1
 		_sync_gear()
@@ -1261,6 +1356,9 @@ func _toggle_light(id: String) -> void:
 		_light = sp
 		head.add_child(sp)
 	_light_item = id
+	_light.top_level = true
+	if scout:
+		scout.gear.set_lit(id, true)
 	for it in inventory.items:
 		if it["id"] == id:
 			hand_l = it["uid"]
@@ -1272,6 +1370,8 @@ func _toggle_light(id: String) -> void:
 func _fly_kite() -> void:
 	var kite := Kite.new()
 	kite.owner_body = self
+	if scout:
+		kite.hand_node = scout._arms[1][2]
 	get_parent().add_child(kite)
 	message.emit("Up it goes!")
 

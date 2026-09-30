@@ -437,6 +437,7 @@ func start_journey() -> void:
 	player.recovered.connect(func(): hud.collapse_fade(false))
 	player.message.connect(hud.show_message)
 	player.use_stone.connect(func(it: Dictionary): cairns.use_stone(player, it))
+	player.photo_requested.connect(_take_photo)
 	player.sleep_fade.connect(func(on):
 		hud.collapse_fade(on, "Zzz …")
 		# sleeping through the night: you wake up in the morning (the clock jumps while the screen is dark)
@@ -818,6 +819,10 @@ func _process_inner(delta: float) -> void:
 		_patience = maxf(_patience - delta * 2.0, 0.0)
 	if _args.has("patient"):
 		_patience = 1.0
+	# the harmonica: the music steps back and the animals listen
+	if player and player._harmonica_t > 36.0:
+		_patience = maxf(_patience, 0.75)
+		music.duck(8.0, 4.0)
 	deer.patience = _patience
 	songbirds.patience = _patience
 	butterflies.patience = _patience
@@ -1331,6 +1336,26 @@ func _autopilot() -> Vector3:
 	var d := target - w
 	d.y = 0.0
 	return d.normalized()
+
+
+# ================================================================ Photos
+
+## The camera item: a picture of the view without the HUD, a white flash, saved to user://reise
+func _take_photo() -> void:
+	var layers: Array[CanvasLayer] = []
+	for c in get_children():
+		if c is CanvasLayer and (c as CanvasLayer).visible:
+			layers.append(c)
+			(c as CanvasLayer).visible = false
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	DirAccess.make_dir_recursive_absolute("user://reise")
+	var path := "user://reise/foto_%d.png" % Time.get_unix_time_from_system()
+	get_viewport().get_texture().get_image().save_png(path)
+	for l in layers:
+		l.visible = true
+	hud.flash()
+	hud.show_message("Click! Photo saved to your journey folder.")
 
 
 # ================================================================ Biome schedule

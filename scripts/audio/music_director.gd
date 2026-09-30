@@ -72,10 +72,20 @@ func _on_setting(k: String) -> void:
 		_apply_volume()
 
 
+## Softer for a while (the scout plays the harmonica)
+var _duck := 0.0
+var _duck_t := 0.0
+
+
+func duck(db: float, seconds: float) -> void:
+	_duck = db
+	_duck_t = seconds
+
+
 func _apply_volume() -> void:
 	var v: float = Settings.values.get("music_volume", 0.7)
 	var on: bool = Settings.values.get("music", true)
-	AudioServer.set_bus_volume_db(bus_idx, linear_to_db(maxf(v, 0.0001)) - 4.0)
+	AudioServer.set_bus_volume_db(bus_idx, linear_to_db(maxf(v, 0.0001)) - 4.0 - _duck_now)
 	AudioServer.set_bus_mute(bus_idx, not on or v <= 0.001)
 
 
@@ -156,7 +166,15 @@ func _playlist(ctx: String) -> Array:
 	return MusicTracks.SITUATIONS.get(ctx, MusicTracks.SITUATIONS["menu"])
 
 
+var _duck_now := 0.0
+
+
 func _process(delta: float) -> void:
+	_duck_t = maxf(_duck_t - delta, 0.0)
+	var want := _duck if _duck_t > 0.0 else 0.0
+	if absf(want - _duck_now) > 0.01:
+		_duck_now = move_toward(_duck_now, want, delta * 12.0)
+		_apply_volume()
 	_poll_loading()
 	_situation_hold = maxf(_situation_hold - delta, 0.0)
 	var changed := false

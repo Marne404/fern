@@ -452,3 +452,15 @@ class DayDial extends Control:
 		else:
 			draw_circle(p, 5.0, Color(0.93, 0.95, 1.0))
 			draw_circle(p + Vector2(2.2, -1.6), 3.8, UiTheme.INK)
+
+
+## A short white flash (camera)
+func flash() -> void:
+	var r := ColorRect.new()
+	r.color = Color(1, 1, 1, 0.85)
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(r)
+	var tw := create_tween()
+	tw.tween_property(r, "color:a", 0.0, 0.35)
+	tw.tween_callback(r.queue_free)
