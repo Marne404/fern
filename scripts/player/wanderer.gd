@@ -113,6 +113,8 @@ func _ready() -> void:
 	camera.far = 4000.0
 	camera.fov = Settings.values["fov"]
 	head.add_child(camera)
+	fp_hands = FirstPersonHands.new()
+	camera.add_child(fp_hands)
 	_arm = SpringArm3D.new()
 	_arm.position = Vector3(0, 0.12, 0)
 	_arm.spring_length = _cam_dist
@@ -1118,11 +1120,19 @@ func _update_hand_things() -> void:
 		scout.play_action("binoculars")
 	elif not _zoom and scout.action_playing() == "binoculars":
 		scout.stop_action()
+	# first person: the held things at the lower edge of the view
+	if fp_hands:
+		var hc := (scout._mat("hand") as ShaderMaterial).get_shader_parameter("color") as Color
+		var busy := swimming or climbing or not rope.is_empty() or resting or sleeping
+		fp_hands.update(get_process_delta_time(), not third_person and not busy and can_act(), held_item("R").get("id", ""),
+			held_item("L").get("id", ""), hc, scout._gait_g, Vector2(velocity.x, velocity.z).length(), _yaw, _light != null)
 	if _light == null:
 		return
 	var n := scout.gear.item_node(_light_item) if third_person else null
 	if _light_item == "laterne":
 		var at: Vector3 = n.global_position + Vector3(0, -0.14, 0) if n else global_position + global_basis * Vector3(0.25, 1.0, -0.2)
+		if not third_person and fp_hands and fp_hands.lantern_pos() != Vector3.INF:
+			at = fp_hands.lantern_pos()
 		_light.global_position = at
 	else:
 		var aim := camera.global_position - camera.global_basis.z * 25.0
@@ -1179,6 +1189,7 @@ func _spray() -> void:
 ## Items in the hands (item uid, -1 = empty): right hand tools and things, left hand the light
 var hand_r := -1
 var hand_l := -1
+var fp_hands: FirstPersonHands
 
 
 func _item_uid(uid: int) -> Dictionary:
