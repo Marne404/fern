@@ -83,6 +83,8 @@ var talk := 0.0
 var look := DEFAULT_LOOK.duplicate()
 ## Holds the current pose (studio filmstrips animate by hand)
 var frozen := false
+## Face parameters forced on top of everything (studio, tests)
+var face_override := {}
 ## true: StandardMaterial3D instead of the toon shader and no merging (for glTF export)
 var export_mode := false
 
@@ -103,8 +105,9 @@ var _meshes: Array[MeshInstance3D] = []
 var _shadow_only := false
 var _baked: Array = []
 var _baked_mat: ShaderMaterial
-const NO_BAKE := ["eye", "white", "mouth", "sclera", "tongue", "teeth", "brow"]
-const NO_SHADOW := ["eye", "white", "mouth", "cheek", "sclera", "tongue", "teeth", "brow", "glass"]
+const FACE_FX := ["star", "heart", "tear", "blush", "blushline", "anger", "ink", "note", "alert", "sleep"]
+const NO_BAKE := ["eye", "white", "mouth", "sclera", "tongue", "teeth", "brow", "star", "heart", "tear", "blush", "blushline", "anger", "ink", "note", "alert", "sleep"]
+const NO_SHADOW := ["eye", "white", "mouth", "cheek", "sclera", "tongue", "teeth", "brow", "glass", "star", "heart", "tear", "blush", "blushline", "anger", "ink", "note", "alert", "sleep"]
 
 var _t := 0.0
 # gait: cycle phase, smoothed world velocity and forward acceleration, the two feet, IK weight, pelvis
@@ -140,6 +143,8 @@ var _pupil := Vector2.ZERO
 var _face_state := ""
 var _prop_angle := 0.0
 var _emote := ""
+var _bubbles: ScoutBubbles
+var _tear_t := 0.0
 var _emote_t := 0.0
 
 
@@ -195,6 +200,12 @@ func play_emote(id: String) -> void:
 		_wave_t = EMOTES[id][1]
 	elif id == "yawn":
 		fidget("stretch")
+
+
+## A symbol above the head (see ScoutBubbles.KINDS)
+func bubble(kind: String, dur := 1.6, side := 0.0, big := 1.0) -> void:
+	if _bubbles and not _shadow_only:
+		_bubbles.pop(kind, dur, side, big)
 
 
 func stop_emote() -> void:
@@ -263,8 +274,11 @@ const FIXED := {
 	"mouth": Color("4a1d28"), "tongue": Color("e0566a"), "teeth": Color("fffaf2"), "brow": Color("1b1820"),
 	"badge1": Color("d8453e"), "badge2": Color("f2c230"), "badge3": Color("3d7fd6"), "badge4": Color("3aa99c"),
 	"wood": Color("a0703c"), "button": Color("f4efe4"), "glass": Color("1b1820"), "lace": Color("f4efe4"),
+	"star": Color("ffd23f"), "heart": Color("ff4f7a"), "tear": Color("8fd3ff"), "blush": Color("ff7a9a"),
+	"blushline": Color("d84a6a"), "anger": Color("e8453c"), "ink": Color("2a2230"), "note": Color("5b8fd9"),
+	"alert": Color("ffb02e"), "sleep": Color("8fb4ff"),
 }
-const GLOSSY := ["eye", "metal", "badge1", "badge2", "badge3", "badge4", "button", "glass"]
+const GLOSSY := ["eye", "metal", "badge1", "badge2", "badge3", "badge4", "button", "glass", "tear", "heart", "star"]
 const CLOTH := ["outfit", "pants", "scarf", "sash", "hat", "pack", "pack2", "pad", "sock", "collar"]
 
 
@@ -287,7 +301,8 @@ func _mat(role: String) -> Material:
 		shm.set_shader_parameter("color", c)
 		shm.set_shader_parameter("gloss", 1.0 if role in GLOSSY else 0.0)
 		shm.set_shader_parameter("cloth", 1.0 if role in CLOTH else 0.0)
-		shm.set_shader_parameter("emission", {"white": 1.0, "sclera": 0.55, "teeth": 0.5}.get(role, 0.0))
+		shm.set_shader_parameter("emission", {"white": 1.0, "sclera": 0.55, "teeth": 0.5, "star": 0.45, "heart": 0.35, "tear": 0.4,
+			"blush": 0.25, "anger": 0.35, "note": 0.3, "alert": 0.4, "sleep": 0.35, "ink": 0.1}.get(role, 0.0))
 		m = shm
 	_mats[role] = m
 	return m
@@ -339,7 +354,11 @@ func _build() -> void:
 	_build_torso(chest_space)
 	_build_head(head_space)
 	_build_face(head_space)
+	ScoutFaceFx.build(self, head_space)
 	_build_hats(head_space)
+	_bubbles = ScoutBubbles.new()
+	_bubbles.setup(self, neck)
+	add_child(_bubbles)
 	for side: int in [-1, 1]:
 		_build_arm(chest_space, side)
 		_build_leg(side)
@@ -1170,6 +1189,8 @@ func animate(delta: float) -> void:
 	if _propeller:
 		_prop_angle += delta * (3.0 + v * 6.0 + (25.0 if not on_floor else 0.0))
 		_propeller.rotation.y = _prop_angle
+	for k in face_override:
+		face[k] = face_override[k]
 	_update_face(delta, face)
 	for f in _step_pending:
 		stepped.emit(f)
@@ -1571,7 +1592,7 @@ func _glance(delta: float, a: float) -> Vector3:
 
 
 func _face_base() -> Dictionary:
-	var f := {"eyes": "dot", "mouth": "smile", "open": 0.0, "brow_r": 0.0, "brow_a": 0.0, "lid": 0.0}
+	var f := {"eyes": "dot", "mouth": "smile", "open": 0.0, "brow_r": 0.0, "brow_a": 0.0, "lid": 0.0, "blush": 0.0, "sweat": 0.0, "tears": 0.0}
 	match int(look["face"]) % FACE_NAMES.size():
 		1:
 			f["eyes"] = "sclera"
@@ -1641,8 +1662,10 @@ func _update_face(delta: float, f: Dictionary) -> void:
 	if state != _face_state:
 		_face_state = state
 		var show := not _shadow_only
-		var drawn := eyes in ["dot", "sclera", "wide"]
+		var drawn := eyes in ["dot", "sclera", "wide", "teary"]
 		for s in ["L", "R"]:
+			for k in ["star", "heart", "spiral", "squeeze"]:
+				(_face[k + s] as Node3D).visible = eyes == k
 			(_face["eye" + s] as Node3D).visible = show
 			(_face["outline" + s] as Node3D).visible = drawn and eyes != "dot"
 			(_face["sclera" + s] as Node3D).visible = drawn and eyes != "dot"
@@ -1653,7 +1676,7 @@ func _update_face(delta: float, f: Dictionary) -> void:
 			(_face["x" + s] as Node3D).visible = eyes == "x"
 			(_face["brow" + s] as Node3D).visible = show
 		(_face["mouth"] as Node3D).visible = show
-		for k in ["smile", "flat", "wavy", "open", "teeth", "cheeky"]:
+		for k in ScoutFaceFx.MOUTHS:
 			(_face[k] as Node3D).visible = k == mouth
 	if _shadow_only:
 		return
@@ -1665,7 +1688,7 @@ func _update_face(delta: float, f: Dictionary) -> void:
 	_blink = maxf(_blink - delta, 0.0)
 	var wide := eyes == "wide"
 	var lid := _spring("lid", 1.0 if _blink > 0.0 else float(f["lid"]), delta, 500.0, 40.0)
-	var pup_s := _spring("pups", 0.62 if wide else (1.0 if eyes == "sclera" else 1.35), delta, 200.0, 20.0)
+	var pup_s := _spring("pups", 0.62 if wide else (1.25 if eyes == "teary" else (1.0 if eyes == "sclera" else 1.35)), delta, 200.0, 20.0)
 	var eye_s := _spring("eyes", 1.2 if wide else 1.0, delta, 200.0, 16.0)
 	var px := _spring("pupx", _pupil.x, delta, 300.0, 30.0)
 	var py := _spring("pupy", _pupil.y, delta, 300.0, 30.0)
@@ -1679,7 +1702,7 @@ func _update_face(delta: float, f: Dictionary) -> void:
 		var lidn: Node3D = _face["lid" + s]
 		lidn.position.y = lerpf(LID_UP, 0.02, clampf(lid, 0.0, 1.0))
 		# only while it covers the eye (at rest it would be a bump on the forehead)
-		lidn.visible = lid > 0.1 and eyes in ["dot", "sclera", "wide"]
+		lidn.visible = lid > 0.1 and eyes in ["dot", "sclera", "wide", "teary"]
 		var pupil: Node3D = _face["pupil" + s]
 		var r := 0.013 if eyes != "dot" else 0.005
 		# local +X of the face frame points to the character's left
@@ -1688,6 +1711,26 @@ func _update_face(delta: float, f: Dictionary) -> void:
 		var brow: Node3D = _face["brow" + s]
 		# angry: inner ends down; worried: inner ends up
 		brow.transform = (brow.get_meta("rest") as Transform3D).translated_local(Vector3(0, brow_r * 0.028, 0.004)).rotated_local(Vector3(0, 0, 1), brow_a * 0.35 * side)
+	# blush, sweat drop, tears running down
+	var bl := _spring("blush", float(f.get("blush", 0.0)), delta, 120.0, 14.0)
+	var blush: Node3D = _face["blush"]
+	blush.visible = bl > 0.04
+	blush.scale = Vector3.ONE * clampf(0.6 + bl * 0.5, 0.6, 1.1)
+	var sw := _spring("sweat", float(f.get("sweat", 0.0)), delta, 150.0, 12.0)
+	var sweat: Node3D = _face["sweat"]
+	sweat.visible = sw > 0.05
+	sweat.scale = Vector3.ONE * maxf(sw, 0.01)
+	var tears := float(f.get("tears", 0.0)) > 0.1 or eyes == "teary"
+	_tear_t += delta
+	for s in ["L", "R"]:
+		var tn: Node3D = _face["tears" + s]
+		tn.visible = tears
+		if tears:
+			for k in 2:
+				var d: Node3D = tn.get_child(k)
+				var ph := fposmod(_tear_t * 0.9 + k * 0.5, 1.0)
+				d.position.y = -0.05 - ph * 0.12
+				d.scale = Vector3.ONE * (0.6 + 0.5 * sin(PI * ph))
 	var open: Node3D = _face["open"]
 	var o := _spring("open", float(f["open"]), delta, 260.0, 18.0)
 	open.scale = Vector3(lerpf(0.6, 1.0, o), lerpf(0.3, 1.25, o), 1.0)

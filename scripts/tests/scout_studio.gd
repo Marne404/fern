@@ -184,6 +184,45 @@ func _initialize() -> void:
 			_gait_strip(world)
 		"clip":
 			_clip_setup(world, ground)
+		"faces":
+			# every eye shape, every mouth, blush / sweat / tears, and the bubbles
+			var eyes: Array = ScoutFaceFx.EYES
+			var mouths: Array = ScoutFaceFx.MOUTHS
+			var cells := []
+			for e in eyes:
+				cells.append({"eyes": e})
+			for m in mouths:
+				cells.append({"mouth": m, "open": 0.7})
+			cells.append({"blush": 1.0, "eyes": "happy"})
+			cells.append({"sweat": 1.0, "eyes": "sclera", "mouth": "wavy"})
+			cells.append({"tears": 1.0, "eyes": "teary", "mouth": "frown"})
+			var cols := 8
+			for i in cells.size():
+				var sc := Scout.new(Scout.DEFAULT_LOOK)
+				sc.set_look_data({"hat": 0, "extra": 0})
+				sc.apply_look()
+				sc.face_override = cells[i]
+				sc.position = Vector3((i % cols - (cols - 1) * 0.5) * 0.72, -(i / cols) * 0.82, 0)
+				sc.rotation.y = PI
+				world.add_child(sc)
+				_scouts.append(sc)
+			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+			_cam.size = 3.2
+			_cam.look_at_from_position(Vector3(0, 0.25, 6.0), Vector3(0, 0.25, 0))
+		"bubbles":
+			var kinds: Array = ScoutBubbles.KINDS
+			for i in kinds.size():
+				var sc := Scout.new(Scout.DEFAULT_LOOK)
+				sc.set_look_data({"hat": 0, "extra": 0})
+				sc.apply_look()
+				sc.position = Vector3((i - (kinds.size() - 1) * 0.5) * 0.8, 0, 0)
+				sc.rotation.y = PI
+				sc.set_meta("bubble", kinds[i])
+				world.add_child(sc)
+				_scouts.append(sc)
+			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+			_cam.size = 3.4
+			_cam.look_at_from_position(Vector3(0, 1.55, 6.0), Vector3(0, 1.55, 0))
 		"idle":
 			var names: Array = Scout.FIDGETS.keys()
 			for i in names.size():
@@ -212,7 +251,14 @@ func _initialize() -> void:
 			_cam.look_at_from_position(Vector3(0, 1.3, -6.5), Vector3(0, 0.8, 0))
 
 
+var _bubble_scout: Scout
+
+
 func _process(_delta: float) -> bool:
+	if _frames == 12:
+		for sc in _scouts:
+			if sc.has_meta("bubble"):
+				sc.bubble(sc.get_meta("bubble"), 99.0, 0.0, 1.3)
 	if _clip:
 		return _clip_step()
 	_frames += 1
