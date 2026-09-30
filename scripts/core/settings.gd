@@ -118,7 +118,8 @@ var values := {
 	"scout": {},                # look of your scout (see Scout.DEFAULT_LOOK)
 	"third_person": false,
 	"emote_wheel": [],          # 24 emote ids for the wheel's three pages (empty = ScoutEmotes.DEFAULT_WHEEL)
-	"emote_camera": true,       # first person: show the emote from behind while it plays
+	"emote_camera": true,
+	"scout_reactions": true,    # the scout reacts to the world (rain, animals, the sky …)       # first person: show the emote from behind while it plays
 	"voice_enabled": false,     # local microphone test (nothing is sent)
 	"voice_device": "Default",
 	"voice_mode": 2,            # 0 push to talk (T), 1 always on, 2 voice activation

@@ -22,6 +22,46 @@ var day := DayCycle.new()
 var weather := Weather.new()
 ## the atmosphere as shown: biome blend bent to the time of day (current stays the pure biome blend)
 var shown := {}
+
+## A shooting star starts: the direction it flies through (world, unit) – the scout looks up at it
+signal shooting_star(dir: Vector3)
+var _star_rate := 0.0
+var _stars := [Vector4(0, 0, 0, -1), Vector4(0, 0, 0, -1)]
+var _star_next := 12.0
+
+
+## Shooting stars: started here now and then (how often: the biome, clear skies, night), drawn by the sky shader
+func update_stars(delta: float) -> void:
+	for i in 2:
+		var st: Vector4 = _stars[i]
+		if st.w >= 0.0:
+			st.w += delta
+			if st.w > 1.0:
+				st.w = -1.0
+			_stars[i] = st
+	if _star_rate > 0.05:
+		_star_next -= delta * _star_rate
+		if _star_next <= 0.0:
+			_star_next = randf_range(14.0, 34.0)
+			var slot := 0 if _stars[0].w < 0.0 else 1
+			var a := Vector2(randf_range(-0.8, 0.8), randf_range(-0.8, 0.8))
+			var ang := randf() * TAU
+			_stars[slot] = Vector4(a.x, a.y, ang, 0.0)
+			var mid := a + Vector2(cos(ang), sin(ang)) * 0.42
+			shooting_star.emit(sky_dir(mid))
+	sky_mat.set_shader_parameter("star_a", _stars[0])
+	sky_mat.set_shader_parameter("star_b", _stars[1])
+
+
+## A point of the sky shader's star plane (p = d.xz / (d.y + 0.4)) as a world direction
+static func sky_dir(p: Vector2) -> Vector3:
+	# solve (h + 0.4)² |p|² + h² = 1 for the height h
+	var q := p.length_squared()
+	var a := q + 1.0
+	var b := 0.8 * q
+	var c := 0.16 * q - 1.0
+	var h := (-b + sqrt(maxf(b * b - 4.0 * a * c, 0.0))) / (2.0 * a)
+	return Vector3(p.x * (h + 0.4), h, p.y * (h + 0.4)).normalized()
 ## ground height of the valley near the camera (for the valley mist)
 var valley_y := 0.0
 
@@ -184,6 +224,7 @@ func _apply_sky_forms(c: Dictionary) -> void:
 	sky_mat.set_shader_parameter("sky_mackerel", float(c.get("sky_mackerel", 0.0)) * (0.55 + 0.45 * clampf(low_sun, 0.0, 1.0)) * (1.0 - night * 0.8) * clear)
 	sky_mat.set_shader_parameter("aurora", float(c.get("aurora", 0.0)) * clear)
 	sky_mat.set_shader_parameter("shooting_stars", float(c.get("shooting_stars", 1.0)) * clear)
+	_star_rate = float(c.get("shooting_stars", 1.0)) * clear * clampf(float(c.get("stars", 0.0)), 0.0, 1.0)
 	for k in debug_sky:
 		sky_mat.set_shader_parameter(k, debug_sky[k])
 

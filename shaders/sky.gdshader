@@ -146,40 +146,44 @@ vec3 aurora_light(vec3 d, float h, float time) {
 	return acc * sector;
 }
 
-// shooting stars: a few slots, each fires now and then along its own path
-vec3 shooting(vec3 d, float h, float time) {
-	vec3 acc = vec3(0.0);
+// shooting stars, started by the CPU (Atmosphere) so the scout can see them: xy = start in the sky plane,
+// z = angle, w = seconds since the start (< 0: none)
+uniform vec4 star_a = vec4(0.0, 0.0, 0.0, -1.0);
+uniform vec4 star_b = vec4(0.0, 0.0, 0.0, -1.0);
+
+vec3 shooting_one(vec2 p, vec4 st) {
+	float dur = 0.9;
+	float ph = st.w;
+	if (ph < 0.0 || ph > dur) {
+		return vec3(0.0);
+	}
+	vec2 dir = vec2(cos(st.z), sin(st.z));
+	float k01 = ph / dur;
+	vec2 head = st.xy + dir * (0.15 + k01 * 0.55);
+	vec2 tail = head - dir * 0.22;
+	vec2 pa = p - tail;
+	float along = clamp(dot(pa, dir) / 0.22, 0.0, 1.0);
+	float dist = length(pa - dir * along * 0.22);
+	float line = smoothstep(0.006, 0.0, dist) * along * along;
+	float life = smoothstep(0.0, 0.12, k01) * (1.0 - smoothstep(0.7, 1.0, k01));
+	return vec3(0.95, 0.97, 1.0) * line * life * 2.2;
+}
+
+vec3 shooting(vec3 d, float h) {
 	if (h < 0.08) {
-		return acc;
+		return vec3(0.0);
 	}
 	vec2 p = d.xz / (h + 0.4);
-	for (int k = 0; k < 3; k++) {
-		float fk = float(k) + 1.0;
-		float period = 22.0 + fk * 9.0;
-		float tt = (time + shooting_seed * 7.0) / period + fk * 0.37;
-		float slot = floor(tt);
-		float ph = fract(tt) * period;           // seconds since this slot's start
-		float dur = 0.9;
-		if (shooting_seed < -0.5) {
-			// debug (screenshots): every slot in mid-flight
-			ph = 0.5;
-		} else if (ph > dur || hash21(vec2(slot, fk)) > shooting_stars * 0.9) {
-			continue;
+	if (shooting_seed < -0.5) {
+		// debug (screenshots): three stars in mid-flight
+		vec3 acc = vec3(0.0);
+		for (int k = 0; k < 3; k++) {
+			float fk = float(k) + 1.0;
+			acc += shooting_one(p, vec4(hash21(vec2(fk, 3.1)) * 1.6 - 0.8, hash21(vec2(fk, 5.7)) * 1.6 - 0.8, hash21(vec2(fk, 9.3)) * 6.2832, 0.45));
 		}
-		vec2 a = vec2(hash21(vec2(slot, fk * 3.1)), hash21(vec2(slot, fk * 5.7))) * 1.6 - 0.8;
-		float ang = hash21(vec2(slot, fk * 9.3)) * 6.2832;
-		vec2 dir = vec2(cos(ang), sin(ang));
-		float k01 = ph / dur;
-		vec2 head = a + dir * (0.15 + k01 * 0.55);
-		vec2 tail = head - dir * 0.22;
-		vec2 pa = p - tail;
-		float along = clamp(dot(pa, dir) / 0.22, 0.0, 1.0);
-		float dist = length(pa - dir * along * 0.22);
-		float line = smoothstep(0.006, 0.0, dist) * along * along;
-		float life = smoothstep(0.0, 0.12, k01) * (1.0 - smoothstep(0.7, 1.0, k01));
-		acc += vec3(0.95, 0.97, 1.0) * line * life * 2.2;
+		return acc;
 	}
-	return acc;
+	return shooting_one(p, star_a) + shooting_one(p, star_b);
 }
 
 void sky() {
@@ -217,7 +221,7 @@ void sky() {
 			col += aurora_light(d, h, TIME) * aurora * stars * 0.55;
 		}
 		if (shooting_stars > 0.0) {
-			col += shooting(d, h, TIME) * fade;
+			col += shooting(d, h) * fade;
 		}
 	}
 

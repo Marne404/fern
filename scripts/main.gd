@@ -41,6 +41,8 @@ var _soaked_hint := false
 var _cloud_drift := 0.0
 var _brook_sound: AudioStreamPlayer3D
 var gusts: WindGusts
+## the scout's senses (reactions to the world)
+var sense: WorldSense
 var leaf_fall: LeafFall
 var desert_fx: DesertFx
 var mountains: Mountains
@@ -438,6 +440,11 @@ func start_journey() -> void:
 	player.message.connect(hud.show_message)
 	player.use_stone.connect(func(it: Dictionary): cairns.use_stone(player, it))
 	player.photo_requested.connect(_take_photo)
+	if sense == null:
+		sense = WorldSense.new()
+		sense.setup(self)
+		add_child(sense)
+	player.scout.landed.connect(sense.on_landed)
 	player.sleep_fade.connect(func(on):
 		hud.collapse_fade(on, "Zzz …")
 		# sleeping through the night: you wake up in the morning (the clock jumps while the screen is dark)
@@ -756,6 +763,7 @@ func _process_inner(delta: float) -> void:
 		atmosphere.day.hour = gen.schedule.best_hour_at(gen, -wpos.z)
 	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
+	atmosphere.update_stars(delta)
 	# test helpers for tuning the lighting
 	if _args.has("skyset") and atmosphere.debug_sky.is_empty():
 		for pair in _args["skyset"].split(","):
@@ -901,6 +909,8 @@ func _process_inner(delta: float) -> void:
 				_passed_obstacles[ok] = true
 				music.stinger("geschafft")
 				hud.show_message("Made it!")
+				if sense:
+					sense.on_made_it()
 		journey_distance = maxf(journey_distance, gen.arc_length(pw.z) - gen.arc_length(start_z))
 		if mode == Mode.PLAYING and not get_tree().paused:
 			_update_schedule(delta, pw)

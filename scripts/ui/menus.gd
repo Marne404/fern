@@ -600,6 +600,7 @@ func _build_settings() -> Control:
 	_check(list, "voice_lipsync", "My scout's mouth moves when I talk")
 	list = _tab("Controls")
 	_check(list, "emote_camera", "Emote camera (first person steps back while an emote plays)")
+	_check(list, "scout_reactions", "My scout reacts to the world (rain, animals, the sky, a warm fire …)")
 	_note(list, "The emote wheel has three pages of eight (hold G / LB; mouse wheel, Q/E or the D-pad flips pages).")
 	for i in 24:
 		_emote_slot(list, i)

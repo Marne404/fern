@@ -284,6 +284,34 @@ func _initialize() -> void:
 			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 			_cam.size = 2.3 * rows + 0.3
 			_cam.look_at_from_position(Vector3(0, 1.1 - (rows - 1) * 1.15, -8.0), Vector3(0, 1.1 - (rows - 1) * 1.15, 0))
+		"reactions":
+			var ids: Array = ScoutReactions.KINDS.keys()
+			if _args.has("only"):
+				ids = Array(str(_args["only"]).split(","))
+			var cols := mini(9, ids.size())
+			for i in ids.size():
+				var sc := Scout.new(Scout.DEFAULT_LOOK)
+				sc.position = Vector3(-(i % cols - (cols - 1) * 0.5) * 1.05, -(i / cols) * 2.3, 0)
+				sc.rotation.y = -0.45
+				world.add_child(sc)
+				sc.frozen = true
+				var lab := Label3D.new()
+				lab.text = String(ids[i])
+				lab.font_size = 44
+				lab.outline_size = 10
+				lab.position = Vector3(0, 2.0, 0)
+				lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+				sc.add_child(lab)
+				for f in 30:
+					sc.animate(1.0 / 60.0)
+				sc.react(ids[i], Vector3(0.45, 0.6, -0.65).normalized(), true)
+				for f in int(ScoutReactions.duration(ids[i]) * float(_args.get("at", "0.45")) * 60.0):
+					sc.animate(1.0 / 60.0)
+				_scouts.append(sc)
+			var rows := ceili(ids.size() / float(cols))
+			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+			_cam.size = 2.3 * rows + 0.3
+			_cam.look_at_from_position(Vector3(0, 1.1 - (rows - 1) * 1.15, -8.0), Vector3(0, 1.1 - (rows - 1) * 1.15, 0))
 		"actions":
 			# every item action, frozen at --at (share of its length, default 0.55)
 			var kinds: Array = ScoutActions.KINDS.keys()

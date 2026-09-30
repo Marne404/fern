@@ -144,6 +144,21 @@ var _action := ""
 var _action_t := 0.0
 var _action_dur := 0.0
 var _action_st := {}
+# reactions to the world (ScoutReactions, fed by WorldSense)
+var _react := ""
+var _react_t := 0.0
+var _react_dur := 0.0
+var _react_st := {}
+var _react_dir := Vector3.ZERO
+var _react_cd := {}
+var _react_gap := 0.0
+## a point in the world the scout pays attention to (global; INF = none) and how much (0..1)
+var attention := Vector3.INF
+var attention_w := 0.0
+var _att_w := 0.0
+## what the world is like right now: "rain" 0..1, "mud" 0..1, "glare" 0..1, "cold" 0..1
+var world_state := {}
+var _breath_t := 2.0
 ## Carried, held and worn items (see ScoutGear)
 var gear: ScoutGear
 var _tear_t := 0.0
@@ -232,6 +247,32 @@ func stop_action() -> void:
 
 func action_playing() -> String:
 	return _action
+
+
+## A reaction to the world (see ScoutReactions.KINDS); dir: world direction it is about. Returns false when
+## it can't play now (cooling down, busy, or not standing still for a full-body one).
+func react(kind: String, dir := Vector3.ZERO, force := false) -> bool:
+	if not ScoutReactions.KINDS.has(kind):
+		return false
+	if not force:
+		if _react != "" or _emote != "" or _action != "" or _react_gap > 0.0 or _react_cd.get(kind, 0.0) > 0.0:
+			return false
+		if not pose in [Pose.STAND, Pose.SIT, Pose.CROUCH] or not on_floor:
+			return false
+		if ScoutReactions.full_body(kind) and (speed > 0.4 or pose == Pose.CROUCH):
+			return false
+	_react = kind
+	_react_t = 0.0
+	_react_dur = ScoutReactions.duration(kind)
+	_react_st = {}
+	_react_dir = dir
+	_react_cd[kind] = ScoutReactions.KINDS[kind][2]
+	_react_gap = 6.0
+	return true
+
+
+func reaction_playing() -> String:
+	return _react
 
 
 ## A symbol above the head (see ScoutBubbles.KINDS)
@@ -1176,6 +1217,28 @@ func animate(delta: float) -> void:
 			# the arms doing something don't swing
 			for i in 2:
 				arm_osc[i] = [arm_osc[i][0] * 0.2, arm_osc[i][1] * 0.2, arm_osc[i][2] * 0.2]
+	# reactions to the world
+	_react_gap = maxf(_react_gap - delta, 0.0)
+	for key in _react_cd:
+		_react_cd[key] = maxf(float(_react_cd[key]) - delta, 0.0)
+	if _react != "":
+		_react_t += delta
+		if _react_t > _react_dur or _emote != "" or _action != "" or hands_busy:
+			_react = ""
+		else:
+			var dl := Vector3.ZERO
+			if _react_dir != Vector3.ZERO:
+				dl = (global_basis.inverse() * _react_dir).normalized() if is_inside_tree() else _react_dir
+			var roff := ScoutReactions.pose(self, _react, _react_t, _react_dur, arm, face, feet_fx, _react_st, dl)
+			head_rot += roff["head"]
+			chest_rot += roff["chest"]
+			rig_pos += roff["rig"]
+			hip_rot += roff["hip"]
+			for i in 2:
+				arm_osc[i] = [arm_osc[i][0] * 0.4, arm_osc[i][1] * 0.4, arm_osc[i][2] * 0.4]
+	var wm := _world_moods(delta, face)
+	chest_rot.x += wm.x
+	head_rot.x += wm.y
 
 	# emotes override arms, legs, head and face (blended in and out)
 	if _emote != "":
@@ -1302,7 +1365,7 @@ func _gait_params(v: float) -> Dictionary:
 	var beta := lerpf(lerpf(0.64, 0.46, smoothstep(0.5, 3.4, v)), lerpf(0.36, 0.3, fast), run)
 	# how far the body travels over a planted foot (limited by the leg's reach)
 	var d := lerpf(lerpf(0.2, 0.5, smoothstep(0.0, 1.6, v)), lerpf(0.42, 0.56, fast), run)
-	var lift := lerpf(0.045 + 0.012 * minf(v, 3.4), 0.15, run) * (0.6 if mood == Mood.TIRED else 1.0)
+	var lift := lerpf(0.045 + 0.012 * minf(v, 3.4), 0.15, run) * (0.6 if mood == Mood.TIRED else 1.0) * (1.0 + 1.3 * float(world_state.get("mud", 0.0)))
 	var h0 := lerpf(0.578 - 0.006 * minf(v, 3.4), 0.55, run)
 	if crouch:
 		beta = lerpf(0.66, 0.56, smoothstep(0.3, 1.6, v))
@@ -1564,6 +1627,67 @@ func _update_stick(gxf: Transform3D, delta: float) -> void:
 	body.position = Vector3(0, -clampf(dist - half, -0.3, 0.25), 0)
 
 
+## The weather and the ground as a lasting mood: hunched in heavy rain, squinting into the low sun, puffs of
+## breath in the cold
+func _world_moods(delta: float, face: Dictionary) -> Vector2:
+	var out := Vector2.ZERO
+	var rain: float = world_state.get("rain", 0.0)
+	if rain > 0.05 and pose == Pose.STAND and _emote == "":
+		out = Vector2(-0.1 * rain, -0.12 * rain)
+		if face["eyes"] in ["dot", "sclera"]:
+			face["brow_a"] = minf(float(face["brow_a"]), -0.4 * rain)
+			face["lid"] = maxf(float(face["lid"]), 0.25 * rain)
+	var glare: float = world_state.get("glare", 0.0)
+	if glare > 0.05 and face["eyes"] in ["dot", "sclera"]:
+		face["lid"] = maxf(float(face["lid"]), 0.45 * glare)
+	var mud: float = world_state.get("mud", 0.0)
+	if mud > 0.3 and speed > 0.3 and face["eyes"] in ["dot", "sclera"] and face["mouth"] in ["smile", "flat"]:
+		face["mouth"] = "frown"
+	# breath in the cold: a little white puff every few seconds
+	if float(world_state.get("cold", 0.0)) > 0.5 and not _shadow_only and is_inside_tree():
+		_breath_t -= delta * (1.6 if speed > 3.0 else 1.0)
+		if _breath_t <= 0.0:
+			_breath_t = randf_range(2.2, 3.2)
+			_puff()
+	return out
+
+
+func _puff() -> void:
+	var p := CPUParticles3D.new()
+	p.one_shot = true
+	p.amount = 10
+	p.lifetime = 1.4
+	p.explosiveness = 0.7
+	p.direction = Vector3(0, 0.2, -1)
+	p.spread = 18.0
+	p.initial_velocity_min = 0.25
+	p.initial_velocity_max = 0.45
+	p.gravity = Vector3(0, 0.12, 0)
+	p.scale_amount_min = 0.05
+	p.scale_amount_max = 0.09
+	var curve := Curve.new()
+	curve.add_point(Vector2(0, 0.4))
+	curve.add_point(Vector2(0.4, 1.0))
+	curve.add_point(Vector2(1, 0.0))
+	p.scale_amount_curve = curve
+	var sm := SphereMesh.new()
+	sm.radius = 0.5
+	sm.height = 1.0
+	sm.radial_segments = 8
+	sm.rings = 4
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(1, 1, 1, 0.35)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	sm.material = m
+	p.mesh = sm
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	get_tree().current_scene.add_child(p)
+	p.global_transform = neck.global_transform * Transform3D(Basis(), Vector3(0, 0.2, -0.3))
+	p.emitting = true
+	get_tree().create_timer(1.8).timeout.connect(p.queue_free)
+
+
 ## Arm targets for the items in the hands; returns how far the head looks down (reading)
 func _hold_pose(arm: Array, osc: Array, delta: float) -> float:
 	var look_down := 0.0
@@ -1704,6 +1828,15 @@ func _glance(delta: float, a: float) -> Vector3:
 		var pitch := atan2(local.y - 0.3, Vector2(local.x, local.z).length())
 		_pupil = Vector2(clampf(yaw * 0.8, -1.0, 1.0), clampf(pitch * 1.5, -0.6, 0.6))
 		return Vector3(clampf(pitch, -0.5, 0.5) * 0.6, clampf(yaw, -1.0, 1.0) * 0.7, 0.0)
+	# something interesting nearby: the head turns (less while walking), the eyes follow
+	_att_w = move_toward(_att_w, attention_w if attention != Vector3.INF else 0.0, delta * 1.5)
+	if _att_w > 0.01 and attention != Vector3.INF and is_inside_tree():
+		var la: Vector3 = (neck.get_parent() as Node3D).global_transform.affine_inverse() * attention - neck.position
+		var ya := clampf(atan2(-la.x, -la.z), -1.2, 1.2)
+		var pa := clampf(atan2(la.y - 0.3, Vector2(la.x, la.z).length()), -0.4, 0.8)
+		_pupil = _pupil.lerp(Vector2(clampf(ya * 0.8, -1.0, 1.0), clampf(pa * 1.5, -0.6, 0.6)), _att_w)
+		var kk := _att_w * (1.0 - minf(a, 1.0) * 0.45)
+		return Vector3(pa * 0.7 * kk, ya * 0.75 * kk, 0.0)
 	_look_timer -= delta
 	if _look_timer <= 0.0:
 		_look_timer = randf_range(1.2, 4.0)
