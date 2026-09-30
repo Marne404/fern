@@ -23,8 +23,9 @@ const ACTIONS := {
 	"backpack": [[KEY_TAB], [JOY_BUTTON_Y], -1],
 	"emotes": [[KEY_G], [JOY_BUTTON_LEFT_SHOULDER], -1],
 	"view": [[KEY_V], [JOY_BUTTON_RIGHT_STICK], -1],
-	"zoom": [[MOUSE_BUTTON_RIGHT], [], JOY_AXIS_TRIGGER_LEFT],
-	"untie": [[KEY_Q], [], JOY_AXIS_TRIGGER_RIGHT],
+	"hand_left": [[MOUSE_BUTTON_LEFT], [], JOY_AXIS_TRIGGER_LEFT],
+	"hand_right": [[MOUSE_BUTTON_RIGHT], [], JOY_AXIS_TRIGGER_RIGHT],
+	"untie": [[KEY_Q], [], -1],
 	"pause": [[KEY_ESCAPE], [JOY_BUTTON_START], -1],
 	"talk": [[KEY_T], [JOY_BUTTON_BACK], -1],
 }

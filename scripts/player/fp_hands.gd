@@ -12,10 +12,55 @@ var _bob := 0.0
 var _sway := Vector2.ZERO
 var _last_yaw := 0.0
 var _show := 0.0
+# empty hands reaching, punching, holding (world points from Hands), one mitten each
+var _bare: Array[Node3D] = [null, null]
+var _bare_col := Color.WHITE
 
 
 func _ready() -> void:
 	name = "FirstPersonHands"
+
+
+## The empty hands at work: per hand {"pos": world, "active": bool, "fist": bool}
+func update_bare(delta: float, on: bool, states: Array, hand_color: Color) -> void:
+	var cam := get_parent() as Camera3D
+	for i in 2:
+		var st: Dictionary = states[i]
+		var want: bool = on and st.get("active", false)
+		if _bare[i] == null and want:
+			var n := Node3D.new()
+			n.name = "Bare%d" % i
+			add_child(n)
+			var m := MeshInstance3D.new()
+			m.mesh = Mesh3.blob(Vector3(0.06, 0.066, 0.052), 2.1, 10, 14)
+			var mat := ShaderMaterial.new()
+			mat.shader = preload("res://shaders/scout.gdshader")
+			mat.set_shader_parameter("color", hand_color)
+			m.material_override = mat
+			m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			n.add_child(m)
+			var th := MeshInstance3D.new()
+			th.mesh = Mesh3.blob(Vector3(0.022, 0.034, 0.022), 2.0, 6, 10)
+			th.material_override = mat
+			th.position = Vector3(0.045 * (1 if i == 0 else -1), 0.02, -0.03)
+			th.rotation.z = 0.55 * (-1 if i == 0 else 1)
+			n.add_child(th)
+			_bare[i] = n
+		var b := _bare[i]
+		if b == null:
+			continue
+		b.visible = want
+		if not want or cam == null:
+			continue
+		# into the camera's space, kept at arm's length in front and inside the view
+		var local: Vector3 = cam.global_transform.affine_inverse() * (st["pos"] as Vector3)
+		local.z = clampf(local.z, -0.75, -0.3)
+		var edge := absf(local.z) * 0.62
+		local.x = clampf(local.x, -edge, edge)
+		local.y = clampf(local.y, -edge * 0.6, edge * 0.5)
+		b.position = b.position.lerp(local, 1.0 - exp(-25.0 * delta)) if b.position != Vector3.ZERO else local
+		b.rotation = Vector3(0.6 if st.get("fist", false) else 1.2, 0.0, 0.0)
+		b.scale = Vector3.ONE * (0.8 if st.get("fist", false) else 1.0)
 
 
 func update(delta: float, on: bool, right_id: String, left_id: String, hand_color: Color, step_phase: float, speed: float, yaw: float, lit: bool) -> void:

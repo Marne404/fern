@@ -674,6 +674,16 @@ func _process_inner(delta: float) -> void:
 		if _args.has("give"):
 			for id in _args["give"].split(","):
 				player.inventory.add(ItemDefs.make(id))
+		# test helper: --reach=both|right: the hands reach for the ground in front (grass)
+		if _args.has("reach"):
+			get_tree().create_timer(3.0).timeout.connect(func():
+				var fw2 := -player.global_basis.z
+				var gp := player.global_position + fw2 * 0.5 + player.global_basis.x * 0.15
+				gp.y = world.ground_y(gp.x, gp.z) + 0.05
+				player.hands.aim_override = gp
+				player.hands.press(1)
+				if _args["reach"] == "both":
+					player.hands.press(0))
 		# test helper: --pad shows the controller glyphs
 		if _args.has("pad"):
 			GameInput._set_pad(true)
@@ -921,6 +931,7 @@ func _process_inner(delta: float) -> void:
 			_update_schedule(delta, pw)
 		hud.set_distance(journey_distance)
 		hud.set_hour(atmosphere.day.hour)
+		hud.set_hands(player.hands)
 		var in_hand: String = player.held_item("R").get("id", "")
 		var free_view := player.can_act() and not menus.is_open() and not backpack.is_open() and mode == Mode.PLAYING
 		hud.trail_map.update_view(gen, pw, player._yaw, free_view and in_hand == "karte", free_view and in_hand == "kompass", delta)

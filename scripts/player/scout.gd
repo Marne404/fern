@@ -158,6 +158,9 @@ var attention_w := 0.0
 var _att_w := 0.0
 ## what the world is like right now: "rain" 0..1, "mud" 0..1, "glare" 0..1, "cold" 0..1
 var world_state := {}
+## the hands (Hands): per hand {"pos": world point, "w": 0..1, "open": bool}; empty = the animation decides
+var hand_goal: Array = [{}, {}]
+var _punch_side := -1
 var _breath_t := 2.0
 ## Carried, held and worn items (see ScoutGear)
 var gear: ScoutGear
@@ -247,6 +250,12 @@ func stop_action() -> void:
 
 func action_playing() -> String:
 	return _action
+
+
+## A quick jab with one hand (the arm follows hand_goal)
+func punch(i: int) -> void:
+	_punch_side = i
+	_kick("punch%d" % i, 6.0)
 
 
 ## A reaction to the world (see ScoutReactions.KINDS); dir: world direction it is about. Returns false when
@@ -1236,6 +1245,32 @@ func animate(delta: float) -> void:
 			hip_rot += roff["hip"]
 			for i in 2:
 				arm_osc[i] = [arm_osc[i][0] * 0.4, arm_osc[i][1] * 0.4, arm_osc[i][2] * 0.4]
+	# the hands reach, punch and hold (world points from Hands)
+	var pulling := 0.0
+	for i in 2:
+		var hg: Dictionary = hand_goal[i]
+		var w := _spring("hgw%d" % i, float(hg.get("w", 0.0)), delta, 260.0, 26.0)
+		if w > 0.01 and hg.has("pos") and is_inside_tree():
+			var cs: Node3D = chest.get_node("ChestSpace")
+			var local: Vector3 = cs.global_transform.affine_inverse() * (hg["pos"] as Vector3)
+			arm[i] = _blend_arm(arm[i], reach(i, local, Vector2(-0.6 if hg.get("open", true) else 0.2, 0.0)), clampf(w, 0.0, 1.0))
+			# low things: bend down to them
+			var low := clampf((0.75 - local.y) / 0.6, 0.0, 1.0) * w
+			chest_rot.x -= 0.55 * low
+			hip_rot.x -= 0.35 * low
+			head_rot.x -= 0.2 * low
+			arm_osc[i] = [arm_osc[i][0] * (1.0 - w), arm_osc[i][1] * (1.0 - w), arm_osc[i][2] * (1.0 - w)]
+			if hg.get("pull", false):
+				pulling = maxf(pulling, w)
+			if hg.get("fist", false):
+				chest_rot.y += (0.25 if i == 1 else -0.25) * w
+	# leaning against a pull, gritted teeth
+	if pulling > 0.05:
+		chest_rot.x -= 0.18 * pulling
+		hip_rot.x -= 0.1 * pulling
+		if face["eyes"] in ["dot", "sclera"]:
+			face["mouth"] = "teeth"
+			face["brow_a"] = 0.7
 	var wm := _world_moods(delta, face)
 	chest_rot.x += wm.x
 	head_rot.x += wm.y

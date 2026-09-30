@@ -145,6 +145,7 @@ func run() -> void:
 	await _test_steps(p)
 	await _test_pad(p)
 	await _test_gear(p)
+	await _test_hands(p)
 	_test_day_cycle()
 	_test_weather()
 	_test_brook()
@@ -318,6 +319,97 @@ func _test_steps(p: Wanderer) -> void:
 	check("A step on the path leaves a print", after == before + 1 or kind in ["grass", "wood", "water"], "%s %d→%d" % [kind, before, after])
 	await frames(40)
 	check("Step sound players are freed", p.get_children().filter(func(c): return c is AudioStreamPlayer and not c.playing).size() == 0)
+
+
+## Hands: tear grass by walking back, carry and drop a loose item, punch it away, the carry block
+func _test_hands(p: Wanderer) -> void:
+	var gen: WorldGen = main.gen
+	var inv := p.inventory
+	for it in inv.items.duplicate():
+		inv.remove(it)
+	p.hand_r = -1
+	p.hand_l = -1
+	p._sync_gear()
+	# find grass beside the path
+	var z: float = main.start_z - 40.0
+	var spot := Vector3.INF
+	for dz in range(0, 400, 7):
+		var zz := z - dz
+		for off: float in [4.0, -4.0, 6.0, -6.0]:
+			var xx := gen.path_x(zz) + off
+			if gen.ground_kind(xx, zz) == "grass" and gen.water_level(xx, zz) == -INF:
+				spot = Vector3(xx, gen.height(xx, zz), zz)
+				break
+		if spot != Vector3.INF:
+			break
+	check("Found grass to grab", spot != Vector3.INF)
+	if spot == Vector3.INF:
+		return
+	var pos: Vector3 = main.world.world_to_local(spot + Vector3(0, 0.3, 0))
+	p.global_position = pos
+	p.look_along(Vector3(0, 0, -1))
+	await frames(10)
+	var grass: Vector3 = p.global_position + Vector3(0.15, 0, -0.45)
+	grass.y = main.world.ground_y(grass.x, grass.z) + 0.05
+	p.hands.aim_override = grass
+	p.hands.press(1)
+	await frames(40)
+	check("A held hand grips the grass", p.hands.grip_kind(1) == "tear", "mode %s" % p.hands.h[1]["mode"])
+	# walk backwards: slower than usual, until the tuft tears
+	var k := InputEventKey.new()
+	k.physical_keycode = KEY_S
+	k.pressed = true
+	Input.parse_input_event(k)
+	var slow := 99.0
+	var torn := false
+	for f in 240:
+		await get_tree().physics_frame
+		if p.hands.grip_kind(1) == "tear":
+			slow = minf(slow, Vector2(p.velocity.x, p.velocity.z).length())
+		elif f > 10:
+			torn = true
+			break
+	k = k.duplicate()
+	k.pressed = false
+	Input.parse_input_event(k)
+	p.hands.release(1)
+	check("Pulling grass slows you down, then it tears", torn and slow < 2.5, "torn %s, speed %.2f" % [torn, slow])
+	# a loose thing: grip, carry, drop
+	await frames(20)
+	var it := ItemDefs.make("stein")
+	var fwd := -p.global_basis.z
+	main._spawn_dropped(it, p.global_position + fwd * 0.55 + Vector3(0, 0.9, 0), Vector3.ZERO)
+	await frames(30)
+	var wi: WorldItem = null
+	for n in get_tree().get_nodes_in_group("world_item") if false else main.find_children("*", "WorldItem", true, false):
+		if (n as WorldItem).item == it:
+			wi = n
+	check("The stone lies in front of you", wi != null)
+	if wi == null:
+		return
+	p.hands.aim_override = wi.global_position
+	p.hands.press(0)
+	await frames(40)
+	check("The left hand lifts the stone", p.hands.grip_kind(0) == "loose", "mode %s" % p.hands.h[0]["mode"])
+	check("Holding it blocks a little energy", p.body.blocks().has("carry"), str(p.body.blocks()))
+	p.hands.aim_override = p.global_position + fwd * 0.6 + Vector3(0.6, 1.2, 0)
+	await frames(20)
+	p.hands.release(0)
+	await frames(60)
+	check("Released, it falls", p.hands.grip_kind(0) == "" and not wi.freeze, "freeze %s" % wi.freeze)
+	# a punch sends it off (step up to it first)
+	var to_stone := Vector3(wi.global_position.x - p.global_position.x, 0, wi.global_position.z - p.global_position.z)
+	p.global_position = wi.global_position - to_stone.normalized() * 0.55 + Vector3(0, 0.2, 0)
+	await frames(20)
+	var before := wi.global_position
+	p.hands.aim_override = wi.global_position
+	p.look_along(wi.global_position - p.global_position)
+	p.hands.press(1)
+	await frames(2)
+	p.hands.release(1)
+	await frames(40)
+	check("A punch knocks it away", wi.global_position.distance_to(before) > 0.2, "%.2f m" % wi.global_position.distance_to(before))
+	p.hands.aim_override = Vector3.INF
 
 
 ## Gear: only what is in the backpack hangs on the scout or can be held; dropping empties the hand

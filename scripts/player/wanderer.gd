@@ -128,6 +128,9 @@ func _ready() -> void:
 	scout = Scout.new(Settings.values.get("scout", {}))
 	add_child(scout)
 	inventory.changed.connect(_sync_gear)
+	hands = Hands.new()
+	hands.setup(self)
+	add_child(hands)
 	scout.stepped.connect(_on_step)
 	scout.landed.connect(_on_landed)
 	set_third_person(Settings.values.get("third_person", false))
@@ -190,7 +193,16 @@ func _process(delta: float) -> void:
 			_yaw -= lr.x * delta * zf
 			_pitch = clampf(_pitch - lr.y * delta * zf, -1.45, 1.45)
 			_apply_look()
-	_zoom = can_act() and Input.is_action_pressed("zoom") and _has_item("fernglas")
+	_zoom = can_act() and hands.zooming
+	# controller: hold X on a knot to untie it (Q on the keyboard)
+	if GameInput.using_pad and Input.is_action_pressed("use") and _look_target and _look_target.has_meta("anchor") and obstacles:
+		_untie_t += delta
+		if _untie_t > 0.8:
+			_untie_t = -10.0
+			var an: Array = _look_target.get_meta("anchor")
+			obstacles.untie_key(an[0], self, _look_target.get_parent())
+	elif not Input.is_action_pressed("use"):
+		_untie_t = 0.0
 	_update_hand_things()
 	# the lamp was dropped or thrown: its light goes with it
 	if _light and not _has_item(_light_item):
@@ -301,6 +313,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("view"):
 		set_third_person(not third_person)
 		Settings.set_value("third_person", third_person, false)
+	elif (event.is_action("hand_left") or event.is_action("hand_right")) and not (event is InputEventKey and event.echo):
+		# the mouse only works the hands while it is captured (the first click captures it)
+		if event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			return
+		var side := 0 if event.is_action("hand_left") else 1
+		if event.is_pressed():
+			hands.press(side)
+		else:
+			hands.release(side)
 	elif event.is_action_pressed("untie"):
 		if _look_target and _look_target.has_meta("anchor") and obstacles:
 			var an: Array = _look_target.get_meta("anchor")
@@ -410,6 +431,11 @@ func _physics_process(delta: float) -> void:
 	var accel := 10.0 if on_floor or swimming else 2.5
 	velocity.x = lerpf(velocity.x, dir.x * speed, 1.0 - exp(-accel * delta))
 	velocity.z = lerpf(velocity.z, dir.z * speed, 1.0 - exp(-accel * delta))
+	# the hands: holding on keeps you close to what you hold
+	if swimming or not can_act():
+		hands.release_all()
+	hands.physics(delta)
+	velocity = hands.constrain(velocity, delta)
 	_block_low_obstacles()
 	_limit_corridor()
 	# the river current carries you away
@@ -1085,7 +1111,9 @@ func _use_special(item: Dictionary) -> void:
 			get_tree().create_timer(0.25).timeout.connect(_spray)
 			message.emit("Pssshh!")
 		"fernglas":
-			message.emit("Hold the right mouse button to look through.")
+			if not is_held(item):
+				hold_item(item)
+			message.emit("Binoculars in hand: hold its mouse button (or trigger) to look through.")
 		"feldhandbuch":
 			if not is_held(item):
 				hold_item(item)
@@ -1120,10 +1148,22 @@ func _update_hand_things() -> void:
 		scout.play_action("binoculars")
 	elif not _zoom and scout.action_playing() == "binoculars":
 		scout.stop_action()
+	# the hands drive the scout's arms
+	if hands:
+		for i in 2:
+			var s: Dictionary = hands.h[i]
+			var active: bool = s["mode"] in ["reach", "hold", "punch"]
+			scout.hand_goal[i] = {"pos": s["pos"], "w": 1.0 if active else 0.0, "open": s["mode"] != "punch",
+				"fist": s["mode"] == "punch", "pull": s["mode"] == "hold" and s["grip"].get("kind", "") in ["heavy", "tear"]}
 	# first person: the held things at the lower edge of the view
 	if fp_hands:
 		var hc := (scout._mat("hand") as ShaderMaterial).get_shader_parameter("color") as Color
 		var busy := swimming or climbing or not rope.is_empty() or resting or sleeping
+		var bare := []
+		for i in 2:
+			var s: Dictionary = hands.h[i]
+			bare.append({"pos": s["pos"], "active": s["mode"] in ["reach", "hold", "punch"], "fist": s["mode"] == "punch"})
+		fp_hands.update_bare(get_process_delta_time(), not third_person and can_act(), bare, hc)
 		fp_hands.update(get_process_delta_time(), not third_person and not busy and can_act(), held_item("R").get("id", ""),
 			held_item("L").get("id", ""), hc, scout._gait_g, Vector2(velocity.x, velocity.z).length(), _yaw, _light != null)
 	if _light == null:
@@ -1190,6 +1230,9 @@ func _spray() -> void:
 var hand_r := -1
 var hand_l := -1
 var fp_hands: FirstPersonHands
+## the two hands on the mouse buttons (punch, reach, grab, pull)
+var hands: Hands
+var _untie_t := 0.0
 
 
 func _item_uid(uid: int) -> Dictionary:

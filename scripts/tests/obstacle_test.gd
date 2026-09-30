@@ -100,6 +100,11 @@ func run() -> void:
 		print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 		get_tree().quit(1 if _fails > 0 else 0)
 		return
+	if "--only_drag" in OS.get_cmdline_user_args():
+		await _test_drag(p, gen, ob)
+		print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
+		get_tree().quit(1 if _fails > 0 else 0)
+		return
 	if "--only_mud" in OS.get_cmdline_user_args():
 		await _test_mud(p, gen)
 		print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
@@ -114,6 +119,7 @@ func run() -> void:
 	await _test_mud(p, gen)
 	await _test_boulders(p, gen)
 	await _test_freecam(p, gen)
+	await _test_drag(p, gen, ob)
 
 	print("== %s: %d failures ==" % ["PASSED" if _fails == 0 else "FAILED", _fails])
 	get_tree().quit(1 if _fails > 0 else 0)
@@ -541,6 +547,76 @@ func _find(gen: WorldGen, type: String) -> Dictionary:
 		if not o.is_empty() and o["type"] == type:
 			return o
 	return {}
+
+
+## Dragging the long log (100 kg): one hand only creeps, two hands pull it along
+func _test_drag(p: Wanderer, gen: WorldGen, ob: ObstacleManager) -> void:
+	var o := gen.obstacle(1)
+	var k: int = o["k"]
+	# a flat stretch of path well before the river
+	var zc: float = float(o["z"]) + 60.0
+	for dz in range(60, 1200, 10):
+		var zz: float = float(o["z"]) + dz
+		var hs := []
+		for t in range(-4, 30, 3):
+			var pp := gen.path_point(zz - t)
+			hs.append(gen.height(pp.x, pp.z))
+		if hs.max() - hs.min() < 0.6:
+			zc = zz
+			break
+	await place(p, gen.path_point(zc + 3.0) + Vector3(0, 0.3, 0), k)
+	var lg := _river_log(ob, k, 0)
+	check("Long log for dragging exists", lg != null)
+	if lg == null:
+		return
+	var moved := []
+	for hands in [1, 2]:
+		# the log lies across the path in front of you, its end towards you
+		var c := gen.path_point(zc - 3.0)
+		var dir := (gen.path_point(zc - 6.0) - gen.path_point(zc)).normalized()
+		dir.y = 0.0
+		var len: float = lg.get_meta("length")
+		var mid: Vector3 = main.world.world_to_local(c) + dir * (len * 0.5)
+		# the log lies on the ground: tilted with the path from end to end
+		var e0: Vector3 = main.world.world_to_local(c)
+		var e1: Vector3 = e0 + dir * len
+		e0.y = main.world.ground_y(e0.x, e0.z) + 0.45
+		e1.y = main.world.ground_y(e1.x, e1.z) + 0.45
+		mid.y = (e0.y + e1.y) * 0.5
+		dir = (e1 - e0).normalized()
+		lg.global_transform = Transform3D(Basis(dir.cross(Vector3.UP).normalized(), dir.cross(Vector3.UP).normalized().cross(dir) * -1.0, dir).orthonormalized(), mid)
+		lg.linear_velocity = Vector3.ZERO
+		lg.angular_velocity = Vector3.ZERO
+		lg.freeze = true
+		var end: Vector3 = lg.global_position - lg.global_basis.z * (len * 0.5 - 0.1)
+		var flat := Vector3(dir.x, 0, dir.z).normalized()
+		var stand: Vector3 = end - flat * 0.75
+		stand.y = main.world.ground_y(stand.x, stand.z) + 0.3
+		await place(p, main.world.local_to_world(stand), k)
+		lg.global_transform = Transform3D(Basis(dir.cross(Vector3.UP).normalized(), dir.cross(Vector3.UP).normalized().cross(dir) * -1.0, dir).orthonormalized(), mid)
+		end = lg.global_position - lg.global_basis.z * (len * 0.5 - 0.1)
+		p.look_along(flat)
+		await frames(10)
+		p.hands.aim_override = end + Vector3(0, 0.1, 0)
+		for i in hands:
+			p.hands.press(1 - i)
+		for f in 8:
+			await frames(5)
+			if "--trace" in OS.get_cmdline_user_args():
+				print("  f%d mode %s pos %s shoulder %s end %s log %s player %s" % [f, p.hands.h[1]["mode"], (p.hands.h[1]["pos"] as Vector3).snapped(Vector3.ONE * 0.01),
+					p.hands._shoulder(1).snapped(Vector3.ONE * 0.01), end.snapped(Vector3.ONE * 0.01), lg.global_position.snapped(Vector3.ONE * 0.01), p.global_position.snapped(Vector3.ONE * 0.01)])
+		var gripped := p.hands.grip_kind(1) == "heavy"
+		var before := lg.global_position
+		key(KEY_S, true)
+		await secs(5.0)
+		key(KEY_S, false)
+		for i in 2:
+			p.hands.release(i)
+		p.hands.aim_override = Vector3.INF
+		var m := Vector2(lg.global_position.x - before.x, lg.global_position.z - before.z).length()
+		moved.append(m)
+		check("Gripped the log with %d hand%s" % [hands, "s" if hands > 1 else ""], gripped, p.hands.h[1]["mode"])
+	check("One hand only creeps, two hands pull it along", moved[0] < 0.8 and moved[1] > moved[0] * 2.0 and moved[1] > 1.0, "%.2f m vs %.2f m in 5 s" % [moved[0], moved[1]])
 
 
 ## Follow the path from 14 m before the obstacle; returns the seconds until 12 m past it (-1 = not made)

@@ -135,6 +135,10 @@ func _ready() -> void:
 	dot.modulate.a = 0.6
 	dot.name = "Crosshair"
 	add_child(dot)
+	_grip = GripMark.new()
+	_grip.set_anchors_preset(Control.PRESET_CENTER)
+	_grip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_grip)
 
 	_messages = VBoxContainer.new()
 	_messages.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -224,6 +228,17 @@ static func keycap(text: String, size := 17) -> PanelContainer:
 	l.custom_minimum_size.x = size * 0.9
 	p.add_child(l)
 	return p
+
+
+## The hands under the crosshair: an open hand when something grippable is in reach, a fist while holding,
+## a ring that fills while something tears
+var _grip: GripMark
+
+
+func set_hands(hs: Hands) -> void:
+	if _grip:
+		_grip.hands = hs
+		_grip.queue_redraw()
 
 
 func set_player(p: Wanderer) -> void:
@@ -484,3 +499,30 @@ func flash() -> void:
 	var tw := create_tween()
 	tw.tween_property(r, "color:a", 0.0, 0.35)
 	tw.tween_callback(r.queue_free)
+
+
+class GripMark extends Control:
+	var hands: Hands
+
+	func _draw() -> void:
+		if hands == null or not is_instance_valid(hands):
+			return
+		var ink := Color(0.13, 0.17, 0.12, 0.55)
+		var line := Color(1.0, 0.98, 0.92, 0.9)
+		var holding := hands.holding(0) or hands.holding(1)
+		if hands.tension > 0.01:
+			draw_arc(Vector2.ZERO, 22.0, -PI * 0.5, -PI * 0.5 + TAU * clampf(hands.tension, 0.0, 1.0), 40, Color(1.0, 0.8, 0.3, 0.95), 4.0, true)
+		if holding:
+			# a closed fist
+			draw_circle(Vector2(0, 2), 8.0, ink)
+			draw_arc(Vector2(0, 2), 8.0, 0.0, TAU, 20, line, 2.0, true)
+			for k in 3:
+				draw_line(Vector2(-5 + k * 5, -3), Vector2(-5 + k * 5, 1), line, 1.5, true)
+		elif hands.hover != "":
+			# an open hand: palm and four fingers
+			draw_circle(Vector2(0, 4), 6.5, ink)
+			draw_arc(Vector2(0, 4), 6.5, 0.0, TAU, 18, line, 2.0, true)
+			for k in 4:
+				var x := -6.0 + k * 4.0
+				draw_line(Vector2(x, -1), Vector2(x, -9 + absf(k - 1.5) * 1.5), line, 2.2, true)
+			draw_line(Vector2(6, 4), Vector2(10, 0), line, 2.2, true)
