@@ -223,6 +223,35 @@ func _initialize() -> void:
 			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 			_cam.size = 3.4
 			_cam.look_at_from_position(Vector3(0, 1.55, 6.0), Vector3(0, 1.55, 0))
+		"gear":
+			# carried, worn and held things; --back shows the backpacks
+			var sets := [
+				[["wasserflasche", "kamera", "fernglas", "pfeife", "kompass", "messer", "stock", "laterne"], ["muetze", "schal"], "stock", "laterne"],
+				[["seil", "laterne", "drachen", "tee", "sonnenhut", "wasserflasche"], [], "", ""],
+				[["karte", "kamera", "wasserflasche"], ["sonnenhut"], "karte", ""],
+				[["kompass", "taschenlampe", "seil", "stock"], ["regenjacke", "handschuhe"], "kompass", "taschenlampe"],
+				[["apfel", "fernglas", "drachen"], ["pullover"], "apfel", ""],
+			]
+			var back := _args.has("back")
+			for i in sets.size():
+				var sc := Scout.new(Scout.random_look() if i > 0 else Scout.DEFAULT_LOOK)
+				sc.position = Vector3((i - 2) * 1.1, 0, 0)
+				sc.rotation.y = (PI if back else 0.0) + (i - 2) * -0.15
+				world.add_child(sc)
+				var items := []
+				for id in sets[i][0]:
+					items.append(ItemDefs.make(id))
+				for id in sets[i][1]:
+					var it := ItemDefs.make(id)
+					it["equipped"] = true
+					items.append(it)
+				sc.gear.set_items(items)
+				if sets[i][2] != "":
+					sc.gear.hold("R", sets[i][2])
+				if sets[i][3] != "":
+					sc.gear.hold("L", sets[i][3])
+				_scouts.append(sc)
+			_cam.look_at_from_position(Vector3(0, 1.3, 6.2) * Vector3(1, 1, -1), Vector3(0, 0.85, 0))
 		"idle":
 			var names: Array = Scout.FIDGETS.keys()
 			for i in names.size():

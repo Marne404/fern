@@ -123,6 +123,7 @@ func _ready() -> void:
 	head.add_child(_arm)
 	scout = Scout.new(Settings.values.get("scout", {}))
 	add_child(scout)
+	inventory.changed.connect(_sync_gear)
 	scout.stepped.connect(_on_step)
 	scout.landed.connect(_on_landed)
 	set_third_person(Settings.values.get("third_person", false))
@@ -281,6 +282,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		interact()
 	elif event.is_action_pressed("rest"):
 		_toggle_rest()
+	elif event.is_action_pressed("hand_next"):
+		_cycle_hand(1)
+	elif event.is_action_pressed("hand_prev"):
+		_cycle_hand(-1)
+	elif event.is_action_pressed("hand_stow"):
+		if hand_r >= 0:
+			stow_hand("R")
+		elif hand_l >= 0:
+			stow_hand("L")
+	elif event.is_action_pressed("use_hand"):
+		use_hand()
 	elif event.is_action_pressed("view"):
 		set_third_person(not third_person)
 		Settings.set_value("third_person", third_person, false)
@@ -1069,6 +1081,101 @@ const FORTUNES := ["The next hill is smaller than it looks.", "A friend will sha
 	"Adventure is just bad planning. Enjoy it.", "Tomorrow's trail starts with today's step."]
 
 var _harmonica_t := 0.0
+
+# ================================================================ Hands
+## Items in the hands (item uid, -1 = empty): right hand tools and things, left hand the light
+var hand_r := -1
+var hand_l := -1
+
+
+func _item_uid(uid: int) -> Dictionary:
+	if uid < 0:
+		return {}
+	for it in inventory.items:
+		if it["uid"] == uid:
+			return it
+	return {}
+
+
+func is_held(item: Dictionary) -> bool:
+	return item["uid"] == hand_r or item["uid"] == hand_l
+
+
+func held_item(side := "R") -> Dictionary:
+	return _item_uid(hand_r if side == "R" else hand_l)
+
+
+func hold_item(item: Dictionary) -> void:
+	if not ScoutGear.holdable(item["id"]) or item["condition"] < 0.35:
+		return
+	if ScoutGear.hand_of(item["id"]) == "L":
+		hand_l = item["uid"]
+	else:
+		hand_r = item["uid"]
+	_sync_gear()
+
+
+func stow_hand(side: String) -> void:
+	if side == "L":
+		# putting the light away switches it off
+		var it := held_item("L")
+		if not it.is_empty() and _light_item == it["id"]:
+			_toggle_light(it["id"])
+		hand_l = -1
+	else:
+		hand_r = -1
+	_sync_gear()
+
+
+## Next / previous thing for the right hand (only what is in the backpack)
+func _cycle_hand(step: int) -> void:
+	var list: Array[Dictionary] = []
+	for it in inventory.items:
+		if ScoutGear.holdable(it["id"]) and ScoutGear.hand_of(it["id"]) == "R" and it["condition"] >= 0.35:
+			list.append(it)
+	if list.is_empty():
+		message.emit("Nothing to hold in the backpack.")
+		return
+	var cur := -1
+	for i in list.size():
+		if list[i]["uid"] == hand_r:
+			cur = i
+	var nxt := cur + step
+	if nxt >= list.size() or nxt < -1:
+		nxt = -1 if step > 0 else list.size() - 1
+	if cur == -1 and step < 0:
+		nxt = list.size() - 1
+	hand_r = list[nxt]["uid"] if nxt >= 0 else -1
+	_sync_gear()
+	message.emit("%s in hand." % ItemDefs.def(list[nxt]["id"])["name"] if nxt >= 0 else "Hands free.")
+
+
+## F / RB: use what is in the right hand (or the light in the left)
+func use_hand() -> void:
+	var it := held_item("R")
+	if it.is_empty():
+		it = held_item("L")
+	if it.is_empty():
+		message.emit("Nothing in your hands. (%s / %s: take something)" % [GameInput.glyph("hand_next"), GameInput.glyph("hand_prev")])
+		return
+	use_item(it)
+
+
+## The scout shows what is carried, worn and held
+func _sync_gear() -> void:
+	if scout == null or scout.gear == null:
+		return
+	if _item_uid(hand_r).is_empty() or _item_uid(hand_r)["condition"] < 0.35:
+		hand_r = -1
+	if _item_uid(hand_l).is_empty():
+		hand_l = -1
+	scout.gear.set_items(inventory.items)
+	var r := _item_uid(hand_r)
+	var l := _item_uid(hand_l)
+	if scout.gear.held("R") != (r["id"] if not r.is_empty() else ""):
+		scout.gear.hold("R", r["id"] if not r.is_empty() else "")
+	if scout.gear.held("L") != (l["id"] if not l.is_empty() else ""):
+		scout.gear.hold("L", l["id"] if not l.is_empty() else "")
 var _light: Light3D
 var _light_item := ""
 
@@ -1129,6 +1236,8 @@ func _toggle_light(id: String) -> void:
 		_light.queue_free()
 		_light = null
 		_light_item = ""
+		hand_l = -1
+		_sync_gear()
 		message.emit("Light off.")
 		return
 	if _light:
@@ -1152,6 +1261,11 @@ func _toggle_light(id: String) -> void:
 		_light = sp
 		head.add_child(sp)
 	_light_item = id
+	for it in inventory.items:
+		if it["id"] == id:
+			hand_l = it["uid"]
+			break
+	_sync_gear()
 	message.emit("Light on.")
 
 

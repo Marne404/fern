@@ -275,6 +275,19 @@ func _show_detail() -> void:
 	use.text = use_text
 	use.pressed.connect(func(): _use(it))
 	_detail.add_child(use)
+	# take it in the hand / put it back on the pack
+	if ScoutGear.holdable(it["id"]) and it.get("condition", 1.0) >= 0.35:
+		var held := player.is_held(it)
+		var hb := Button.new()
+		hb.text = "Put away" if held else "Hold in hand"
+		hb.theme_type_variation = "SecondaryButton"
+		hb.pressed.connect(func():
+			if held:
+				player.stow_hand(ScoutGear.hand_of(it["id"]))
+			else:
+				player.hold_item(it)
+			_show_detail())
+		_detail.add_child(hb)
 	var ropes: Array = player.inventory.items.filter(func(x): return x["id"] == "seil")
 	if it["id"] == "seil" and ropes.size() >= 2 and on_knot.is_valid():
 		var kb := Button.new()

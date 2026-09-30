@@ -144,6 +144,7 @@ func run() -> void:
 	await _test_backpack(p)
 	await _test_steps(p)
 	await _test_pad(p)
+	await _test_gear(p)
 	_test_day_cycle()
 	_test_weather()
 	_test_brook()
@@ -313,6 +314,37 @@ func _test_steps(p: Wanderer) -> void:
 	check("A step on the path leaves a print", after == before + 1 or kind in ["grass", "wood", "water"], "%s %d→%d" % [kind, before, after])
 	await frames(40)
 	check("Step sound players are freed", p.get_children().filter(func(c): return c is AudioStreamPlayer and not c.playing).size() == 0)
+
+
+## Gear: only what is in the backpack hangs on the scout or can be held; dropping empties the hand
+func _test_gear(p: Wanderer) -> void:
+	var inv := p.inventory
+	var stick := ItemDefs.make("stock")
+	var lantern := ItemDefs.make("laterne")
+	inv.add(stick)
+	inv.add(lantern)
+	await frames(2)
+	check("A carried walking stick hangs on the pack", p.scout.gear._hung.has("stock"))
+	p.hold_item(stick)
+	await frames(2)
+	check("Held in the hand, not on the pack", p.scout.gear.held("R") == "stock" and not p.scout.gear._hung.has("stock"))
+	p._toggle_light("laterne")
+	await frames(2)
+	check("A light goes into the left hand", p.scout.gear.held("L") == "laterne")
+	p._toggle_light("laterne")
+	p.drop_item(stick)
+	await frames(2)
+	check("Dropping empties the hand", p.scout.gear.held("R") == "" and p.hand_r == -1)
+	var hat := ItemDefs.make("muetze")
+	inv.add(hat)
+	p.use_item(hat)
+	await frames(2)
+	check("A worn wool hat shows as a beanie", p.scout.wear.get("hat", -1) == 3)
+	p.use_item(hat)
+	inv.remove(hat)
+	inv.remove(lantern)
+	await frames(2)
+	check("Nothing left over after putting things away", p.scout.gear._hung.is_empty() or not p.scout.gear._hung.has("laterne"))
 
 
 ## Controller: the left stick walks (analog), the right stick looks, buttons trigger actions, glyphs follow

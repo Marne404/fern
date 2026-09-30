@@ -144,6 +144,8 @@ var _face_state := ""
 var _prop_angle := 0.0
 var _emote := ""
 var _bubbles: ScoutBubbles
+## Carried, held and worn items (see ScoutGear)
+var gear: ScoutGear
 var _tear_t := 0.0
 var _emote_t := 0.0
 
@@ -155,6 +157,9 @@ func _init(look_in: Dictionary = {}, for_export := false) -> void:
 	_build()
 	if not export_mode:
 		_bake()
+	gear = ScoutGear.new()
+	gear.setup(self)
+	add_child(gear)
 	apply_look()
 
 
@@ -232,30 +237,44 @@ func fidget(which := "") -> void:
 
 # ================================================================ Colors
 
+## Clothes worn from the backpack (ScoutGear) override the editor look: hat, scarf, gloves, jacket
+var wear := {}
+var wear_ids := {}
+
+
+func set_wear(w: Dictionary) -> void:
+	if w == wear:
+		return
+	wear = w
+	apply_look()
+
+
 func apply_look() -> void:
 	var skin: Color = SKIN_COLORS[look["skin"] % SKIN_COLORS.size()]
-	var outfit: Color = OUTFIT_COLORS[look["outfit"] % OUTFIT_COLORS.size()]
+	var outfit: Color = wear.get("outfit_rgb", OUTFIT_COLORS[look["outfit"] % OUTFIT_COLORS.size()])
 	var pants: Color = PANTS_COLORS[look["pants"] % PANTS_COLORS.size()]
-	var hat: Color = ACCENT_COLORS[look["hat_color"] % ACCENT_COLORS.size()]
+	var hat: Color = wear.get("hat_rgb", ACCENT_COLORS[look["hat_color"] % ACCENT_COLORS.size()])
 	var pack: Color = ACCENT_COLORS[look["pack"] % ACCENT_COLORS.size()]
 	_set_color("skin", skin)
+	_set_color("hand", wear.get("hand_rgb", skin))
 	_set_color("cheek", skin.lerp(Color("ff5f86"), 0.5))
 	_set_color("outfit", outfit)
 	_set_color("collar", outfit.darkened(0.12) if outfit.get_luminance() > 0.5 else outfit.lightened(0.18))
 	_set_color("pants", pants)
 	_set_color("sash", ACCENT_COLORS[look["sash"] % ACCENT_COLORS.size()])
-	_set_color("scarf", ACCENT_COLORS[look["scarf"] % ACCENT_COLORS.size()])
+	_set_color("scarf", wear.get("scarf_rgb", ACCENT_COLORS[look["scarf"] % ACCENT_COLORS.size()]))
 	_set_color("hat", hat)
 	_set_color("hatband", hat.darkened(0.45) if hat.get_luminance() > 0.25 else hat.lightened(0.5))
 	_set_color("pack", pack)
 	_set_color("pack2", pack.darkened(0.25))
 	_set_color("pad", Color("5b86b5") if pack.b < pack.r else Color("d9824a"))
+	var hat_i: int = wear.get("hat", look["hat"] % HAT_NAMES.size())
 	for i in _hats.size():
-		_hats[i].visible = i == look["hat"] % HAT_NAMES.size()
+		_hats[i].visible = i == hat_i
 	var ex: int = look["extra"] % EXTRA_NAMES.size()
 	_extras["glasses"].visible = ex == 1 or ex == 4
 	_extras["patch"].visible = ex == 2
-	_extras["scarf"].visible = ex == 3 or ex == 4
+	_extras["scarf"].visible = ex == 3 or ex == 4 or wear.has("scarf_rgb")
 	_face_state = ""
 	_recolor()
 
@@ -359,6 +378,7 @@ func _build() -> void:
 	_bubbles = ScoutBubbles.new()
 	_bubbles.setup(self, neck)
 	add_child(_bubbles)
+
 	for side: int in [-1, 1]:
 		_build_arm(chest_space, side)
 		_build_leg(side)
@@ -628,8 +648,8 @@ func _build_arm(space: Node3D, side: int) -> void:
 	var elbow := _node(shoulder, "Elbow" + s, Vector3(0, -0.2, 0))
 	_add(elbow, Mesh3.capsule(0.05, 0.045, 0.165), "skin", "Forearm" + s)
 	var hand := _node(elbow, "Hand" + s, Vector3(0, -0.165, 0))
-	_add(hand, Mesh3.blob(Vector3(0.06, 0.066, 0.052), 2.1, 10, 14, Transform3D(Basis(), Vector3(0, -0.05, 0))), "skin", "Mitten" + s)
-	_add(hand, Mesh3.blob(Vector3(0.022, 0.034, 0.022), 2.0, 6, 10, Transform3D(Basis(Vector3(0, 0, 1), 0.55 * side), Vector3(0.044 * -side, -0.03, -0.032))), "skin", "Thumb" + s)
+	_add(hand, Mesh3.blob(Vector3(0.06, 0.066, 0.052), 2.1, 10, 14, Transform3D(Basis(), Vector3(0, -0.05, 0))), "hand", "Mitten" + s)
+	_add(hand, Mesh3.blob(Vector3(0.022, 0.034, 0.022), 2.0, 6, 10, Transform3D(Basis(Vector3(0, 0, 1), 0.55 * side), Vector3(0.044 * -side, -0.03, -0.032))), "hand", "Thumb" + s)
 	_arms.append([shoulder, elbow, hand])
 
 
@@ -679,8 +699,6 @@ func _build_pack(space: Node3D) -> void:
 			var a := TAU * i / 20.0
 			band.append(Vector3(sx, 0.37 + cos(a) * 0.089, 0.15 + sin(a) * 0.089))
 		_add(_pack, Mesh3.tube(band, 0.015, 6, [], 0.4, false), "leather", "RollStrap")
-	var bottle := [Vector2(0, -0.085), Vector2(0.038, -0.085), Vector2(0.043, -0.065), Vector2(0.043, 0.045), Vector2(0.028, 0.075), Vector2(0.017, 0.085), Vector2(0.019, 0.112), Vector2(0, 0.114)]
-	_add(_pack, Mesh3.lathe(bottle, 16, 1.0, Transform3D(Basis(), Vector3(0.24, -0.08, 0.16))), "metal", "Bottle")
 	var mug := [Vector2(0, -0.033), Vector2(0.034, -0.033), Vector2(0.038, 0.033), Vector2(0.032, 0.034), Vector2(0.028, -0.018), Vector2(0, -0.018)]
 	_add(_pack, Mesh3.lathe(mug, 16, 1.0, Transform3D(Basis(), Vector3(-0.235, 0.0, 0.19))), "metal", "Mug")
 	var handle := []
@@ -1111,6 +1129,14 @@ func animate(delta: float) -> void:
 					chest_rot.z += sin(_t * 40.0) * 0.012
 					head_rot.x -= 0.12
 
+	# items in the hands (emotes still override them)
+	var hands_busy := pose in [Pose.SWIM, Pose.CLIMB, Pose.LIE] or (not on_floor and _air_t > 0.45)
+	if gear:
+		gear.set_hands_busy(hands_busy)
+		gear.update(delta)
+		if not hands_busy:
+			head_rot.x += _hold_pose(arm, arm_osc, delta)
+
 	# emotes override arms, legs, head and face (blended in and out)
 	if _emote != "":
 		_emote_t += delta
@@ -1172,13 +1198,18 @@ func animate(delta: float) -> void:
 	_apply_legs(gxf, leg, delta)
 	for i in 2:
 		var am: Array = _arms[i]
-		var sx: float = _spring("ax%d" % i, arm[i][0], delta, 140.0, 11.0) + arm_osc[i][0] * ow
-		var sz: float = _spring("az%d" % i, arm[i][1], delta, 110.0, 8.0) + arm_osc[i][1] * ow
-		var ex: float = _spring("ex%d" % i, arm[i][2], delta, 110.0, 9.0) + arm_osc[i][2] * ow
-		am[0].rotation = Vector3(sx, 0, sz)
+		var ar: Array = arm[i]
+		var sx: float = _spring("ax%d" % i, ar[0], delta, 140.0, 11.0) + arm_osc[i][0] * ow
+		var sz: float = _spring("az%d" % i, ar[1], delta, 110.0, 8.0) + arm_osc[i][1] * ow
+		var ex: float = _spring("ex%d" % i, ar[2], delta, 110.0, 9.0) + arm_osc[i][2] * ow
+		# optional: shoulder twist, wrist pitch and roll
+		var sy: float = _spring("ay%d" % i, ar[3] if ar.size() > 3 else 0.0, delta, 120.0, 11.0)
+		var wx: float = _spring("wx%d" % i, ar[4] if ar.size() > 4 else 0.0, delta, 160.0, 13.0)
+		var wz: float = _spring("wz%d" % i, ar[5] if ar.size() > 5 else 0.0, delta, 160.0, 13.0)
+		am[0].rotation = Vector3(sx, sy, sz)
 		var wave_z := sin(_t * 11.0) * 0.6 if waving_now and i == 1 else 0.0
 		am[1].rotation = Vector3(ex, 0, _spring("ez%d" % i, wave_z, delta, 160.0, 10.0))
-		am[2].rotation = Vector3(ex * 0.25, 0, 0)
+		am[2].rotation = Vector3(ex * 0.25 + wx, 0, wz)
 	# pack and hat bounce with the body's up and down movement
 	var pv := _spring("pelv", (rig.position.y - _last_rig_y) / maxf(delta, 1e-4), delta, 300.0, 30.0)
 	_last_rig_y = rig.position.y
@@ -1431,6 +1462,58 @@ func _apply_legs(gxf: Transform3D, leg: Array, delta: float) -> void:
 		lg[2].basis = foot_b
 		if _ik_w <= 0.0:
 			lg[0].position = Vector3((i * 2 - 1) * FOOT_X, HIP_Y, 0)
+
+
+## Arm targets for the items in the hands; returns how far the head looks down (reading)
+func _hold_pose(arm: Array, osc: Array, delta: float) -> float:
+	var look_down := 0.0
+	for i in 2:
+		var side := "L" if i == 0 else "R"
+		var sd := -1.0 if i == 0 else 1.0
+		var id := gear.held(side)
+		var w := _spring("holdw%d" % i, 1.0 if id != "" else 0.0, delta, 60.0, 14.0)
+		if w < 0.01:
+			continue
+		var grip := ScoutGear.grip_of(id) if id != "" else String(get_meta("last_grip%d" % i, "hold"))
+		set_meta("last_grip%d" % i, grip)
+		var target: Array = arm[i]
+		var swing := 1.0
+		match grip:
+			"hang":
+				target = [0.28, sd * 0.2, 0.55, 0.0, -0.2, 0.0]
+				swing = 0.35
+			"point":
+				target = [1.2, sd * 0.1, 0.25, -sd * 0.2, -0.15, 0.0]
+				swing = 0.1
+			"stick":
+				target = [arm[i][0], arm[i][1] + sd * 0.08, arm[i][2] + 0.35, 0.0, 0.0, 0.0]
+				swing = 0.8
+			"read", "palm":
+				# hands in front of the chest (the item is anchored there), head down to look at it
+				target = [0.75, -sd * 0.12, 1.25, sd * 0.45, 0.2, 0.0] if grip == "read" else [0.5, -sd * 0.1, 1.45, sd * 0.5, 0.45, 0.0]
+				swing = 0.0
+				look_down = maxf(look_down, 0.42 * w)
+				# the map and the book need both hands
+				if grip == "read":
+					var j := 1 - i
+					arm[j] = _blend_arm(arm[j], [0.75, sd * 0.12, 1.25, -sd * 0.45, 0.2, 0.0], w)
+					osc[j] = [osc[j][0] * (1.0 - w), osc[j][1] * (1.0 - w), osc[j][2] * (1.0 - w)]
+			_:
+				target = [0.3, sd * 0.1, 0.85, 0.0, 0.25, 0.0]
+				swing = 0.5
+		arm[i] = _blend_arm(arm[i], target, w)
+		var k := lerpf(1.0, swing, w)
+		osc[i] = [osc[i][0] * k, osc[i][1] * k, osc[i][2] * k]
+	return look_down
+
+
+static func _blend_arm(a: Array, b: Array, w: float) -> Array:
+	var out := []
+	for n in maxi(a.size(), b.size()):
+		var x: float = a[n] if n < a.size() else 0.0
+		var y: float = b[n] if n < b.size() else 0.0
+		out.append(lerpf(x, y, w))
+	return out
 
 
 ## Pose of an emote at time t: changes arm/leg/face in place, returns offsets for rig, hips, chest, head
