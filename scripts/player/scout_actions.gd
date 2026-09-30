@@ -13,6 +13,7 @@ const KINDS := {
 	"spray": [1.6, "wasserpistole", false], "throw": [0.9, "", false], "apply": [1.4, "", false], "dress": [1.0, "", false],
 	"light": [1.8, "streichhoelzer", false], "roast": [4.0, "roast_stick", false], "kite": [0.0, "", false],
 	"read": [1.6, "", false],
+	"refill": [3.0, "wasserflasche", false], "scoop": [2.6, "", false],
 }
 
 
@@ -190,6 +191,72 @@ static func pose(sc: Scout, kind: String, t: float, dur: float, arm: Array, face
 				face["eyes"] = "happy"
 				face["mouth"] = "open"
 				face["open"] = 0.5
+		"scoop":
+			# down on the knees, both hands into the water, up to the mouth, a long sip
+			var down := smoothstep(0.0, 0.4, t) * (1.0 - smoothstep(1.1, 1.5, t))
+			var up := smoothstep(1.1, 1.5, t)
+			off["rig"] = Vector3(0, -0.32 * down - 0.12 * up, 0) * k
+			off["chest"] = Vector3(-0.55 * down + 0.1 * up, 0, 0) * k
+			off["head"] = Vector3(-0.25 * down + 0.2 * up, 0, 0) * k
+			for i in 2:
+				var sd := -1.0 if i == 0 else 1.0
+				var low := Vector3(sd * 0.05, 0.3, -0.42)
+				var mouth := Vector3(sd * 0.04, 1.08, -0.34)
+				arm[i] = Scout._blend_arm(arm[i], sc.reach(i, low.lerp(mouth, up), Vector2(-0.3, sd * 0.7)), k)
+			if k > 0.3:
+				face["eyes"] = "closed" if up > 0.5 else "sclera"
+				face["mouth"] = "o" if up > 0.5 else "smile"
+				if t > dur * 0.8:
+					face["eyes"] = "happy"
+					face["mouth"] = "open"
+					face["open"] = 0.5
+			if once.call("ahh", dur * 0.82):
+				sc.bubble("sparkle", 0.9, 0.4, 0.6)
+		"refill":
+			# kneeling at the water with the bottle – three ways of doing it, a different tempo each time, and a
+			# different little finish: hold it against the light, take a sip, shake the drops off
+			if not st.has("v"):
+				st["v"] = randi() % 3
+			var v: int = st["v"]
+			var fill_end := dur * 0.6
+			var after := smoothstep(fill_end, fill_end + 0.35, t) * (1.0 - smoothstep(dur - 0.4, dur - 0.05, t))
+			var kneel := smoothstep(0.0, 0.45, t) * lerpf(1.0, 0.45, smoothstep(fill_end, fill_end + 0.4, t)) * (1.0 - smoothstep(dur - 0.45, dur - 0.05, t))
+			var dipk := smoothstep(0.1, 0.5, t) * (1.0 - smoothstep(fill_end, fill_end + 0.3, t))
+			off["rig"] = Vector3(0, -0.33 * kneel, 0) * k
+			off["chest"] = Vector3(-0.55 * kneel * (1.0 - after * 0.6), 0, 0) * k
+			var dip := Vector3(0.06, 0.26 + 0.03 * sin(t * 9.0) * dipk, -0.47)
+			var knee := Vector3(-0.13, 0.5, -0.22)
+			match v:
+				0:
+					# one hand far out dips the bottle, the other rests on the knee; then it's held up against the light
+					var check := Vector3(0.1, 1.12, -0.36)
+					arm[1] = Scout._blend_arm(arm[1], sc.reach(1, dip.lerp(check, after), Vector2(0.3 - after * 0.3, after * 0.5)), k * maxf(dipk, after))
+					arm[0] = Scout._blend_arm(arm[0], sc.reach(0, knee, Vector2.ZERO), k * dipk)
+					off["head"] = Vector3(-0.35 * dipk + 0.25 * after, 0, -0.15 * after) * k
+				1:
+					# both hands hold it under, tilted so the air gurgles out; then a quick sip from it
+					var sip := Vector3(0.03, 1.02, -0.22)
+					arm[1] = Scout._blend_arm(arm[1], sc.reach(1, dip.lerp(sip, after), Vector2(0.9 - after * 1.6, 0.4)), k * maxf(dipk, after))
+					arm[0] = Scout._blend_arm(arm[0], sc.reach(0, Vector3(-0.02, 0.3, -0.46).lerp(sip + Vector3(-0.07, -0.04, 0), after), Vector2(0.9 - after * 1.6, -0.4)), k * maxf(dipk, after))
+					off["head"] = Vector3(-0.4 * dipk + 0.3 * after, 0, 0) * k
+				_:
+					# one hand dips it, the other on the hip, meanwhile a look around (and a little hum); then a shake
+					var shake := Vector3(0.28, 0.78 + 0.06 * sin(t * 34.0), -0.28)
+					arm[1] = Scout._blend_arm(arm[1], sc.reach(1, dip.lerp(shake, after), Vector2(0.3, sin(t * 34.0) * 0.4 * after)), k * maxf(dipk, after))
+					arm[0] = Scout._blend_arm(arm[0], sc.reach(0, Vector3(-0.2, 0.72, -0.02), Vector2(0, -0.5)), k * kneel)
+					off["head"] = Vector3(-0.1 * dipk, sin(t * 1.6) * 0.6 * dipk, 0.1 * dipk) * k
+					if once.call("hum", dur * 0.3):
+						sc.bubble("note", 1.0, 0.5, 0.6)
+			if k > 0.3:
+				face["eyes"] = "sclera" if v != 2 else "happy"
+				face["mouth"] = "o" if dipk > 0.5 and v == 1 else "smile"
+				if after > 0.5:
+					face["eyes"] = ["star", "closed", "happy"][v]
+					face["mouth"] = ["grin", "o", "grin"][v]
+			if once.call("gurgle", dur * 0.3):
+				sc.bubble("dots", 1.0, 0.45, 0.7)
+			if once.call("full", fill_end):
+				sc.bubble("drop", 0.9, 0.5, 0.7)
 		"read":
 			# unfold the map / flip a page
 			var flip := sin(t * TAU / 0.8)

@@ -225,6 +225,11 @@ func _process(delta: float) -> void:
 	var prev := _facing
 	if not third_person or not rope.is_empty() or climbing:
 		_facing = _yaw
+	elif hands and hands.busy_point() != Vector3.INF and not resting:
+		# reaching, punching or holding: the whole body turns to it (not just the arms)
+		var to := hands.busy_point() - global_position
+		if Vector2(to.x, to.z).length() > 0.15:
+			_facing = lerp_angle(_facing, atan2(-to.x, -to.z), 1.0 - exp(-10.0 * delta))
 	elif spd > 0.4 and not resting:
 		_facing = lerp_angle(_facing, atan2(-hv.x, -hv.y), 1.0 - exp(-9.0 * delta))
 	scout.turn_rate = lerpf(scout.turn_rate, clampf(angle_difference(prev, _facing) / maxf(delta, 0.001), -4.0, 4.0), 1.0 - exp(-6.0 * delta))
@@ -957,10 +962,11 @@ func _update_look_target() -> void:
 		var wl := world.gen.water_level(w.x, w.z)
 		if wl > -INF and p.y < wl + 0.3:
 			_water_target = true
-			var bottle := _find_refillable()
-			prompt = "E  drink water" + ("  ·  fill bottle" if not bottle.is_empty() else "")
+			var held := _held_bottle()
+			var fill: bool = not held.is_empty() and held["charges"] < ItemDefs.def(held["id"])["charges"]
+			prompt = "E  " + ("fill the bottle" if fill else "drink water")
 			prompt_title = "Water"
-			prompt_action = "drink" + (" · fill bottle" if not bottle.is_empty() else "")
+			prompt_action = "fill the bottle" if fill else "drink" + (" · hold the bottle to fill it" if not _find_refillable().is_empty() else "")
 			return
 
 
@@ -976,14 +982,48 @@ func interact() -> void:
 	elif _look_target and _look_target.has_meta("poi_action"):
 		(_look_target.get_meta("poi_action") as Callable).call(self)
 	elif _water_target:
-		body.water = minf(body.water + 30.0, 100.0)
-		var bottle := _find_refillable()
-		if not bottle.is_empty():
-			bottle["charges"] = ItemDefs.def("wasserflasche")["charges"]
-			inventory.changed.emit()
-			message.emit("You drink and refill the bottle.")
+		var bottle := _held_bottle()
+		if not bottle.is_empty() and bottle["charges"] < ItemDefs.def(bottle["id"])["charges"]:
+			# kneel down and fill it (the bottle is full when the animation is)
+			var dur := ScoutActions.duration("refill") * randf_range(0.85, 1.25)
+			if scout:
+				scout.play_action("refill", "", dur)
+			_water_rings(dur)
+			get_tree().create_timer(dur * 0.8).timeout.connect(func():
+				if inventory.items.has(bottle):
+					bottle["charges"] = ItemDefs.def(bottle["id"])["charges"]
+					inventory.changed.emit()
+					message.emit("The bottle is full."))
 		else:
-			message.emit("Cold, clear water.")
+			if scout:
+				scout.play_action("scoop")
+			_water_rings(1.2)
+			get_tree().create_timer(1.4).timeout.connect(func():
+				body.water = minf(body.water + 30.0, 100.0)
+				message.emit("Cold, clear water." if _find_refillable().is_empty() else "Cold, clear water. (Take the bottle in your hand to fill it.)"))
+
+
+## The water bottle in one of the hands (only a held bottle can be filled)
+func _held_bottle() -> Dictionary:
+	for side in ["R", "L"]:
+		var it := held_item(side)
+		if not it.is_empty() and ItemDefs.def(it["id"]).get("refill", false):
+			return it
+	return {}
+
+
+## Rings on the water in front of you while the hands are in it
+func _water_rings(seconds: float) -> void:
+	if world == null:
+		return
+	var fwd := -global_basis.z if not third_person else -scout.global_basis.z
+	var at := global_position + fwd * 0.7
+	var w := world.local_to_world(at)
+	var wl := world.gen.water_level(w.x, w.z)
+	if wl == -INF:
+		return
+	for k in int(seconds / 0.45):
+		get_tree().create_timer(0.4 + k * 0.45).timeout.connect(func(): add_ring(Vector3(at.x, wl, at.z), 0.5))
 
 
 func _find_refillable() -> Dictionary:

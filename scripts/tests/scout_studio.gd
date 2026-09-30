@@ -346,6 +346,36 @@ func _initialize() -> void:
 			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 			_cam.size = 4.9
 			_cam.look_at_from_position(Vector3(0, 0.0, -8.0), Vector3(0, 0.0, 0))
+		"water":
+			# the three bottle refill variants and the scoop, each at five moments (rows × columns)
+			var rows := [["refill", 0], ["refill", 1], ["refill", 2], ["scoop", 0]]
+			var ats := [0.15, 0.4, 0.62, 0.75, 0.86]
+			for r in rows.size():
+				for c in ats.size():
+					var sc := Scout.new(Scout.DEFAULT_LOOK)
+					sc.position = Vector3(-(c - (ats.size() - 1) * 0.5) * 1.15, -r * 1.9, 0)
+					sc.rotation.y = -0.7
+					world.add_child(sc)
+					sc.frozen = true
+					for f in 30:
+						sc.animate(1.0 / 60.0)
+					var kind: String = rows[r][0]
+					sc.play_action(kind)
+					sc._action_st["v"] = rows[r][1]
+					for f in int(ScoutActions.duration(kind) * ats[c] * 60.0):
+						sc.animate(1.0 / 60.0)
+					if c == 0:
+						var lab := Label3D.new()
+						lab.text = "%s %d" % rows[r] if kind == "refill" else kind
+						lab.font_size = 56
+						lab.outline_size = 12
+						lab.position = Vector3(0.9, 1.3, 0)
+						lab.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+						sc.add_child(lab)
+					_scouts.append(sc)
+			_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+			_cam.size = 7.4
+			_cam.look_at_from_position(Vector3(0, -2.0, -8.0), Vector3(0, -2.0, 0))
 		"idle":
 			var names: Array = Scout.FIDGETS.keys()
 			for i in names.size():
