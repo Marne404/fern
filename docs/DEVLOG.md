@@ -223,7 +223,7 @@ The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans an
 - The title screen shows the first biome at its best hour; world 1 opens in hour order (spring meadow, cliffs,
   autumn meadow, sunset coast). All website biome pictures show their biome at its best.
 
-## Round 16 – A scout that lives in its world
+## Round 16 – A scout that lives in its world (v0.13.0)
 
 - **Controller:** every action on a button, analog walking, the emote wheel on the right stick, the knot game on the
   D-pad, button symbols that follow the device, vibration, settings for look speed, invert and toggles.
