@@ -58,10 +58,22 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 
 - **Your scout** – customizable hiker (11 colors, 8 shirts and shorts, sash and scarf colors, 8 hats, 5 faces, glasses and
   neckerchiefs) with procedural animation: feet planted with IK that never slide (stroll, trot, bounding sprint,
-  sneaking on tiptoes), sitting, swimming, climbing, flailing through the air, idle gestures; faces react to
-  exhaustion, fear, cold and sleep.
-- **Emotes** – a wheel (hold **G**) with 16 gestures and expressions: wave, point, thumbs up, cheer, laugh, shrug,
-  facepalm, clap, salute, think, cower, stomp, sit down, lie down, … The eight slots are configurable.
+  sneaking on tiptoes), sitting, swimming, climbing, flailing through the air, idle gestures; an expressive face
+  (star, heart, teary and dizzy eyes, blushing, sweat drops) and little symbols popping up above the head.
+- **Gear you can see** – what the backpack holds hangs on it (bottle, rope coil, lantern on its hook, walking stick,
+  kite, camera and binoculars on straps); worn clothes show. Hold items in your hands (**X/Z** or the D-pad, **F**
+  / **RB** to use): a walking stick planted with every step, a swinging lantern, a flashlight, a map of the trail
+  ahead, a compass whose needle points north, a camera, a harmonica the birds listen to, a water pistol that puts
+  out campfires … Only what is in your backpack, of course.
+- **A scout that lives in its world** – looks at deer, birds and butterflies, catches snowflakes with the tongue,
+  holds on to the hat in a gust, shades the eyes against the low sun, points at shooting stars, warms the hands at
+  the fire, shakes itself dry after a swim and about twenty more little moments.
+- **Emotes** – a wheel (hold **G** / **LB**) with three pages: 32 gestures and expressions from wave, cheer and
+  facepalm to heart, aww, sneeze, star jump, peekaboo and hero pose. The 24 slots are configurable.
+- **Controller support** – plug in a controller and play: analog walking, every action on a button, the emote wheel
+  on the right stick, button symbols in the HUD (Xbox or PlayStation), vibration.
+- **Music by the time of day** – the four music packs are measured and sorted by the hour: calm and bright in the
+  morning, warm in the golden hour, dreamy at night; a gentle resolution after obstacles.
 - **Voice groundwork** – microphone detection with push to talk, always on or voice activation, a level meter and
   optional monitoring; your scout's mouth moves with your voice. Nothing is sent anywhere yet (multiplayer comes later).
 - **Endless, seed-based world** – type any word or number as your world seed and share it with friends.
@@ -117,6 +129,8 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 | **R** | rest (sleep when tired) |
 | **V** | first / third person |
 | **G** (hold) | emote wheel |
+| **F** | use the item in your hand |
+| **X / Z** | next / previous item in your hand · **H** put it away |
 | **T** | push to talk (voice test, if enabled) |
 | **Mouse wheel** | camera distance (third person) |
 | **Right mouse** | binoculars |
@@ -185,8 +199,9 @@ Command-line options after `--`, e.g. `godot --path . -- --play --z=-15000`:
 `--obtest` obstacle test (40 checks) · `--selftest` body/backpack/items/emotes/voice test.
 
 Standalone tools: `godot --path . -s res://scripts/tests/scout_studio.gd -- --mode=lineup --out=x.png` renders scouts
-(modes `lineup`, `poses`, `face`, `back`, `walk`, `side`, `group`, `idle`, `gait` filmstrip, `clip` frame sequence),
-`scripts/tests/gait_probe.gd` measures foot slip per speed, `scripts/tests/schedule_sim.gd` simulates hikes through
+(modes `lineup`, `poses`, `face`, `back`, `walk`, `side`, `group`, `idle`, `gait` filmstrip, `clip` frame sequence,
+`faces`, `bubbles`, `gear`, `actions`, `emotes`, `reactions`),
+`scripts/tests/gait_probe.gd` measures foot slip per speed, `scripts/tests/music_sim.gd` checks which music plays when, `scripts/tests/schedule_sim.gd` simulates hikes through
 the biome schedule (share of biome time in its best window), `scripts/tests/scout_export.gd` exports the scout
 as `docs/models/scout.glb` for the website.
 

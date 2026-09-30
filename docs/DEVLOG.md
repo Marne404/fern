@@ -223,6 +223,22 @@ The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans an
 - The title screen shows the first biome at its best hour; world 1 opens in hour order (spring meadow, cliffs,
   autumn meadow, sunset coast). All website biome pictures show their biome at its best.
 
+## Round 16 – A scout that lives in its world
+
+- **Controller:** every action on a button, analog walking, the emote wheel on the right stick, the knot game on the
+  D-pad, button symbols that follow the device, vibration, settings for look speed, invert and toggles.
+- **Face kit and bubbles:** star, heart, spiral, squeezed and teary eyes; "o", pout, grin, frown and tongue-out
+  mouths; blush, sweat drops, tears; hearts, notes, "!", "?", anger marks, sparkles, Zzz popping up above the head.
+- **Gear:** the backpack shows what it holds, worn clothes show; two hands with items that work – the walking stick
+  planted with the steps, a swinging lantern that is the light, flashlight, trail map and compass views, camera
+  (photos without the HUD), binoculars, harmonica, whistle, rubber chicken, water pistol, kite string, eating,
+  drinking, lighting a fire, roasting marshmallows; a first-person hand view. Arms reach targets by IK.
+- **Emotes:** the 16 reworked with anticipation and overshoot, 16 new, a wheel with three pages.
+- **Reactions:** attention to animals, fires and landmarks, and 26 little moments with the weather, the sky, animals,
+  water, mud, cold and heat; shooting stars now come from the CPU so the scout can point at them.
+- **Music:** every track measured and sorted by the hour; more of the packs (action loops, slow ends, a sparkle for
+  rare moments).
+
 ---
 
 ## Ideas for later

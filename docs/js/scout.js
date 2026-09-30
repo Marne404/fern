@@ -16,6 +16,7 @@ export const EMOTES = {
   wave: ['Wave', 2.2], point: ['Point', 2.0], thumbs: ['Thumbs up', 1.8], cheer: ['Cheer', 2.0], laugh: ['Laugh', 2.4],
   shrug: ['Shrug', 1.8], facepalm: ['Facepalm', 2.2], clap: ['Clap', 2.4], salute: ['Salute', 2.0], think: ['Think', 3.0],
   yawn: ['Stretch & yawn', 2.2], cower: ['Cower', 2.2], stomp: ['Stomp', 2.0], look: ['Look around', 3.0],
+  yes: ['Yes!', 1.4], no: ['No', 1.5], heart: ['Heart', 2.2], aww: ['Aww', 2.2], starjump: ['Star jump', 1.8], hero: ['Hero pose', 2.4],
 };
 export const DEFAULT_LOOK = { skin: 0, outfit: 0, pants: 0, sash: 7, scarf: 0, hat: 1, hat_color: 10, pack: 1, face: 0, extra: 3 };
 
@@ -29,9 +30,13 @@ const FIXED = {
   leather: '#6b4428', sole: '#e9dcc0', metal: '#9fb6c4', eye: '#1b1820', white: '#ffffff', sclera: '#fbf7ee', sock: '#f4efe4',
   rope: '#cdb07a', mouth: '#4a1d28', tongue: '#e0566a', teeth: '#fffaf2', brow: '#1b1820', badge1: '#d8453e', badge2: '#f2c230',
   badge3: '#3d7fd6', badge4: '#3aa99c', wood: '#a0703c', button: '#f4efe4', glass: '#1b1820', lace: '#f4efe4',
+  star: '#ffd23f', heart: '#ff4f7a', tear: '#8fd3ff', blush: '#ff7a9a', blushline: '#d84a6a', ink: '#2a2230',
 };
-const UNLIT = ['white', 'sclera', 'teeth', 'eye', 'brow', 'mouth', 'glass'];
-const NO_SHADOW = ['eye', 'white', 'mouth', 'cheek', 'sclera', 'tongue', 'teeth', 'brow', 'glass'];
+const UNLIT = ['white', 'sclera', 'teeth', 'eye', 'brow', 'mouth', 'glass', 'star', 'heart', 'tear', 'blush', 'blushline', 'ink'];
+const NO_SHADOW = ['eye', 'white', 'mouth', 'cheek', 'sclera', 'tongue', 'teeth', 'brow', 'glass', 'star', 'heart', 'tear', 'blush', 'blushline', 'ink'];
+// the face kit (round 16): extra eyes and mouths, blush, sweat, tears
+const EYE_FX = ['Star', 'Heart', 'Spiral', 'Squeeze'];
+const MOUTHS = ['Smile', 'Flat', 'Wavy', 'Open', 'Teeth', 'Cheeky', 'O', 'Pout', 'Grin', 'Frown', 'TongueOut'];
 
 let _template = null;
 export async function loadScoutTemplate(url = 'models/scout.glb') {
@@ -92,7 +97,11 @@ export class Scout {
     for (const s of ['L', 'R']) {
       for (const k of ['Eye', 'Outline', 'Sclera', 'Pupil', 'Lid', 'Happy', 'Closed', 'X', 'Brow']) this.face[k + s] = need(k + s);
     }
-    for (const k of ['Mouth', 'Smile', 'Flat', 'Wavy', 'Open', 'Teeth', 'Cheeky']) this.face[k] = need(k);
+    for (const k of MOUTHS.concat(['Mouth'])) this.face[k] = need(k);
+    for (const s of ['L', 'R']) for (const k of EYE_FX.concat(['Tears'])) this.face[k + s] = need(k + s);
+    for (const k of ['Blush', 'Sweat']) this.face[k] = need(k);
+    for (const k of Object.keys(this.face)) if (EYE_FX.some((e) => k.startsWith(e)) || k.startsWith('Tears') || k === 'Blush' || k === 'Sweat') this.face[k].visible = false;
+    for (const s of ['L', 'R']) this.arms.forEach(([sh, , ha]) => { sh.rotation.order = 'YXZ'; ha.rotation.order = 'YXZ'; });
     this.rest = {};
     for (const k of ['EyeL', 'EyeR', 'BrowL', 'BrowR']) this.rest[k] = { p: this.face[k].position.clone(), q: this.face[k].quaternion.clone() };
     this.hipY = this.legs[0][0].position.y;
@@ -298,9 +307,11 @@ export class Scout {
       const sx = this.spring('ax' + i, arm[i][0], dt, 140, 11) + armOsc[i][0] * ow;
       const sz = this.spring('az' + i, arm[i][1], dt, 110, 8) + armOsc[i][1] * ow;
       const ex = this.spring('ex' + i, arm[i][2], dt, 110, 9) + armOsc[i][2] * ow;
-      sh.rotation.set(sx, 0, sz);
+      const sy = this.spring('ay' + i, arm[i][3] ?? 0, dt, 120, 11);
+      const wx = this.spring('wx' + i, arm[i][4] ?? 0, dt, 160, 13), wz = this.spring('wz' + i, arm[i][5] ?? 0, dt, 160, 13);
+      sh.rotation.set(sx, sy, sz);
       el.rotation.set(ex, 0, this.spring('ez' + i, wavingNow && i === 1 ? Math.sin(T * 11) * 0.6 : 0, dt, 160, 10));
-      ha.rotation.set(ex * 0.25, 0, 0);
+      ha.rotation.set(ex * 0.25 + wx, 0, wz);
     }
     // pack and hat bounce with the body's up and down movement
     const pv = this.spring('pelv', (this.rig.position.y - this.lastRigY) / Math.max(dt, 1e-4), dt, 300, 30);
@@ -453,7 +464,9 @@ export class Scout {
   emotePose(e, t, dur, arm, leg, f, fx) {
     const k = smooth(0, 0.25, t) * (1 - smooth(dur - 0.3, dur, t));
     const o = { rig: [0, 0, 0], hip: [0, 0, 0], chest: [0, 0, 0], head: [0, 0, 0] };
-    const to = (i, v) => { arm[i] = arm[i].map((x, j) => lerp(x, v[j], k)); };
+    const to = (i, v) => { const n = Math.max(arm[i].length, v.length); const a = []; for (let j = 0; j < n; j++) a.push(lerp(arm[i][j] ?? 0, v[j] ?? 0, k)); arm[i] = a; };
+    // a hand to a point in chest space (x mirrored for the left hand) with a wrist tilt
+    const at = (i, p, wrist = [0, 0]) => to(i, this.reach(i, [p[0] * (i === 0 ? -1 : 1), p[1], p[2]], [wrist[0], wrist[1] * (i === 0 ? -1 : 1)]));
     const face = (d) => { if (k > 0.3) Object.assign(f, d); };
     const sc = (v) => v.map((x) => x * k);
     const S = Math.sin;
@@ -485,9 +498,41 @@ export class Scout {
         for (let i = 0; i < 2; i++) { const st = Math.max(S(t * 8 + i * Math.PI), 0); leg[i] = [lerp(leg[i][0], st * 0.55, k), lerp(leg[i][1], -st * 1.1, k)]; fx[i] = [st * 0.13 * k, st * 0.2 * k]; }
         to(0, [-0.2, -0.25, 0.1]); to(1, [-0.2, 0.25, 0.1]); o.rig = sc([0, Math.abs(S(t * 8)) * 0.03, 0]); o.chest = sc([-0.08, 0, 0]);
         face({ brow_a: 1, mouth: 'teeth', eyes: 'sclera' }); break;
+      case 'yes': { const nod = S(t * Math.PI * 2 / 0.45) * (1 - smooth(1.0, 1.3, t)); o.head = sc([0.22 * nod, 0, 0]); o.chest = sc([0.04 * nod, 0, 0]); face({ eyes: 'happy', mouth: 'grin', brow_r: 0.4 }); break; }
+      case 'no': { const sh = S(t * Math.PI * 2 / 0.4) * (1 - smooth(1.0, 1.4, t)); o.head = sc([0, 0.35 * sh, 0]); to(1, [0.9, 0.1, 1.6, 0.4, 0, S(t * Math.PI * 2 / 0.4) * 0.5]); face({ eyes: 'squeeze', mouth: 'pout', brow_a: 0.4 }); break; }
+      case 'heart': at(0, [0.035, 1.0, -0.4], [-0.5, 0.9]); at(1, [0.035, 1.0, -0.4], [-0.5, 0.9]); o.head = sc([0.05, 0, S(t * 3) * 0.1]); face({ eyes: 'heart', mouth: 'grin', blush: 0.9 }); break;
+      case 'aww': { const sw = S(t * 3.5); at(0, [0.2, 1.14, -0.3], [-0.3, 0]); at(1, [0.2, 1.14, -0.3], [-0.3, 0]); o.head = sc([0.05, 0, sw * 0.18]); o.chest = sc([0, 0, sw * 0.06]); face({ eyes: 'happy', mouth: 'o', blush: 1 }); break; }
+      case 'starjump': {
+        const hs = S(t * Math.PI * 2 / 0.6 - 0.8), air = Math.max(hs, 0);
+        o.rig = sc([0, (air * 0.2 + Math.min(hs, 0) * 0.06) * (1 - smooth(1.3, 1.6, t)), 0]);
+        to(0, [0.2, -2.3 * air - 0.2, 0.2]); to(1, [0.2, 2.3 * air + 0.2, 0.2]);
+        face({ eyes: air > 0.5 ? 'star' : 'happy', mouth: 'grin', brow_r: 0.9 }); break;
+      }
+      case 'hero': at(0, [0.24, 0.68, -0.02], [0.4, 0]); at(1, [0.24, 0.68, -0.02], [0.4, 0]); o.chest = sc([0.14, 0, 0]); o.head = sc([0.22, -0.15, 0]); face({ eyes: 'sclera', mouth: 'grin', brow_a: 0.5, brow_r: 0.3 }); break;
       case 'look': to(1, [2.3, 0.6, 2.4]); o.head = sc([0.1, S(t * 1.8) * 0.9, 0]); this.pupil = [S(t * 1.8), 0.1]; face({ brow_r: 0.5, eyes: 'sclera' }); break;
     }
     return o;
+  }
+
+  // arm IK (as Scout.reach in the game): [pitch, roll, elbow, twist, wrist pitch, wrist roll] for a hand target
+  reach(i, target, wrist = [0, 0]) {
+    const UA = 0.2, FA = 0.215, sd = i === 0 ? -1 : 1;
+    const t = new THREE.Vector3(target[0] - 0.205 * sd, target[1] - 0.965, target[2]);
+    const dist = Math.min(Math.max(t.length(), 0.08), (UA + FA) * 0.995);
+    const ce = Math.min(Math.max((dist * dist - UA * UA - FA * FA) / (2 * UA * FA), -1), 1);
+    const ex = Math.acos(ce);
+    const e0 = new THREE.Vector3(0, -UA - FA * Math.cos(ex), -FA * Math.sin(ex));
+    const td = t.clone().normalize();
+    const base = new THREE.Quaternion().setFromUnitVectors(e0.clone().normalize(), td);
+    let best = base, bestV = Infinity;
+    for (let k = 0; k < 16; k++) {
+      const q = new THREE.Quaternion().setFromAxisAngle(td, Math.PI * 2 * k / 16).multiply(base);
+      const el = new THREE.Vector3(0, -UA, 0).applyQuaternion(q);
+      const v = el.y - sd * el.x * 0.6 + el.z * 0.2;
+      if (v < bestV) { bestV = v; best = q; }
+    }
+    const e = new THREE.Euler().setFromQuaternion(best, 'YXZ');
+    return [e.x, e.z, ex, e.y, wrist[0], wrist[1]];
   }
 
   glance(dt, a) {
@@ -527,7 +572,7 @@ export class Scout {
   updateFace(dt, f) {
     const st = `${f.eyes}/${f.mouth}`;
     const F = this.face;
-    const drawn = ['dot', 'sclera', 'wide'].includes(f.eyes);
+    const drawn = ['dot', 'sclera', 'wide', 'teary'].includes(f.eyes);
     if (st !== this.faceState) {
       this.faceState = st;
       for (const s of ['L', 'R']) {
@@ -537,8 +582,10 @@ export class Scout {
         F['Happy' + s].visible = f.eyes === 'happy';
         F['Closed' + s].visible = f.eyes === 'closed';
         F['X' + s].visible = f.eyes === 'x';
+        for (const k of EYE_FX) F[k + s].visible = f.eyes === k.toLowerCase();
       }
-      for (const k of ['Smile', 'Flat', 'Wavy', 'Open', 'Teeth', 'Cheeky']) F[k].visible = k.toLowerCase() === f.mouth;
+      const mname = { tongue: 'TongueOut' }[f.mouth] ?? f.mouth;
+      for (const k of MOUTHS) F[k].visible = k.toLowerCase() === mname.toLowerCase();
     }
     this.nextBlink -= dt;
     if (this.nextBlink <= 0) { this.blink = 0.13; this.nextBlink = rnd(1.8, 5); }
@@ -565,5 +612,14 @@ export class Scout {
     });
     const o = this.spring('open', f.open, dt, 260, 18);
     F.Open.scale.set(lerp(0.6, 1, o), lerp(0.3, 1.25, o), 1);
+    const bl = this.spring('blush', f.blush ?? 0, dt, 120, 14);
+    F.Blush.visible = bl > 0.04;
+    F.Sweat.visible = (f.sweat ?? 0) > 0.05;
+    const tears = (f.tears ?? 0) > 0.1 || f.eyes === 'teary';
+    this.tearT = (this.tearT ?? 0) + dt;
+    ['L', 'R'].forEach((s) => {
+      F['Tears' + s].visible = tears;
+      if (tears) F['Tears' + s].children.forEach((d, k) => { const ph = ((this.tearT * 0.9 + k * 0.5) % 1); d.position.y = -0.05 - ph * 0.12; });
+    });
   }
 }
