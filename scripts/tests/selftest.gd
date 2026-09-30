@@ -397,10 +397,16 @@ func _test_hands(p: Wanderer) -> void:
 	p.hands.release(0)
 	await frames(60)
 	check("Released, it falls", p.hands.grip_kind(0) == "" and not wi.freeze, "freeze %s" % wi.freeze)
-	# a punch sends it off (step up to it first)
-	var to_stone := Vector3(wi.global_position.x - p.global_position.x, 0, wi.global_position.z - p.global_position.z)
-	p.global_position = wi.global_position - to_stone.normalized() * 0.55 + Vector3(0, 0.2, 0)
-	await frames(20)
+	# a punch sends it off: the stone lies in front of you (other things from earlier checks cleared away)
+	for n in main.find_children("*", "WorldItem", true, false):
+		if n != wi and (n as Node3D).global_position.distance_to(p.global_position) < 4.0:
+			n.queue_free()
+	var fw3 := -p.global_basis.z
+	var sp: Vector3 = p.global_position + fw3 * 0.6
+	sp.y = main.world.ground_y(sp.x, sp.z) + 0.12
+	wi.global_position = sp
+	wi.linear_velocity = Vector3.ZERO
+	await frames(40)
 	var before := wi.global_position
 	p.hands.aim_override = wi.global_position
 	p.look_along(wi.global_position - p.global_position)

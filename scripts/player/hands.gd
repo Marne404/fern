@@ -101,9 +101,9 @@ func reach_len(sh: Vector3, aim: Vector3) -> float:
 
 
 ## Where the hands aim: the point under the crosshair, or straight ahead
-func _aim_point(i: int) -> Vector3:
-	# the two hands a hand's width apart
-	var side := p.global_basis.x * (0.07 * (i * 2 - 1))
+func _aim_point(i: int, centered := false) -> Vector3:
+	# the two hands a hand's width apart (a punch goes straight for the crosshair)
+	var side := Vector3.ZERO if centered else p.global_basis.x * (0.07 * (i * 2 - 1))
 	if aim_override != Vector3.INF:
 		return aim_override + side
 	var cam := p.camera
@@ -494,12 +494,14 @@ func _punch(i: int) -> void:
 
 func _punch_hit(i: int) -> void:
 	var sh := _shoulder(i)
-	var aim := _aim_point(i)
+	var aim := _aim_point(i, true)
 	var dir := (aim - sh).normalized()
 	var q := PhysicsRayQueryParameters3D.create(sh, sh + dir * (reach_len(sh, aim) + 0.25), 1 | (1 << (WorldItem.LAYER - 1)) | GRAB_LAYER)
 	q.collide_with_areas = true
 	q.exclude = [p.get_rid()]
 	var hit := p.get_world_3d().direct_space_state.intersect_ray(q)
+	if OS.get_cmdline_user_args().has("--handlog"):
+		print("[Hands] punch %d from %s to %s hit %s %s %s" % [i, sh, aim, hit.get("collider"), (hit.get("collider") as Object).get("item") if hit.get("collider") else "", (hit.get("collider") as Node3D).global_position if hit.get("collider") else ""])
 	if hit.is_empty():
 		# into water?
 		if p.world:
