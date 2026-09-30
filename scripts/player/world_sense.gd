@@ -12,7 +12,7 @@ var _was_rain := 0.0
 var _was_water := false
 var _was_biome := -1
 var _lm_cache := {}
-var _in_sky_mode := false
+var _moment_ms := -600000
 
 
 func setup(m: Node) -> void:
@@ -57,8 +57,13 @@ func _process(delta: float) -> void:
 ## a reaction, with a direction in the world
 func _react(kind: String, dir := Vector3.ZERO) -> void:
 	var sc := _scout()
-	if sc and sc.react(kind, dir) and main._args.has("reactlog"):
-		print("[React] %.1f s  %s" % [Time.get_ticks_msec() / 1000.0, kind])
+	if sc and sc.react(kind, dir):
+		if main._args.has("reactlog"):
+			print("[React] %.1f s  %s" % [Time.get_ticks_msec() / 1000.0, kind])
+		# a rare beautiful moment gets a little musical sparkle (at most every ten minutes)
+		if kind in ["shooting_star", "awe_sky", "rainbow"] and Time.get_ticks_msec() - _moment_ms > 600000:
+			_moment_ms = Time.get_ticks_msec()
+			main.music.stinger("moment")
 
 
 func on_made_it() -> void:

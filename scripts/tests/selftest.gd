@@ -515,6 +515,19 @@ func _test_weather() -> void:
 		if i % 40 == 0:
 			wr.wish("clear")
 		wr.advance(0.05, 1.0)
+	# music by the hour: the glowing forest at night favours night music, the golden slopes their golden tracks
+	var night := MusicTracks.biome_scores(10, 23.5)
+	var best_n := ""
+	for t in night:
+		if best_n == "" or night[t] > night[best_n]:
+			best_n = t
+	check("Night music at night", MusicTracks.band_fit(best_n, 23.5) > 0.8, best_n)
+	var gold := MusicTracks.biome_scores(19, 17.5)
+	var best_g := ""
+	for t in gold:
+		if best_g == "" or gold[t] > gold[best_g]:
+			best_g = t
+	check("Golden-hour music in the golden hour", MusicTracks.band_fit(best_g, 17.5) > 0.8, best_g)
 	check("A clear wish clears the sky", wr.rain < 0.05 and wr.state in [Weather.FAIR, Weather.AFTER, Weather.CLEARING], "state %d, rain %.2f" % [wr.state, wr.rain])
 	# the biome schedule: every biome comes, none twice within a few segments, seed 1 opens in hour order
 	var g: WorldGen = main.gen

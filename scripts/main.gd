@@ -767,6 +767,7 @@ func _process_inner(delta: float) -> void:
 	atmosphere.valley_y = cam.global_position.y - (wpos.y - gen.row(wpos.z, false)["elev"])
 	atmosphere.update(wpos.z, delta)
 	atmosphere.update_stars(delta)
+	music.set_hour(atmosphere.day.hour)
 	# test helpers for tuning the lighting
 	if _args.has("skyset") and atmosphere.debug_sky.is_empty():
 		for pair in _args["skyset"].split(","):
@@ -911,6 +912,7 @@ func _process_inner(delta: float) -> void:
 			elif pw.z < o["z"] - 14.0 and _passed_obstacles.get(ok, true) == false:
 				_passed_obstacles[ok] = true
 				music.stinger("geschafft")
+				music.relief()
 				hud.show_message("Made it!")
 				if sense:
 					sense.on_made_it()

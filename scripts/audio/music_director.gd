@@ -16,6 +16,8 @@ const STINGERS := {
 	"kollaps": ["res://assets/music/fantasy_rpg/mp3/Death.mp3", -10.0],
 	"geschafft": ["res://assets/music/fantasy_rpg/mp3/Victory.mp3", -11.0],
 	"seltsam": ["res://assets/music/fantasy_rpg/mp3/Strange.mp3", -10.0],
+	# a rare, beautiful moment: the first aurora, a shooting star, a rainbow
+	"moment": ["res://assets/music/fantasy_rpg/mp3/Complete.mp3", -4.0],
 }
 
 var bus_idx := -1
@@ -161,9 +163,35 @@ func _wanted_context() -> String:
 
 
 func _playlist(ctx: String) -> Array:
+	return _scores(ctx).keys()
+
+
+## Candidates with weights: a biome by the hour (MusicTracks.biome_scores), calm and water moments by the hour too
+func _scores(ctx: String) -> Dictionary:
 	if ctx.begins_with("biom:"):
-		return MusicTracks.BIOMES[int(ctx.get_slice(":", 1)) % MusicTracks.BIOMES.size()]
-	return MusicTracks.SITUATIONS.get(ctx, MusicTracks.SITUATIONS["menu"])
+		return MusicTracks.biome_scores(int(ctx.get_slice(":", 1)), hour)
+	var list: Array = MusicTracks.SITUATIONS.get(ctx, MusicTracks.SITUATIONS["menu"])
+	var out := {}
+	for t in list:
+		var f := MusicTracks.band_fit(t, hour) if ctx in ["ruhe", "wasser", "menu"] else 1.0
+		out[t] = maxf(f * f, 0.05)
+	return out
+
+
+## The hour of the day (the music follows it) – set by main every frame
+var hour := 12.0
+var _band_t := 0.0
+var _relief := false
+var _playing_t := 0.0
+
+
+func set_hour(h: float) -> void:
+	hour = h
+
+
+## An obstacle was overcome: when the tension music ends, a gentle "slow end" part plays first
+func relief() -> void:
+	_relief = true
 
 
 var _duck_now := 0.0
@@ -202,6 +230,14 @@ func _process(delta: float) -> void:
 		return
 	var p := _players[_active]
 	var length: float = MusicTracks.TRACKS[_current][2]
+	_playing_t += delta
+	# the day moves on: a track that no longer fits the hour hands over (after a while, never abruptly)
+	_band_t -= delta
+	if _band_t <= 0.0:
+		_band_t = 10.0
+		if _context.begins_with("biom:") and _playing_t > 90.0 and not _scores(_context).has(_current):
+			_switch(_context, 8.0)
+			return
 	if not p.playing or p.get_playback_position() > length - FADE:
 		# fade out, short breather (longer in calm moments), then the next track
 		_fade_out(_active, FADE)
@@ -210,16 +246,20 @@ func _process(delta: float) -> void:
 
 
 func _switch(ctx: String, fade: float) -> void:
+	var from := _context
 	_context = ctx
-	var list := _playlist(ctx)
-	if list.has(_current) and ctx != "spannung" and _loading == "":
+	var scores := _scores(ctx)
+	# after an obstacle: the tension resolves into a slow end first
+	if _relief and from == "spannung" and ctx != "spannung":
+		_relief = false
+		scores = _scores("geschafft")
+	elif scores.has(_current) and ctx != "spannung" and _loading == "":
 		return   # the current track already fits
-	var pool: Array = list.filter(func(t): return not _recent.has(t) and t != _current)
-	if pool.is_empty():
-		pool = list.filter(func(t): return t != _current)
-	if pool.is_empty():
-		pool = list
-	var t: String = pool[_rng.randi() % pool.size()]
+	var avoid := _recent.duplicate()
+	avoid.append(_current)
+	var t := MusicTracks.pick(scores, avoid, _rng)
+	if t == "":
+		return
 	_recent.append(t)
 	if _recent.size() > 10:
 		_recent.pop_front()
@@ -282,6 +322,7 @@ func _start_track(title: String, fade: float) -> void:
 	_tweens[_active].tween_property(p, "volume_db", target, fade).set_trans(Tween.TRANS_SINE)
 	_fade_out(old, fade)
 	_current = title
+	_playing_t = 0.0
 	track_started.emit(title, _context)
 
 
