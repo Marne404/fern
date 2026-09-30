@@ -408,14 +408,60 @@ func _test_hands(p: Wanderer) -> void:
 	wi.linear_velocity = Vector3.ZERO
 	await frames(40)
 	var before := wi.global_position
-	p.hands.aim_override = wi.global_position
-	p.look_along(wi.global_position - p.global_position)
-	p.hands.press(1)
-	await frames(2)
-	p.hands.release(1)
-	await frames(40)
+	for attempt in 2:
+		p.hands.aim_override = wi.global_position + Vector3(0, 0.04 * attempt, 0)
+		p.look_along(wi.global_position - p.global_position)
+		p.hands.press(1)
+		await frames(2)
+		p.hands.release(1)
+		await frames(40)
+		if wi.global_position.distance_to(before) > 0.2:
+			break
 	check("A punch knocks it away", wi.global_position.distance_to(before) > 0.2, "%.2f m" % wi.global_position.distance_to(before))
 	p.hands.aim_override = Vector3.INF
+	# berries: pulled off the bush bunch by bunch, onto one pile in the backpack
+	var fm: ForageManager = main.forage
+	var plan := {}
+	for cz in range(-4, -400, -1):
+		for cx in range(-6, 6):
+			var pl := ForageManager.plan(gen, cx, cz)
+			if not pl.is_empty() and pl["type"] == "beeren":
+				plan = pl
+				break
+		if not plan.is_empty():
+			break
+	check("A berry bush somewhere", not plan.is_empty())
+	if plan.is_empty():
+		return
+	var bush: Node3D = fm._build(plan, Vector2.ZERO)
+	main.add_child(bush)
+	bush.global_position = p.global_position + (-p.global_basis.z) * 1.4
+	await frames(5)
+	var areas := bush.get_children().filter(func(c): return c is Area3D and c.has_meta("grab"))
+	check("The bush has bunches to grip", areas.size() >= 10, "%d" % areas.size())
+	for it2 in inv.items.duplicate():
+		inv.remove(it2)
+	var picked := 0
+	for n in 2:
+		var a3: Area3D = areas[n]
+		# stand outside the bush, facing the bunch
+		var out := Vector3(a3.global_position.x - bush.global_position.x, 0, a3.global_position.z - bush.global_position.z).normalized()
+		var st: Vector3 = a3.global_position + out * 0.6
+		st.y = main.world.ground_y(st.x, st.z) + 0.1
+		p.global_position = st
+		p.look_along(-out)
+		await frames(5)
+		p.hands.aim_override = a3.global_position
+		p.hands.press(1)
+		await frames(60)
+		p.hands.release(1)
+		await frames(5)
+	for it2 in inv.items:
+		if it2["id"] == "beeren":
+			picked = int(it2["charges"])
+	check("Berries picked one bunch at a time, onto one pile", picked == 2, "%d handfuls" % picked)
+	p.hands.aim_override = Vector3.INF
+	bush.queue_free()
 
 
 ## Gear: only what is in the backpack hangs on the scout or can be held; dropping empties the hand

@@ -103,6 +103,14 @@ func _build(p: Dictionary, corner: Vector2) -> Node3D:
 				mi.rotation.y = rng.randf() * TAU
 				mi.scale = Vector3.ONE * rng.randf_range(1.2, 1.8)
 				root.add_child(mi)
+				# picked up by hand, one by one
+				var pa := _grab_area(root, mi.position + Vector3(0, 0.04, 0), 0.09, {"kind": "tear", "what": "pebble", "resist": 0.0, "stretch": 0.01, "pull": 0.5})
+				pa.set_meta("on_tear", func(w: Wanderer):
+					if not w.inventory.add(ItemDefs.make("kiesel")):
+						w.message.emit("No room in the backpack.")
+						return
+					mi.queue_free()
+					pa.queue_free())
 			_interactable(root, Vector3(0, 0.2, 0), Vector3(1.4, 0.6, 1.4), "Pick up flat pebbles", func(w: Wanderer):
 				var n := 0
 				for i in 3:
@@ -144,6 +152,7 @@ func _berry_bush(root: Node3D, rng: RandomNumberGenerator, variant: int, uid: in
 	berries.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var half := aabb.size * 0.5 * bs
 	var center := aabb.get_center() * bs
+	var bunches := []
 	for i in 20:
 		# bunches of three on the outer shell of the bush
 		var dir := Vector3(rng.randf_range(-1, 1), rng.randf_range(-0.2, 1.0), rng.randf_range(-1, 1)).normalized()
@@ -151,7 +160,28 @@ func _berry_bush(root: Node3D, rng: RandomNumberGenerator, variant: int, uid: in
 		for k in 3:
 			var o := Vector3(rng.randf_range(-0.05, 0.05), -k * 0.05, rng.randf_range(-0.05, 0.05))
 			mm.set_instance_transform(i * 3 + k, Transform3D(Basis().scaled(Vector3.ONE * rng.randf_range(0.8, 1.2)), at + o))
+		bunches.append(at)
 	root.add_child(berries)
+	# every bunch can be pulled off by hand (a little resistance): +1 handful in the backpack
+	var left := [bunches.size()]
+	for i in bunches.size():
+		var area := _grab_area(root, bunches[i] + Vector3(0, -0.05, 0), 0.11,
+			{"kind": "tear", "what": names[variant], "resist": 0.25, "stretch": 0.08, "pull": 0.3})
+		area.set_meta("on_tear", func(w: Wanderer):
+			if not ItemDefs.add_picked(w.inventory, "beeren"):
+				w.message.emit("No room in the backpack.")
+				return
+			for k in 3:
+				mm.set_instance_transform(i * 3 + k, Transform3D(Basis().scaled(Vector3.ONE * 0.001), Vector3.ZERO))
+			area.queue_free()
+			left[0] -= 1
+			Sfx.play(w, "stone_click", -16.0, 2.2)
+			if left[0] <= 0:
+				taken[uid] = true
+				for c in root.get_children():
+					if c.has_meta("poi_prompt"):
+						c.queue_free()
+				w.message.emit("The last %s – the bush is bare." % names[variant]))
 	var body := StaticBody3D.new()
 	var cs := CollisionShape3D.new()
 	var sh := SphereShape3D.new()
@@ -161,20 +191,17 @@ func _berry_bush(root: Node3D, rng: RandomNumberGenerator, variant: int, uid: in
 	body.add_child(cs)
 	root.add_child(body)
 	Songbirds.mark(root, center + Vector3(0, half.y * 0.9, 0))
-	_interactable(root, center, Vector3(half.x * 2.4, half.y * 2.2, half.z * 2.4), "Pick %s" % names[variant], func(w: Wanderer):
-		var n := 0
-		for i in 3:
-			if w.inventory.add(ItemDefs.make("beeren")):
-				n += 1
-		if n == 0:
-			w.message.emit("No room in the backpack.")
-			return
-		taken[uid] = true
-		berries.queue_free()
-		for c in root.get_children():
-			if c.has_meta("poi_prompt"):
-				c.queue_free()
-		w.message.emit("Picked %d handfuls of %s." % [n, names[variant]]))
+	# picking is done by hand now: the prompt only tells how
+	_interactable(root, center, Vector3(half.x * 2.4, half.y * 2.2, half.z * 2.4), func(_w: Wanderer) -> String:
+		return "You can pick the %s by hand: hold %s or %s on a bunch" % [names[variant], GameInput.glyph("hand_left"), GameInput.glyph("hand_right")],
+		func(w: Wanderer): w.message.emit("Hold a hand button on a bunch and pull."))
+	# a punch shakes the bush
+	body.set_meta("punch", func(w: Wanderer, _at: Vector3, _dir: Vector3):
+		var tw := bush.create_tween()
+		tw.tween_property(bush, "scale", Vector3.ONE * bs * Vector3(1.08, 0.94, 1.08), 0.07)
+		tw.tween_property(bush, "scale", Vector3.ONE * bs * Vector3(0.96, 1.04, 0.96), 0.1)
+		tw.tween_property(bush, "scale", Vector3.ONE * bs, 0.18)
+		Sfx.play(w, "whoosh", -14.0, 0.7))
 
 
 ## A cluster of mushrooms at the foot of a tree or in the grass: edible ones, or fly agarics
@@ -192,6 +219,15 @@ func _mushrooms(root: Node3D, rng: RandomNumberGenerator, variant: int, uid: int
 		mi.scale = Vector3.ONE * (rng.randf_range(0.35, 0.55) if agaric else rng.randf_range(1.1, 1.6))
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		group.add_child(mi)
+		# pulled out one by one (they hold on a bit)
+		var ma := _grab_area(root, mi.position + Vector3(0, 0.08, 0), 0.1,
+			{"kind": "tear", "what": "fly agaric" if agaric else "mushroom", "resist": 0.45, "stretch": 0.14, "pull": 0.25})
+		ma.set_meta("on_tear", func(w: Wanderer):
+			if not ItemDefs.add_picked(w.inventory, "fliegenpilz" if agaric else "pilze"):
+				w.message.emit("No room in the backpack.")
+				return
+			mi.queue_free()
+			ma.queue_free())
 	_interactable(root, Vector3(0, 0.2, 0), Vector3(1.3, 0.6, 1.3), "Gather fly agarics" if agaric else "Gather mushrooms", func(w: Wanderer):
 		var id := "fliegenpilz" if agaric else "pilze"
 		var n := 0
@@ -218,7 +254,24 @@ func _berry_mat(c: Color) -> StandardMaterial3D:
 	return _berry_mats[key]
 
 
-func _interactable(root: Node3D, pos: Vector3, size: Vector3, prompt: String, action: Callable) -> void:
+## An area the hands can grip (Hands.GRAB_LAYER) with its grip description
+func _grab_area(root: Node3D, pos: Vector3, radius: float, grab: Dictionary) -> Area3D:
+	var area := Area3D.new()
+	area.collision_layer = Hands.GRAB_LAYER
+	area.collision_mask = 0
+	area.monitoring = false
+	area.set_meta("grab", grab)
+	var cs := CollisionShape3D.new()
+	var sh := SphereShape3D.new()
+	sh.radius = radius
+	cs.shape = sh
+	area.add_child(cs)
+	area.position = pos
+	root.add_child(area)
+	return area
+
+
+func _interactable(root: Node3D, pos: Vector3, size: Vector3, prompt, action: Callable) -> void:
 	var area := Area3D.new()
 	area.collision_layer = 1 << 2
 	area.collision_mask = 0

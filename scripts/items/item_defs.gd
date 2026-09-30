@@ -7,7 +7,7 @@ extends RefCounted
 
 const ITEMS := {
 	"apfel": {"name": "Apple", "weight": 0.2, "kind": "essen", "food": 16, "water": 4, "props": ["verderblich", "schwimmt"], "desc": "Crunchy and a little sour."},
-	"beeren": {"name": "Berries", "weight": 0.1, "kind": "essen", "food": 9, "water": 3, "props": ["verderblich"], "desc": "Hopefully the edible kind."},
+	"beeren": {"name": "Berries", "weight": 0.1, "kind": "essen", "food": 9, "water": 3, "charges": 1, "stack": 8, "props": ["verderblich"], "desc": "Hopefully the edible kind. Picked by hand, bunch by bunch."},
 	"brot": {"name": "Bread", "weight": 0.4, "kind": "essen", "food": 32, "props": ["verderblich"], "desc": "A bit dry, but filling."},
 	"muesliriegel": {"name": "Granola bar", "weight": 0.1, "kind": "essen", "food": 18, "props": ["wasserfest"], "desc": "Chocolate with oats."},
 	"bohnen": {"name": "Can of beans", "weight": 0.5, "kind": "essen", "food": 45, "props": ["wasserfest"], "desc": "They taste fine cold, too."},
@@ -30,7 +30,7 @@ const ITEMS := {
 	"stein": {"name": "Pretty stone", "weight": 1.2, "kind": "kram", "props": ["wasserfest"], "desc": "Completely useless. Beautiful."},
 	# ---------------------------------------------------------------- round 10
 	"kaese": {"name": "Cheese wedge", "weight": 0.3, "kind": "essen", "food": 22, "props": ["verderblich"], "desc": "Holey and happy."},
-	"pilze": {"name": "Mushrooms", "weight": 0.1, "kind": "essen", "food": 8, "queasy": 0.2, "props": ["verderblich"], "desc": "Probably fine. Probably."},
+	"pilze": {"name": "Mushrooms", "weight": 0.1, "kind": "essen", "food": 8, "queasy": 0.2, "charges": 1, "stack": 6, "props": ["verderblich"], "desc": "Probably fine. Probably."},
 	"honig": {"name": "Jar of honey", "weight": 0.4, "kind": "essen", "food": 20, "water": 5, "props": ["zerbrechlich"], "desc": "Sticky fingers guaranteed."},
 	"trockenobst": {"name": "Dried fruit", "weight": 0.15, "kind": "essen", "food": 14, "props": ["wasserfest"], "desc": "Chewy apricots and cranberries."},
 	"schokolade": {"name": "Chocolate bar", "weight": 0.1, "kind": "essen", "food": 12, "stamina": 18, "props": [], "desc": "Instant morale boost."},
@@ -66,7 +66,7 @@ const ITEMS := {
 		"desc": "Nice raw. Much nicer roasted over a fire."},
 	"kiesel": {"name": "Flat pebble", "weight": 0.15, "kind": "kram", "props": ["wasserfest"],
 		"desc": "Perfect for skipping over water. Or for a cairn."},
-	"fliegenpilz": {"name": "Fly agaric", "weight": 0.1, "kind": "essen", "food": 2, "poison": 30.0, "props": ["verderblich"],
+	"fliegenpilz": {"name": "Fly agaric", "weight": 0.1, "kind": "essen", "food": 2, "poison": 30.0, "charges": 1, "stack": 6, "props": ["verderblich"],
 		"desc": "Red with white dots. Beautiful. Do not eat."},
 }
 
@@ -93,6 +93,18 @@ static func make(id: String, uid := -1) -> Dictionary:
 	return it
 
 
+## Something picked by hand (a berry bunch, a mushroom): onto a pile of the same kind in the backpack if there
+## is one with room, else a new one. Returns false when nothing fits.
+static func add_picked(inv: Inventory, id: String) -> bool:
+	var stack: int = ITEMS[id].get("stack", 1)
+	for it in inv.items:
+		if it["id"] == id and not it.get("wet", false) and int(it.get("charges", 1)) < stack:
+			it["charges"] = int(it.get("charges", 1)) + 1
+			inv.changed.emit()
+			return true
+	return inv.add(make(id))
+
+
 static func has_prop(item: Dictionary, prop: String) -> bool:
 	return (ITEMS[item["id"]]["props"] as Array).has(prop)
 
@@ -108,6 +120,8 @@ static func display_name(item: Dictionary) -> String:
 		n += " (broken)"
 	if d.has("charges") and d["kind"] == "trinken":
 		n += " · %d/%d" % [item["charges"], d["charges"]]
+	elif d.has("stack") and int(item.get("charges", 1)) > 1:
+		n += " · %d" % item["charges"]
 	return n
 
 
