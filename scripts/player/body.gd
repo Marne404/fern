@@ -1,8 +1,8 @@
 class_name Body
 extends RefCounted
 ## Body state: only Fit → Exhausted → Weak → Collapsed is visible.
-## Hunger, thirst, tiredness, temperature, wetness and load act in the background
-## on maximum stamina and recovery.
+## Hunger, thirst, tiredness, cold and heat, injuries, the backpack's weight and what you carry each block a part of
+## the stamina bar (blocks(), in stamina points); wetness and load act on recovery.
 
 enum State { FIT, TIRED, WEAK, COLLAPSED }
 const STATE_NAMES := ["Fit", "Exhausted", "Weak", "Collapsed"]
@@ -27,17 +27,44 @@ var heat_protect_t := 0.0
 ## Multipliers set by the owner each frame: climbing effort (stick, boots), rest recovery (harmonica)
 var climb_factor := 1.0
 var rest_bonus := 1.0
+## Set by the owner: kilograms in the backpack, and the carry block from what the hands hold (stamina points)
+var pack_kg := 0.0
+var carry_block := 0.0
+
+const MIN_STAMINA := 8.0
 
 
-## Upper stamina limit from all background factors
+## What blocks the stamina bar, in stamina points: {cause: points}; the causes as in StaminaBar.CAUSES
+func blocks() -> Dictionary:
+	var b := {}
+	if food < 25.0:
+		b["food"] = pow(1.0 - food / 25.0, 0.7) * 55.0
+	if water < 25.0:
+		b["water"] = pow(1.0 - water / 25.0, 0.7) * 55.0
+	if rest < 20.0:
+		b["rest"] = (1.0 - rest / 20.0) * 40.0
+	# the colder, the more
+	if feel_temp < 12.0:
+		b["cold"] = clampf((12.0 - feel_temp) / 14.0, 0.0, 1.0) * 45.0
+	elif feel_temp > 27.0:
+		b["hot"] = clampf((feel_temp - 27.0) / 12.0, 0.0, 1.0) * 35.0
+	# injuries stay until they are treated (plasters, bandage, first aid)
+	if health < 99.5:
+		b["health"] = (100.0 - health) * 0.5
+	if pack_kg > Inventory.COMFORT_WEIGHT:
+		b["pack"] = minf((pack_kg - Inventory.COMFORT_WEIGHT) * 2.0, 40.0)
+	if carry_block > 0.5:
+		b["carry"] = minf(carry_block, 60.0)
+	return b
+
+
+## Upper stamina limit: 100 minus all blocks (never below MIN_STAMINA)
 func max_stamina() -> float:
-	var f := 1.0
-	f *= _factor(food, 25.0)
-	f *= _factor(water, 25.0)
-	f *= _factor(rest, 20.0)
-	f *= lerpf(0.55, 1.0, health / 100.0)
-	f *= 1.0 - comfort_penalty() * 0.45
-	return clampf(100.0 * f, 8.0, 100.0)
+	var total := 0.0
+	var b := blocks()
+	for k in b:
+		total += b[k]
+	return clampf(100.0 - total, MIN_STAMINA, 100.0)
 
 
 func _factor(v: float, threshold: float) -> float:
@@ -64,6 +91,7 @@ func temp_word() -> String:
 
 ## Main update. effort: 0 standing, 1 walking, 2 running, 3 swimming; load = luggage in kg
 func update(delta: float, effort: int, climb: float, load: float, air_temp: float, clothing: float, resting: bool) -> void:
+	pack_kg = load
 	if state == State.COLLAPSED:
 		return
 	var busy: float = [0.6, 1.0, 1.8, 2.0][effort]

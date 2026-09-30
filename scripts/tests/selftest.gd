@@ -73,7 +73,7 @@ func run() -> void:
 	check("Hunger rises while hiking", p.body.food < f0 - 10.0, "%.0f -> %.0f" % [f0, p.body.food])
 	check("Thirst rises faster", (w0 - p.body.water) > (f0 - p.body.food), "water %.0f -> %.0f" % [w0, p.body.water])
 	p.body.food = 5.0
-	check("Hunger lowers max stamina", p.body.max_stamina() < 50.0, "max %.0f" % p.body.max_stamina())
+	check("Hunger lowers max stamina", p.body.max_stamina() < 60.0 and p.body.blocks().has("food"), "max %.0f" % p.body.max_stamina())
 	p.body.food = 90.0
 	p.body.water = 90.0
 

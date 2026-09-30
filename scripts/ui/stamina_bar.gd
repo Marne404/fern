@@ -12,7 +12,9 @@ const FILL := [Color("7ccf3a"), Color("f2c230"), Color("ec8a34"), Color("d1493f"
 const CAUSES := {
 	"food": [Color("e9a23b"), "hunger"], "water": [Color("58a6e0"), "thirst"], "rest": [Color("9c86c9"), "tired"],
 	"cold": [Color("9fd6f0"), "cold"], "hot": [Color("f07a3a"), "hot"], "health": [Color("d8453e"), "injury"],
+	"pack": [Color("c9a86a"), "backpack"], "carry": [Color("b07a4a"), "carrying"],
 }
+const ORDER := ["health", "cold", "hot", "carry", "pack", "food", "water", "rest"]
 
 var body: Body
 var player: Wanderer
@@ -47,6 +49,7 @@ func _process(delta: float) -> void:
 		return
 	_shown = lerpf(_shown, body.stamina, 1.0 - exp(-10.0 * delta))
 	_max_shown = lerpf(_max_shown, body.max_stamina(), 1.0 - exp(-4.0 * delta))
+	_causes(delta)
 	if body.state != _last_state:
 		if body.state > _last_state:
 			shout(["", "EXHAUSTED!", "WEAK!", "COLLAPSED!"][body.state])
@@ -63,25 +66,27 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
-## Shares of the lost maximum: -ln(factor) of each cause, normalized
-func _causes() -> Array:
-	var f := {
-		"food": body._factor(body.food, 25.0),
-		"water": body._factor(body.water, 25.0),
-		"rest": body._factor(body.rest, 20.0),
-		"health": lerpf(0.55, 1.0, body.health / 100.0),
-	}
-	var comfort := 1.0 - body.comfort_penalty() * 0.45
-	f["cold" if body.feel_temp < 20.0 else "hot"] = comfort
+## The blocks in drawing order, smoothed: [[cause, points], …]
+var _blk := {}
+
+
+func _causes(delta := 0.0) -> Array:
+	var b := body.blocks()
+	for k in ORDER:
+		var want: float = b.get(k, 0.0)
+		var cur: float = _blk.get(k, 0.0)
+		_blk[k] = lerpf(cur, want, 1.0 - exp(-4.0 * delta)) if delta > 0.0 else want
 	var out := []
 	var total := 0.0
-	for k in f:
-		var v: float = -log(maxf(f[k], 0.001))
-		if v > 0.001:
-			out.append([k, v])
-			total += v
-	for o in out:
-		o[1] /= maxf(total, 1e-6)
+	for k in ORDER:
+		if _blk[k] > 0.3:
+			out.append([k, _blk[k]])
+			total += _blk[k]
+	# never more than the bar minus the minimum
+	var room := 100.0 - Body.MIN_STAMINA
+	if total > room:
+		for o in out:
+			o[1] *= room / total
 	return out
 
 
@@ -94,15 +99,26 @@ func _draw() -> void:
 	var r := Rect2(o, Vector2(bw, H))
 	# background
 	_round_rect(r, bg * Color(1, 1, 1, a), H * 0.5)
-	# hatched max-stamina losses at the right end
-	var lost := clampf(100.0 - _max_shown, 0.0, 100.0)
+	# hatched blocks at the right end, one per cause
+	var causes := []
+	var lost := 0.0
+	for k in ORDER:
+		if _blk.get(k, 0.0) > 0.3:
+			causes.append([k, _blk[k]])
+			lost += _blk[k]
+	lost = minf(lost, 100.0 - Body.MIN_STAMINA)
 	var x_end := o.x + bw
-	var causes := _causes()
 	var seg_x := x_end - bw * lost / 100.0
 	var x := seg_x
 	var icons := []
+	var scale := 1.0
+	var raw := 0.0
 	for c in causes:
-		var w: float = bw * lost / 100.0 * c[1]
+		raw += c[1]
+	if raw > lost and raw > 0.0:
+		scale = lost / raw
+	for c in causes:
+		var w: float = bw * c[1] * scale / 100.0
 		if w < 1.0:
 			continue
 		var col: Color = CAUSES[c[0]][0]
@@ -163,8 +179,8 @@ func _effects() -> Array:
 		out.append("boot")
 	if body.wet > 0.3:
 		out.append("wet")
-	if player and player.inventory.total_weight() > Inventory.COMFORT_WEIGHT:
-		out.append("heavy")
+	if body.carry_block > 0.5:
+		out.append("carry")
 	return out
 
 
@@ -239,6 +255,11 @@ static func draw_icon(ci: CanvasItem, kind: String, c: Vector2, a: float, ink :=
 		"boot":
 			ci.draw_rect(Rect2(c + Vector2(-4, -7), Vector2(6, 10)), Color("8b5a36", a))
 			ci.draw_rect(Rect2(c + Vector2(-4, 1), Vector2(10, 5)), Color("8b5a36", a))
-		"heavy":
+		"carry":
+			# a log held by two hands
+			ci.draw_rect(Rect2(c + Vector2(-8, -2.5), Vector2(16, 5)), Color("b07a4a", a))
+			ci.draw_circle(c + Vector2(-5, 4), 2.6, ink)
+			ci.draw_circle(c + Vector2(5, 4), 2.6, ink)
+		"heavy", "pack":
 			ci.draw_colored_polygon(PackedVector2Array([c + Vector2(-5, -2), c + Vector2(5, -2), c + Vector2(7, 7), c + Vector2(-7, 7)]), ink)
 			ci.draw_arc(c + Vector2(0, -4), 3.0, PI, TAU, 10, ink, 2.0, true)
