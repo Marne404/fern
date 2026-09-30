@@ -76,6 +76,20 @@ func run() -> void:
 	check("Hunger lowers max stamina", p.body.max_stamina() < 60.0 and p.body.blocks().has("food"), "max %.0f" % p.body.max_stamina())
 	p.body.food = 90.0
 	p.body.water = 90.0
+	# the colder, the more of the bar is blocked; injuries block until treated; a heavy backpack blocks too
+	p.body.feel_temp = 8.0
+	var cold_a: float = p.body.blocks().get("cold", 0.0)
+	p.body.feel_temp = -2.0
+	var cold_b: float = p.body.blocks().get("cold", 0.0)
+	p.body.feel_temp = 18.0
+	check("Cold blocks more the colder it is", cold_a > 3.0 and cold_b > cold_a * 2.0, "%.0f / %.0f" % [cold_a, cold_b])
+	p.body.health = 60.0
+	var inj: float = p.body.blocks().get("health", 0.0)
+	p.body.health = 100.0
+	p.body.pack_kg = 20.0
+	var pk: float = p.body.blocks().get("pack", 0.0)
+	p.body.pack_kg = 0.0
+	check("Injuries and a heavy backpack block energy", inj >= 15.0 and pk >= 15.0, "injury %.0f, pack %.0f" % [inj, pk])
 
 	# cold without clothing
 	jacket["equipped"] = false

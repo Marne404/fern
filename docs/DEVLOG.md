@@ -239,6 +239,18 @@ The Stylized Nature MegaKit Pro (48 more models) went into every biome; plans an
 - **Music:** every track measured and sorted by the hour; more of the packs (action loops, slow ends, a sparkle for
   rare moments).
 
+## Round 17 – Hands
+
+- **Two hands on the mouse buttons** (LT / RT): a click punches, holding reaches out and grips what the hand touches
+  until the button is released. Loose things are carried and flung, logs dragged (one hand creeps, two hands pull,
+  enough hands lift – counted over all holders, ready for multiplayer), grass, berry bunches and mushrooms tear
+  after a pull, trees, rocks and fences hold you. The scout bends down to the ground, reaches by IK and leans back
+  against a pull; first person shows the mittens; the crosshair shows an open hand, a fist and the tension.
+- **Berries by hand** – a bush has 20 bunches, each pulled off onto one pile in the backpack; mushrooms and pebbles
+  one by one too.
+- **Energy in blocks** – hunger, thirst, tiredness, cold (growing with the cold), heat, injuries until treated, the
+  backpack's weight and what you carry each block their own hatched part of the bar.
+
 ---
 
 ## Ideas for later

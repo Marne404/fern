@@ -70,6 +70,12 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
   the fire, shakes itself dry after a swim and about twenty more little moments.
 - **Emotes** – a wheel (hold **G** / **LB**) with three pages: 32 gestures and expressions from wave, cheer and
   facepalm to heart, aww, sneeze, star jump, peekaboo and hero pose. The 24 slots are configurable.
+- **Two hands** – the left mouse button works the left hand, the right one the right hand (LT / RT on a
+  controller). Click to punch, hold to reach out and grip whatever you touch until you let go: pick berries
+  bunch by bunch, pull mushrooms, tear out a tuft of grass by walking backwards, carry and fling stones, drag a log
+  (one hand creeps, two pull it along – and two players will be able to lift it), hold on to a tree.
+- **An energy bar that shows what weighs on you** – hunger, thirst, tiredness, cold (the colder the more), heat,
+  injuries (until you treat them), a heavy backpack and whatever you carry each block their own part of the bar.
 - **Controller support** – plug in a controller and play: analog walking, every action on a button, the emote wheel
   on the right stick, button symbols in the HUD (Xbox or PlayStation), vibration.
 - **Music by the time of day** – the four music packs are measured and sorted by the hour: calm and bright in the
@@ -133,7 +139,7 @@ Fern is a single-player prototype of a planned co-op game (see the [game design]
 | **X / Z** | next / previous item in your hand · **H** put it away |
 | **T** | push to talk (voice test, if enabled) |
 | **Mouse wheel** | camera distance (third person) |
-| **Right mouse** | binoculars |
+| **Left / right mouse** | left / right hand: click punches, hold grips (binoculars: hold them in a hand) |
 | **Q** | untie rope |
 | **Esc** | pause / menu |
 | **F12** | screenshot |
