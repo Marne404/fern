@@ -79,6 +79,12 @@ var values := {
 	"vsync": true,
 	"fov": 70.0,
 	"mouse_sens": 1.0,
+	"pad_look_sens": 1.0,       # controller: right stick speed
+	"pad_invert_y": false,
+	"pad_sprint_toggle": true,  # controller: L3 switches sprinting on until you stop (else hold)
+	"pad_crouch_toggle": true,  # controller: B switches crouching (else hold)
+	"vibration": true,
+	"button_style": 0,          # controller glyphs: 0 automatic, 1 Xbox, 2 PlayStation
 	"wind_fx": true,
 	"particles": true,
 	"footprints": true,

@@ -25,6 +25,7 @@ driver/enable_input=true
 
 Settings="*res://scripts/core/settings.gd"
 Voice="*res://scripts/audio/voice.gd"
+GameInput="*res://scripts/core/game_input.gd"
 
 [display]
 

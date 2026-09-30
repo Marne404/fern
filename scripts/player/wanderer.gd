@@ -177,6 +177,15 @@ func view_origin() -> Vector3:
 
 func _process(delta: float) -> void:
 	_update_rings(delta)
+	# controller: right stick looks around; LT / right mouse button: binoculars
+	if can_act() or fly_mode != 0:
+		var lr := GameInput.look_rate()
+		if lr != Vector2.ZERO:
+			var zf := 0.35 if _zoom else 1.0
+			_yaw -= lr.x * delta * zf
+			_pitch = clampf(_pitch - lr.y * delta * zf, -1.45, 1.45)
+			_apply_look()
+	_zoom = can_act() and Input.is_action_pressed("zoom") and _has_item("fernglas")
 	# the lamp was dropped or thrown: its light goes with it
 	if _light and not _has_item(_light_item):
 		_light.queue_free()
@@ -268,21 +277,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		_yaw -= event.relative.x * sens
 		_pitch = clampf(_pitch - event.relative.y * sens, -1.45, 1.45)
 		_apply_look()
-	elif event is InputEventKey and event.pressed and not event.echo:
-		match event.physical_keycode:
-			KEY_E:
-				interact()
-			KEY_R:
-				_toggle_rest()
-			KEY_V:
-				set_third_person(not third_person)
-				Settings.set_value("third_person", third_person, false)
-			KEY_Q:
-				if _look_target and _look_target.has_meta("anchor") and obstacles:
-					var an: Array = _look_target.get_meta("anchor")
-					obstacles.untie_key(an[0], self, _look_target.get_parent())
-	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_RIGHT:
-		_zoom = event.pressed and _has_item("fernglas")
+	elif event.is_action_pressed("use"):
+		interact()
+	elif event.is_action_pressed("rest"):
+		_toggle_rest()
+	elif event.is_action_pressed("view"):
+		set_third_person(not third_person)
+		Settings.set_value("third_person", third_person, false)
+	elif event.is_action_pressed("untie"):
+		if _look_target and _look_target.has_meta("anchor") and obstacles:
+			var an: Array = _look_target.get_meta("anchor")
+			obstacles.untie_key(an[0], self, _look_target.get_parent())
 	elif event is InputEventMouseButton and event.pressed and third_person and event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 		_cam_dist = clampf(_cam_dist * (0.9 if event.button_index == MOUSE_BUTTON_WHEEL_UP else 1.1), 1.6, 7.0)
 		_arm.spring_length = _cam_dist
@@ -329,23 +334,28 @@ func _physics_process(delta: float) -> void:
 
 	var dir := Vector3.ZERO
 	var sprint := false
+	# how far the stick is pushed (keys: 1): a controller can creep and stroll
+	var amount := 1.0
 	if can_act():
 		var fwd := -global_basis.z
 		var right := global_basis.x
-		if Input.is_physical_key_pressed(KEY_W): dir += fwd
-		if Input.is_physical_key_pressed(KEY_S): dir -= fwd
-		if Input.is_physical_key_pressed(KEY_A): dir -= right
-		if Input.is_physical_key_pressed(KEY_D): dir += right
+		var mv := GameInput.move_vector()
+		dir = fwd * mv.y + right * mv.x
+		amount = clampf(mv.length(), 0.0, 1.0)
 		if autopilot.is_valid():
 			dir = autopilot.call()
+			amount = 1.0
 		dir.y = 0.0
 		dir = dir.normalized()
 		if dir != Vector3.ZERO and resting:
 			resting = false
-		sprint = Input.is_physical_key_pressed(KEY_SHIFT) and dir != Vector3.ZERO and body.state < Body.State.WEAK and not swimming
-		if Input.is_physical_key_pressed(KEY_SPACE) and on_floor and not swimming and _try_climb():
+		sprint = GameInput.sprint_held() and dir != Vector3.ZERO and amount > 0.6 and body.state < Body.State.WEAK and not swimming
+		var jump := Input.is_action_pressed("jump")
+		if jump and crouching:
+			GameInput.release_crouch()
+		if jump and on_floor and not swimming and _try_climb():
 			return
-		if Input.is_physical_key_pressed(KEY_SPACE) and on_floor and body.stamina > 8.0 and not swimming and not crouching:
+		if jump and on_floor and body.stamina > 8.0 and not swimming and not crouching:
 			var load_f := clampf(1.0 - (inventory.total_weight() - Inventory.COMFORT_WEIGHT) / 30.0, 0.6, 1.0)
 			velocity.y = JUMP_VELOCITY * (0.8 if body.state >= Body.State.TIRED else 1.0) * load_f
 			body.spend(6.0)
@@ -357,6 +367,8 @@ func _physics_process(delta: float) -> void:
 	var speed := SWIM_SPEED if swimming else (SPRINT_SPEED if sprint else WALK_SPEED)
 	if crouching:
 		speed = 1.6
+	if not sprint and dir != Vector3.ZERO:
+		speed *= lerpf(0.25, 1.0, smoothstep(0.1, 0.9, amount))
 	speed *= [1.0, 0.85, 0.65, 0.0][body.state]
 	speed *= clampf(1.0 - (inventory.total_weight() - 14.0) / 40.0, 0.55, 1.0)
 	if in_water and not swimming:
@@ -565,7 +577,7 @@ func _block_low_obstacles() -> void:
 
 
 func _update_crouch() -> void:
-	var want := can_act() and (Input.is_physical_key_pressed(KEY_CTRL) or force_crouch)
+	var want := can_act() and (GameInput.crouch_held() or force_crouch)
 	# with a big backpack you don't get as small when crouching
 	var low := 1.0 + (0.4 if inventory.total_weight() > 12.0 else 0.0)
 	if want and not crouching:
@@ -722,12 +734,10 @@ func _rope_physics(delta: float) -> void:
 			var fwd := -global_basis.z
 			var along := (b - a).normalized()
 			var sgn := 1.0 if fwd.dot(along) >= 0.0 else -1.0
-			if Input.is_physical_key_pressed(KEY_W): move += sgn
-			if Input.is_physical_key_pressed(KEY_S): move -= sgn
+			move += sgn * signf(GameInput.move_vector().y) * float(absf(GameInput.move_vector().y) > 0.3)
 		else:
-			if Input.is_physical_key_pressed(KEY_S): move += 1.0
-			if Input.is_physical_key_pressed(KEY_W): move -= 1.0
-		if Input.is_physical_key_pressed(KEY_SPACE):
+			move -= signf(GameInput.move_vector().y) * float(absf(GameInput.move_vector().y) > 0.3)
+		if Input.is_action_pressed("jump"):
 			_leave_rope("Let go!")
 			return
 	var spd := 1.2 if rope["mode"] == "hangel" else 1.6
@@ -1230,6 +1240,8 @@ func _on_step(foot: Node3D) -> void:
 
 
 func _on_landed(fall_speed: float) -> void:
+	if fall_speed > 6.0:
+		GameInput.rumble(clampf(fall_speed / 14.0, 0.2, 0.8), clampf((fall_speed - 8.0) / 10.0, 0.0, 0.9), 0.18)
 	var kind := _ground_kind(global_position)
 	Sfx.play(self, "step_%s_%d" % [kind, randi() % 3], -12.0, 0.8)
 	if footprints and kind not in ["water", "wood"]:

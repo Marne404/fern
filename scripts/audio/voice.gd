@@ -94,7 +94,7 @@ func _process(delta: float) -> void:
 		_measure()
 	var mode: int = Settings.values.get("voice_mode", Mode.VOICE_ACTIVATION)
 	var thr: float = Settings.values.get("voice_threshold", -38.0)
-	var key := Input.is_physical_key_pressed(PTT_KEY)
+	var key := Input.is_action_pressed("talk")
 	var on := gate(mode, level_db, voice_share, thr, key, delta)
 	_set_transmitting(on and (active or not is_nan(fake_db)))
 	# lip sync: compressed level with a little syllable jitter, fast attack, slower release

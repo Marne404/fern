@@ -603,6 +603,13 @@ func _build_settings() -> Control:
 	for i in 8:
 		_emote_slot(list, i)
 	_slider(list, "mouse_sens", "Mouse sensitivity", 0.2, 3.0, 0.05, func(v): return "%.2f" % v)
+	_note(list, "Controller: left stick walks, right stick looks, A jump, B crouch, L3 sprint, X use, Y backpack, RB use the item in your hand, D-pad items and rest, hold LB for emotes, LT binoculars, R3 view, Start pause.")
+	_slider(list, "pad_look_sens", "Controller look speed", 0.3, 2.5, 0.05, func(v): return "%.2f" % v)
+	_check(list, "pad_invert_y", "Invert looking up and down (controller)")
+	_check(list, "pad_sprint_toggle", "L3 switches sprinting on (off: hold L3)")
+	_check(list, "pad_crouch_toggle", "B switches crouching on and off (off: hold B)")
+	_check(list, "vibration", "Controller vibration")
+	_option(list, "button_style", "Button symbols", ["Automatic", "Xbox", "PlayStation"])
 
 	var back := _button("Back", func(): back(), true)
 	outer.add_child(back)

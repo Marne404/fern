@@ -143,6 +143,7 @@ func run() -> void:
 	await _test_voice(p)
 	await _test_backpack(p)
 	await _test_steps(p)
+	await _test_pad(p)
 	_test_day_cycle()
 	_test_weather()
 	_test_brook()
@@ -312,6 +313,52 @@ func _test_steps(p: Wanderer) -> void:
 	check("A step on the path leaves a print", after == before + 1 or kind in ["grass", "wood", "water"], "%s %d→%d" % [kind, before, after])
 	await frames(40)
 	check("Step sound players are freed", p.get_children().filter(func(c): return c is AudioStreamPlayer and not c.playing).size() == 0)
+
+
+## Controller: the left stick walks (analog), the right stick looks, buttons trigger actions, glyphs follow
+func _test_pad(p: Wanderer) -> void:
+	var gen: WorldGen = main.gen
+	var z: float = main.start_z - 20.0
+	var x := gen.path_x(z)
+	p.global_position = main.world.world_to_local(Vector3(x, gen.height(x, z) + 0.3, z))
+	p.look_along(main.world.world_to_local(gen.path_point(z - 10.0)) - p.global_position)
+	await frames(10)
+	for a in GameInput.ACTIONS:
+		check("Action exists: " + a, InputMap.has_action(a))
+	var p0 := p.global_position
+	GameInput.fake_axis(JOY_AXIS_LEFT_Y, -1.0)
+	await frames(60)
+	var full := Vector2(p.velocity.x, p.velocity.z).length()
+	GameInput.fake_axis(JOY_AXIS_LEFT_Y, -0.4)
+	await frames(60)
+	var half := Vector2(p.velocity.x, p.velocity.z).length()
+	GameInput.fake_axis(JOY_AXIS_LEFT_Y, 0.0)
+	check("Left stick walks, analog", p.global_position.distance_to(p0) > 2.0 and half < full * 0.8 and half > 0.4, "full %.2f, half %.2f m/s" % [full, half])
+	check("Glyphs switch to the controller", GameInput.using_pad and GameInput.glyph("use") in ["X", "Square"], GameInput.glyph("use"))
+	var yaw0: float = p._yaw
+	GameInput.fake_axis(JOY_AXIS_RIGHT_X, 1.0)
+	await frames(30)
+	GameInput.fake_axis(JOY_AXIS_RIGHT_X, 0.0)
+	check("Right stick looks around", absf(angle_difference(yaw0, p._yaw)) > 0.3, "%.2f rad" % angle_difference(yaw0, p._yaw))
+	var j := InputEventJoypadButton.new()
+	j.button_index = JOY_BUTTON_A
+	j.pressed = true
+	Input.parse_input_event(j)
+	await frames(3)
+	var vy := p.velocity.y
+	j = j.duplicate()
+	j.pressed = false
+	Input.parse_input_event(j)
+	check("A jumps", vy > 1.0, "vy %.2f" % vy)
+	var k := InputEventKey.new()
+	k.physical_keycode = KEY_W
+	k.pressed = true
+	Input.parse_input_event(k)
+	k = k.duplicate()
+	k.pressed = false
+	Input.parse_input_event(k)
+	await frames(2)
+	check("Keys switch the glyphs back", not GameInput.using_pad and GameInput.glyph("use") == "E", GameInput.glyph("use"))
 
 
 ## Times of day: moods, sun/moon, sleep, speed

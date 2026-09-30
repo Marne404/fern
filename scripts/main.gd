@@ -109,6 +109,9 @@ func _ready() -> void:
 	if Settings.next_seed >= 0:
 		seed_v = Settings.next_seed
 		Settings.next_seed = -1
+	# tests always hike world 1 (the player's last world changes whenever they play)
+	if _args.has("obtest") or _args.has("selftest"):
+		seed_v = 1
 	if _args.has("seed"):
 		seed_v = Settings.parse_seed(_args["seed"])
 	if _bench_mode:
@@ -428,6 +431,7 @@ func start_journey() -> void:
 	player.obstacles = obstacles
 	player.spawn_item = _spawn_dropped
 	player.collapsed.connect(func():
+		GameInput.rumble(0.4, 0.8, 0.5)
 		hud.collapse_fade(true)
 		music.stinger("kollaps"))
 	player.recovered.connect(func(): hud.collapse_fade(false))
@@ -578,30 +582,34 @@ func resume() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# emote wheel: hold G
-	if event is InputEventKey and event.physical_keycode == KEY_G and not event.echo:
-		if event.pressed and mode == Mode.PLAYING and player and player.can_act() and not menus.is_open() and not backpack.is_open() and not knot_game.is_open():
+	# emote wheel: hold G / LB
+	if event.is_action("emotes") and not (event is InputEventKey and event.echo):
+		if event.is_pressed() and mode == Mode.PLAYING and player and player.can_act() and not menus.is_open() and not backpack.is_open() and not knot_game.is_open():
 			emote_wheel.open()
-		elif not event.pressed:
+		elif not event.is_pressed():
 			emote_wheel.close(true)
+		return
+	if event.is_action_pressed("backpack"):
+		if mode == Mode.PLAYING and player and not menus.is_open() and not knot_game.is_open():
+			if backpack.is_open():
+				backpack.close()
+			elif player.can_act():
+				backpack.open(player)
+		return
+	# Esc / Start pause; B (ui_cancel on a controller) only goes back out of open screens
+	var pad_back := event is InputEventJoypadButton and event.is_action_pressed("ui_cancel")
+	if event.is_action_pressed("pause") or (pad_back and (_bench or backpack.is_open() or menus.is_open())):
+		if _bench:
+			_bench_abort()
+		elif backpack.is_open():
+			backpack.close()
+		elif menus.is_open():
+			menus.back()
+		elif mode == Mode.PLAYING:
+			pause()
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.keycode:
-			KEY_TAB:
-				if mode == Mode.PLAYING and player and not menus.is_open() and not knot_game.is_open():
-					if backpack.is_open():
-						backpack.close()
-					elif player.can_act():
-						backpack.open(player)
-			KEY_ESCAPE:
-				if _bench:
-					_bench_abort()
-				elif backpack.is_open():
-					backpack.close()
-				elif menus.is_open():
-					menus.back()
-				elif mode == Mode.PLAYING:
-					pause()
 			KEY_F3:
 				# performance overlay: off → FPS → detailed
 				Settings.set_value("perf_overlay", (int(Settings.values["perf_overlay"]) + 1) % 3, false)

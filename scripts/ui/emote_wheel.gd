@@ -45,6 +45,7 @@ func is_open() -> bool:
 
 func open() -> void:
 	reload()
+	GameInput.block_look += 1
 	_open = true
 	_aim = Vector2.ZERO
 	_sel = -1
@@ -57,6 +58,7 @@ func close(play := true) -> void:
 	if not _open:
 		return
 	_open = false
+	GameInput.block_look = maxi(GameInput.block_look - 1, 0)
 	_root.visible = false
 	if play and _sel >= 0:
 		chosen.emit(_ids[_sel])
@@ -87,6 +89,11 @@ func _input(event: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	if _open:
+		# controller: the right stick points at a slot (it stays selected when the stick springs back)
+		var st := GameInput.right_stick()
+		if st.length() > 0.45:
+			_aim = st.normalized() * RADIUS * minf(st.length(), 1.0)
+			_sel = int(fposmod(atan2(_aim.x, -_aim.y) + PI / SLOTS, TAU) / (TAU / SLOTS))
 		_anim = minf(_anim + delta * 6.0, 1.0)
 		_root.queue_redraw()
 
