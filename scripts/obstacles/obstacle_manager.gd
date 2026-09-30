@@ -503,12 +503,12 @@ func _rope_prompt(k: int, idx: int, kind: String, w: Wanderer) -> String:
 			return "Tie rope here (stretch it)"
 		"dangling":
 			if r["anchor"] == idx:
-				return "Pick up rope end · Q: untie"
+				return "Pick up rope end · %s: untie" % GameInput.glyph("untie")
 			return ""
 		"spanned":
-			return "Climb across (E) · Q: untie"
+			return "Climb across · %s: untie" % GameInput.glyph("untie")
 		"hanging":
-			return "Rappel down (E) · Q: untie"
+			return "Rappel down · %s: untie" % GameInput.glyph("untie")
 	return ""
 
 

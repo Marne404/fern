@@ -674,6 +674,9 @@ func _process_inner(delta: float) -> void:
 		if _args.has("give"):
 			for id in _args["give"].split(","):
 				player.inventory.add(ItemDefs.make(id))
+		# test helper: --pad shows the controller glyphs
+		if _args.has("pad"):
+			GameInput._set_pad(true)
 		# test helper: --hold=karte,laterne (in the hands; lights are switched on)
 		if _args.has("hold"):
 			for id in _args["hold"].split(","):

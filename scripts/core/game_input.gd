@@ -24,7 +24,7 @@ const ACTIONS := {
 	"emotes": [[KEY_G], [JOY_BUTTON_LEFT_SHOULDER], -1],
 	"view": [[KEY_V], [JOY_BUTTON_RIGHT_STICK], -1],
 	"zoom": [[MOUSE_BUTTON_RIGHT], [], JOY_AXIS_TRIGGER_LEFT],
-	"untie": [[KEY_Q], [], -1],
+	"untie": [[KEY_Q], [], JOY_AXIS_TRIGGER_RIGHT],
 	"pause": [[KEY_ESCAPE], [JOY_BUTTON_START], -1],
 	"talk": [[KEY_T], [JOY_BUTTON_BACK], -1],
 }

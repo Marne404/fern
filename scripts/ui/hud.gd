@@ -177,7 +177,8 @@ func _ready() -> void:
 	_hint.set_anchors_preset(Control.PRESET_TOP_LEFT)
 	_hint.offset_left = 22
 	_hint.offset_top = 16
-	_hint.text = "WASD walk · Shift run · Space jump · E use\nR rest · Tab backpack · G emotes · V view · Esc pause"
+	_update_hint(false)
+	GameInput.device_changed.connect(_update_hint)
 	_hint.modulate.a = 0.0
 	add_child(_hint)
 
@@ -193,6 +194,19 @@ func _label(size: int, align: HorizontalAlignment, weight := 700) -> Label:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
+
+
+## The controls line at the top left follows the device you use
+func _update_hint(pad: bool) -> void:
+	if not is_instance_valid(_hint):
+		return
+	var g := func(a: String) -> String: return GameInput.glyph(a, 1 if pad else 0)
+	if pad:
+		_hint.text = "L-stick walk · %s sprint · %s jump · %s crouch · %s use\n%s backpack · hold %s emotes · %s / %s items · %s use item · %s rest · %s pause" % [
+			g.call("sprint"), g.call("jump"), g.call("crouch"), g.call("use"), g.call("backpack"), g.call("emotes"),
+			g.call("hand_prev"), g.call("hand_next"), g.call("use_hand"), g.call("rest"), g.call("pause")]
+	else:
+		_hint.text = "WASD walk · Shift run · Space jump · E use · F use item · Z/X items\nR rest · Tab backpack · G emotes · V view · Esc pause"
 
 
 ## Cream key with an ink border and a hard shadow, e.g. [E]
@@ -269,6 +283,7 @@ func set_prompt(text: String, title := "", action := "") -> void:
 	_prompt_title.visible = title != ""
 	# "You could tie a rope here" is a hint, not an action
 	_prompt_key.visible = not action.begins_with("You ")
+	(_prompt_key.get_child(0) as Label).text = GameInput.glyph("use")
 	_prompt_action.text = action
 
 
@@ -408,7 +423,8 @@ class PackSlot extends Control:
 		draw_string(font, Vector2(r.end.x - kw, wr.end.y + 19), kg, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, line)
 		# key hints left of the slot
 		var y := r.position.y + 8.0
-		for h in [["Tab", "backpack"], ["G", "emotes"], ["V", "view"]]:
+		for h in [[GameInput.glyph("backpack"), "backpack"], [GameInput.glyph("emotes") + (" hold" if GameInput.using_pad else ""), "emotes"],
+				[GameInput.glyph("hand_next"), "hands"], [GameInput.glyph("view"), "view"]]:
 			_hint_row(h[0], h[1], Vector2(r.position.x - 14, y), font)
 			y += 28.0
 

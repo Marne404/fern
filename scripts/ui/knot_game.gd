@@ -97,8 +97,9 @@ func start(book: bool) -> void:
 	var lines := []
 	for i in KNOTS.size():
 		var k: Dictionary = KNOTS[i]
-		lines.append("%d  %s  %s  (holds up to %d %%)" % [i + 1, k["name"], k["stars"], roundi(k["base"] * 100)])
-	_info.text = "\n".join(lines) + "\n\nEsc cancels." + ("" if has_book else "\nWithout the field guide you only see the steps briefly!")
+		var pick: String = ["A", "X", "Y"][i] if GameInput.using_pad else str(i + 1)
+		lines.append("%s  %s  %s  (holds up to %d %%)" % [pick, k["name"], k["stars"], roundi(k["base"] * 100)])
+	_info.text = "\n".join(lines) + ("\n\nB cancels." if GameInput.using_pad else "\n\nEsc cancels.") + ("" if has_book else "\nWithout the field guide you only see the steps briefly!")
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
@@ -115,7 +116,19 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _active or not (event is InputEventKey) or not event.pressed or event.echo:
+	if not _active:
+		return
+	# a controller: D-pad for the moves, A / X / Y choose the knot, B gives up
+	if event is InputEventJoypadButton and event.pressed:
+		var map := {JOY_BUTTON_DPAD_UP: KEY_UP, JOY_BUTTON_DPAD_DOWN: KEY_DOWN, JOY_BUTTON_DPAD_LEFT: KEY_LEFT,
+			JOY_BUTTON_DPAD_RIGHT: KEY_RIGHT, JOY_BUTTON_A: KEY_1, JOY_BUTTON_X: KEY_2, JOY_BUTTON_Y: KEY_3, JOY_BUTTON_B: KEY_ESCAPE}
+		if not map.has(event.button_index):
+			return
+		var k := InputEventKey.new()
+		k.physical_keycode = map[event.button_index]
+		k.pressed = true
+		event = k
+	if not (event is InputEventKey) or not event.pressed or event.echo:
 		return
 	get_viewport().set_input_as_handled()
 	var key: int = event.physical_keycode
@@ -169,7 +182,7 @@ func _choose(i: int) -> void:
 	_show_until = 2.2
 	_title.text = KNOTS[i]["name"]
 	_rope.points = PackedVector2Array([Vector2(140, 200)])
-	_info.text = "Arrow keys (or WASD) in the right order." + \
+	_info.text = ("D-pad" if GameInput.using_pad else "Arrow keys (or WASD)") + " in the right order." + \
 		("\nThe field guide lies open next to you." if has_book else "\nMemorize the sequence – it'll be gone in a moment!")
 	_refresh_seq()
 
